@@ -37,8 +37,8 @@ const customerNav: NavItem[] = [
 
 const supplierNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
-  { label: 'My Items', to: '/my-items', icon: <Package size={18} /> },
-  { label: 'My Dimensions', to: '/my-dimensions', icon: <Tags size={18} /> },
+  { label: 'Items', to: '/my-items', icon: <Package size={18} /> },
+  { label: 'Dimensions', to: '/my-dimensions', icon: <Tags size={18} /> },
   { label: 'Quotations', to: '/quotations', icon: <ClipboardList size={18} /> },
   { label: 'Proforma Invoices', to: '/proforma-invoices', icon: <FileText size={18} /> },
   { label: 'Delivery Orders', to: '/delivery-orders', icon: <Truck size={18} /> },

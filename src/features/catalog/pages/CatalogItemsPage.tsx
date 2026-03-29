@@ -1,10 +1,9 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { itemApi, type ItemSummary } from '@/features/catalog/api/itemApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { Button } from '@/components/ui/button'
@@ -12,10 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-
-export const Route = createFileRoute('/_app/catalog/items')({
-  component: ItemsPage,
-})
+import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 
 const itemSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -23,7 +19,7 @@ const itemSchema = z.object({
 })
 type ItemFormValues = z.infer<typeof itemSchema>
 
-function ItemsPage() {
+export function CatalogItemsPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -67,7 +63,6 @@ function ItemsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create Item</DialogTitle></DialogHeader>
-            {/* key={open} forces remount on each open — clears previous values */}
             <ItemForm
               key={String(open)}
               onSubmit={(v) => createMutation.mutate(v)}
@@ -99,9 +94,8 @@ function ItemsPage() {
                   <td className="px-4 py-3 font-medium text-slate-800">{item.name}</td>
                   <td className="px-4 py-3 text-slate-500">{item.categoryName ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      item.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
-                    }`}>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
+                      }`}>
                       {item.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -129,7 +123,6 @@ function ItemsPage() {
           </tbody>
         </table>
 
-        {/* Pagination */}
         {data && data.totalCount > pageSize && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
             <span>{data.totalCount} items</span>
@@ -146,7 +139,6 @@ function ItemsPage() {
         )}
       </div>
 
-      {/* Edit dialog — key=editing.id forces remount with correct defaultValues */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Item</DialogTitle></DialogHeader>
@@ -162,7 +154,6 @@ function ItemsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => { if (!o) setDeleting(null) }}

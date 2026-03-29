@@ -22,7 +22,6 @@ import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app.suppliers.$id'
 import { Route as AppMyItemsIdRouteImport } from './routes/_app.my-items.$id'
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
-import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog.items'
 import { Route as AppCatalogCategoriesRouteImport } from './routes/_app.catalog.categories'
 import { Route as AppCatalogItemsIdRouteImport } from './routes/_app.catalog.items.$id'
 
@@ -89,20 +88,15 @@ const AppCustomersIdRoute = AppCustomersIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppCustomersRoute,
 } as any)
-const AppCatalogItemsRoute = AppCatalogItemsRouteImport.update({
-  id: '/catalog/items',
-  path: '/catalog/items',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppCatalogCategoriesRoute = AppCatalogCategoriesRouteImport.update({
   id: '/catalog/categories',
   path: '/catalog/categories',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCatalogItemsIdRoute = AppCatalogItemsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppCatalogItemsRoute,
+  id: '/catalog/items/$id',
+  path: '/catalog/items/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -115,7 +109,6 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
-  '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
@@ -131,7 +124,6 @@ export interface FileRoutesByTo {
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
-  '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
@@ -150,7 +142,6 @@ export interface FileRoutesById {
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_app/catalog/categories': typeof AppCatalogCategoriesRoute
-  '/_app/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/_app/customers/$id': typeof AppCustomersIdRoute
   '/_app/my-items/$id': typeof AppMyItemsIdRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
@@ -168,7 +159,6 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/login'
     | '/catalog/categories'
-    | '/catalog/items'
     | '/customers/$id'
     | '/my-items/$id'
     | '/suppliers/$id'
@@ -184,7 +174,6 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/login'
     | '/catalog/categories'
-    | '/catalog/items'
     | '/customers/$id'
     | '/my-items/$id'
     | '/suppliers/$id'
@@ -202,7 +191,6 @@ export interface FileRouteTypes {
     | '/_app/suppliers'
     | '/_auth/login'
     | '/_app/catalog/categories'
-    | '/_app/catalog/items'
     | '/_app/customers/$id'
     | '/_app/my-items/$id'
     | '/_app/suppliers/$id'
@@ -308,13 +296,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersIdRouteImport
       parentRoute: typeof AppCustomersRoute
     }
-    '/_app/catalog/items': {
-      id: '/_app/catalog/items'
-      path: '/catalog/items'
-      fullPath: '/catalog/items'
-      preLoaderRoute: typeof AppCatalogItemsRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/catalog/categories': {
       id: '/_app/catalog/categories'
       path: '/catalog/categories'
@@ -324,10 +305,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/catalog/items/$id': {
       id: '/_app/catalog/items/$id'
-      path: '/$id'
+      path: '/catalog/items/$id'
       fullPath: '/catalog/items/$id'
       preLoaderRoute: typeof AppCatalogItemsIdRouteImport
-      parentRoute: typeof AppCatalogItemsRoute
+      parentRoute: typeof AppRoute
     }
   }
 }
@@ -368,18 +349,6 @@ const AppSuppliersRouteWithChildren = AppSuppliersRoute._addFileChildren(
   AppSuppliersRouteChildren,
 )
 
-interface AppCatalogItemsRouteChildren {
-  AppCatalogItemsIdRoute: typeof AppCatalogItemsIdRoute
-}
-
-const AppCatalogItemsRouteChildren: AppCatalogItemsRouteChildren = {
-  AppCatalogItemsIdRoute: AppCatalogItemsIdRoute,
-}
-
-const AppCatalogItemsRouteWithChildren = AppCatalogItemsRoute._addFileChildren(
-  AppCatalogItemsRouteChildren,
-)
-
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
@@ -388,7 +357,7 @@ interface AppRouteChildren {
   AppMyItemsRoute: typeof AppMyItemsRouteWithChildren
   AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
-  AppCatalogItemsRoute: typeof AppCatalogItemsRouteWithChildren
+  AppCatalogItemsIdRoute: typeof AppCatalogItemsIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -399,7 +368,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMyItemsRoute: AppMyItemsRouteWithChildren,
   AppSuppliersRoute: AppSuppliersRouteWithChildren,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,
-  AppCatalogItemsRoute: AppCatalogItemsRouteWithChildren,
+  AppCatalogItemsIdRoute: AppCatalogItemsIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
