@@ -13,9 +13,18 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
+import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
+import { Route as AppMyItemsRouteImport } from './routes/_app.my-items'
+import { Route as AppMyDimensionsRouteImport } from './routes/_app.my-dimensions'
+import { Route as AppItemMappingRouteImport } from './routes/_app.item-mapping'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppSuppliersIdRouteImport } from './routes/_app.suppliers.$id'
+import { Route as AppMyItemsIdRouteImport } from './routes/_app.my-items.$id'
+import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
 import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog.items'
 import { Route as AppCatalogCategoriesRouteImport } from './routes/_app.catalog.categories'
+import { Route as AppCatalogItemsIdRouteImport } from './routes/_app.catalog.items.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
@@ -35,10 +44,50 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AuthRoute,
 } as any)
+const AppSuppliersRoute = AppSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyItemsRoute = AppMyItemsRouteImport.update({
+  id: '/my-items',
+  path: '/my-items',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyDimensionsRoute = AppMyDimensionsRouteImport.update({
+  id: '/my-dimensions',
+  path: '/my-dimensions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppItemMappingRoute = AppItemMappingRouteImport.update({
+  id: '/item-mapping',
+  path: '/item-mapping',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AppRoute,
+} as any)
+const AppCustomersRoute = AppCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuppliersIdRoute = AppSuppliersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppSuppliersRoute,
+} as any)
+const AppMyItemsIdRoute = AppMyItemsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppMyItemsRoute,
+} as any)
+const AppCustomersIdRoute = AppCustomersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppCustomersRoute,
 } as any)
 const AppCatalogItemsRoute = AppCatalogItemsRouteImport.update({
   id: '/catalog/items',
@@ -50,50 +99,114 @@ const AppCatalogCategoriesRoute = AppCatalogCategoriesRouteImport.update({
   path: '/catalog/categories',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCatalogItemsIdRoute = AppCatalogItemsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppCatalogItemsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/customers': typeof AppCustomersRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/item-mapping': typeof AppItemMappingRoute
+  '/my-dimensions': typeof AppMyDimensionsRoute
+  '/my-items': typeof AppMyItemsRouteWithChildren
+  '/suppliers': typeof AppSuppliersRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
-  '/catalog/items': typeof AppCatalogItemsRoute
+  '/catalog/items': typeof AppCatalogItemsRouteWithChildren
+  '/customers/$id': typeof AppCustomersIdRoute
+  '/my-items/$id': typeof AppMyItemsIdRoute
+  '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/catalog/items/$id': typeof AppCatalogItemsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/customers': typeof AppCustomersRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/item-mapping': typeof AppItemMappingRoute
+  '/my-dimensions': typeof AppMyDimensionsRoute
+  '/my-items': typeof AppMyItemsRouteWithChildren
+  '/suppliers': typeof AppSuppliersRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
-  '/catalog/items': typeof AppCatalogItemsRoute
+  '/catalog/items': typeof AppCatalogItemsRouteWithChildren
+  '/customers/$id': typeof AppCustomersIdRoute
+  '/my-items/$id': typeof AppMyItemsIdRoute
+  '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/catalog/items/$id': typeof AppCatalogItemsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/_app/customers': typeof AppCustomersRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/item-mapping': typeof AppItemMappingRoute
+  '/_app/my-dimensions': typeof AppMyDimensionsRoute
+  '/_app/my-items': typeof AppMyItemsRouteWithChildren
+  '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_app/catalog/categories': typeof AppCatalogCategoriesRoute
-  '/_app/catalog/items': typeof AppCatalogItemsRoute
+  '/_app/catalog/items': typeof AppCatalogItemsRouteWithChildren
+  '/_app/customers/$id': typeof AppCustomersIdRoute
+  '/_app/my-items/$id': typeof AppMyItemsIdRoute
+  '/_app/suppliers/$id': typeof AppSuppliersIdRoute
+  '/_app/catalog/items/$id': typeof AppCatalogItemsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/customers'
     | '/dashboard'
+    | '/item-mapping'
+    | '/my-dimensions'
+    | '/my-items'
+    | '/suppliers'
     | '/login'
     | '/catalog/categories'
     | '/catalog/items'
+    | '/customers/$id'
+    | '/my-items/$id'
+    | '/suppliers/$id'
+    | '/catalog/items/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/catalog/categories' | '/catalog/items'
+  to:
+    | '/'
+    | '/customers'
+    | '/dashboard'
+    | '/item-mapping'
+    | '/my-dimensions'
+    | '/my-items'
+    | '/suppliers'
+    | '/login'
+    | '/catalog/categories'
+    | '/catalog/items'
+    | '/customers/$id'
+    | '/my-items/$id'
+    | '/suppliers/$id'
+    | '/catalog/items/$id'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/_auth'
+    | '/_app/customers'
     | '/_app/dashboard'
+    | '/_app/item-mapping'
+    | '/_app/my-dimensions'
+    | '/_app/my-items'
+    | '/_app/suppliers'
     | '/_auth/login'
     | '/_app/catalog/categories'
     | '/_app/catalog/items'
+    | '/_app/customers/$id'
+    | '/_app/my-items/$id'
+    | '/_app/suppliers/$id'
+    | '/_app/catalog/items/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,12 +245,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_app/suppliers': {
+      id: '/_app/suppliers'
+      path: '/suppliers'
+      fullPath: '/suppliers'
+      preLoaderRoute: typeof AppSuppliersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-items': {
+      id: '/_app/my-items'
+      path: '/my-items'
+      fullPath: '/my-items'
+      preLoaderRoute: typeof AppMyItemsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-dimensions': {
+      id: '/_app/my-dimensions'
+      path: '/my-dimensions'
+      fullPath: '/my-dimensions'
+      preLoaderRoute: typeof AppMyDimensionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/item-mapping': {
+      id: '/_app/item-mapping'
+      path: '/item-mapping'
+      fullPath: '/item-mapping'
+      preLoaderRoute: typeof AppItemMappingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/customers': {
+      id: '/_app/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof AppCustomersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/suppliers/$id': {
+      id: '/_app/suppliers/$id'
+      path: '/$id'
+      fullPath: '/suppliers/$id'
+      preLoaderRoute: typeof AppSuppliersIdRouteImport
+      parentRoute: typeof AppSuppliersRoute
+    }
+    '/_app/my-items/$id': {
+      id: '/_app/my-items/$id'
+      path: '/$id'
+      fullPath: '/my-items/$id'
+      preLoaderRoute: typeof AppMyItemsIdRouteImport
+      parentRoute: typeof AppMyItemsRoute
+    }
+    '/_app/customers/$id': {
+      id: '/_app/customers/$id'
+      path: '/$id'
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof AppCustomersIdRouteImport
+      parentRoute: typeof AppCustomersRoute
     }
     '/_app/catalog/items': {
       id: '/_app/catalog/items'
@@ -153,19 +322,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCatalogCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/catalog/items/$id': {
+      id: '/_app/catalog/items/$id'
+      path: '/$id'
+      fullPath: '/catalog/items/$id'
+      preLoaderRoute: typeof AppCatalogItemsIdRouteImport
+      parentRoute: typeof AppCatalogItemsRoute
+    }
   }
 }
 
+interface AppCustomersRouteChildren {
+  AppCustomersIdRoute: typeof AppCustomersIdRoute
+}
+
+const AppCustomersRouteChildren: AppCustomersRouteChildren = {
+  AppCustomersIdRoute: AppCustomersIdRoute,
+}
+
+const AppCustomersRouteWithChildren = AppCustomersRoute._addFileChildren(
+  AppCustomersRouteChildren,
+)
+
+interface AppMyItemsRouteChildren {
+  AppMyItemsIdRoute: typeof AppMyItemsIdRoute
+}
+
+const AppMyItemsRouteChildren: AppMyItemsRouteChildren = {
+  AppMyItemsIdRoute: AppMyItemsIdRoute,
+}
+
+const AppMyItemsRouteWithChildren = AppMyItemsRoute._addFileChildren(
+  AppMyItemsRouteChildren,
+)
+
+interface AppSuppliersRouteChildren {
+  AppSuppliersIdRoute: typeof AppSuppliersIdRoute
+}
+
+const AppSuppliersRouteChildren: AppSuppliersRouteChildren = {
+  AppSuppliersIdRoute: AppSuppliersIdRoute,
+}
+
+const AppSuppliersRouteWithChildren = AppSuppliersRoute._addFileChildren(
+  AppSuppliersRouteChildren,
+)
+
+interface AppCatalogItemsRouteChildren {
+  AppCatalogItemsIdRoute: typeof AppCatalogItemsIdRoute
+}
+
+const AppCatalogItemsRouteChildren: AppCatalogItemsRouteChildren = {
+  AppCatalogItemsIdRoute: AppCatalogItemsIdRoute,
+}
+
+const AppCatalogItemsRouteWithChildren = AppCatalogItemsRoute._addFileChildren(
+  AppCatalogItemsRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppCustomersRoute: typeof AppCustomersRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppItemMappingRoute: typeof AppItemMappingRoute
+  AppMyDimensionsRoute: typeof AppMyDimensionsRoute
+  AppMyItemsRoute: typeof AppMyItemsRouteWithChildren
+  AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
-  AppCatalogItemsRoute: typeof AppCatalogItemsRoute
+  AppCatalogItemsRoute: typeof AppCatalogItemsRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCustomersRoute: AppCustomersRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppItemMappingRoute: AppItemMappingRoute,
+  AppMyDimensionsRoute: AppMyDimensionsRoute,
+  AppMyItemsRoute: AppMyItemsRouteWithChildren,
+  AppSuppliersRoute: AppSuppliersRouteWithChildren,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,
-  AppCatalogItemsRoute: AppCatalogItemsRoute,
+  AppCatalogItemsRoute: AppCatalogItemsRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

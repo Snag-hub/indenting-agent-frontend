@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 export const Route = createFileRoute('/_app/catalog/categories')({
   component: CategoriesPage,
@@ -22,6 +23,7 @@ function CategoriesPage() {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<CategoryTreeNode | null>(null)
+  const [deleting, setDeleting] = useState<CategoryTreeNode | null>(null)
 
   const { data: tree = [], isLoading } = useQuery({
     queryKey: queryKeys.catalog.categoryTree(),
@@ -30,18 +32,27 @@ function CategoriesPage() {
 
   const createMutation = useMutation({
     mutationFn: categoryApi.create,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.catalog.categoryTree() }); setOpen(false) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.catalog.categoryTree() })
+      setOpen(false)
+    },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: CategoryFormValues }) =>
       categoryApi.update(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.catalog.categoryTree() }); setEditing(null) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.catalog.categoryTree() })
+      setEditing(null)
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: categoryApi.delete,
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.catalog.categoryTree() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.catalog.categoryTree() })
+      setDeleting(null)
+    },
   })
 
   return (
@@ -50,12 +61,15 @@ function CategoriesPage() {
         <h1 className="text-2xl font-semibold text-slate-900">Categories</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus size={16} /> New Category</Button>
+            <Button size="sm"><Plus size={16} className="mr-1" /> New Category</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create Category</DialogTitle></DialogHeader>
+            {/* key={open} forces remount on each open — clears previous values */}
             <CategoryForm
+              key={String(open)}
               onSubmit={(v) => createMutation.mutate(v)}
+              onCancel={() => setOpen(false)}
               loading={createMutation.isPending}
             />
           </DialogContent>
@@ -74,25 +88,39 @@ function CategoriesPage() {
               node={node}
               depth={0}
               onEdit={setEditing}
-              onDelete={(id) => deleteMutation.mutate(id)}
+              onDelete={setDeleting}
             />
           ))}
         </div>
       )}
 
-      {/* Edit dialog */}
+      {/* Edit dialog — key=editing.id forces remount with correct defaultValues each time */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Category</DialogTitle></DialogHeader>
           {editing && (
             <CategoryForm
+              key={editing.id}
               defaultValues={{ name: editing.name }}
               onSubmit={(v) => updateMutation.mutate({ id: editing.id, data: v })}
+              onCancel={() => setEditing(null)}
               loading={updateMutation.isPending}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => { if (!o) setDeleting(null) }}
+        title="Delete Category"
+        description={`Delete "${deleting?.name}"? Child categories will also be removed.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }
@@ -103,7 +131,7 @@ function CategoryNode({
   node: CategoryTreeNode
   depth: number
   onEdit: (n: CategoryTreeNode) => void
-  onDelete: (id: string) => void
+  onDelete: (n: CategoryTreeNode) => void
 }) {
   const [expanded, setExpanded] = useState(true)
   const hasChildren = node.children.length > 0
@@ -126,12 +154,12 @@ function CategoryNode({
         <button onClick={() => onEdit(node)} className="text-slate-400 hover:text-slate-700 p-1">
           <Pencil size={14} />
         </button>
-        <button onClick={() => onDelete(node.id)} className="text-slate-400 hover:text-red-600 p-1">
+        <button onClick={() => onDelete(node)} className="text-slate-400 hover:text-red-600 p-1">
           <Trash2 size={14} />
         </button>
       </div>
       {expanded && hasChildren && node.children.map((child) => (
-        <CategoryNode key={child.id} node={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} />
+        <CategoryNode key={child.id} node={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete}  />
       ))}
     </div>
   )
@@ -140,10 +168,12 @@ function CategoryNode({
 function CategoryForm({
   defaultValues,
   onSubmit,
+  onCancel,
   loading,
 }: {
   defaultValues?: Partial<CategoryFormValues>
   onSubmit: (v: CategoryFormValues) => void
+  onCancel: () => void
   loading: boolean
 }) {
   const { register, handleSubmit, formState: { errors } } = useForm<CategoryFormValues>({
@@ -154,12 +184,17 @@ function CategoryForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-1">
         <Label>Name</Label>
-        <Input {...register('name')} />
+        <Input {...register('name')} autoFocus />
         {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
       </div>
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Saving…' : 'Save'}
-      </Button>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Saving…' : 'Save'}
+        </Button>
+      </DialogFooter>
     </form>
   )
 }

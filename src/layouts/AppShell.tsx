@@ -18,6 +18,7 @@ const adminNav: NavItem[] = [
   { label: 'Suppliers', to: '/suppliers', icon: <Building2 size={18} /> },
   { label: 'Item Mapping', to: '/item-mapping', icon: <Package size={18} /> },
   { label: 'Categories', to: '/catalog/categories', icon: <Tags size={18} /> },
+  { label: 'Master Items', to: '/catalog/items', icon: <Package size={18} /> },
   { label: 'Tickets', to: '/tickets', icon: <Ticket size={18} /> },
   { label: 'Audit Logs', to: '/audit-logs', icon: <FileText size={18} /> },
   { label: 'Settings', to: '/settings', icon: <Settings size={18} /> },

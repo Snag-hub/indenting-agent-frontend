@@ -19,6 +19,11 @@ export interface ItemDetail extends ItemSummary {
   }[]
 }
 
+export interface AddVariantPayload {
+  sku?: string | null
+  values: { dimensionId: string; dimensionValueId: string }[]
+}
+
 export const itemApi = {
   list: (params?: { categoryId?: string; page?: number; pageSize?: number }) =>
     api.get<PagedResult<ItemSummary>>('/catalog/items', { params }).then((r) => r.data),
@@ -28,4 +33,7 @@ export const itemApi = {
   update: (id: string, data: { name: string; categoryId?: string | null; description?: string | null }) =>
     api.put(`/catalog/items/${id}`, data),
   delete: (id: string) => api.delete(`/catalog/items/${id}`),
+  addVariant: (itemId: string, payload: AddVariantPayload) =>
+    api.post<string>(`/catalog/items/${itemId}/variants`, payload).then((r) => r.data),
+  removeVariant: (variantId: string) => api.delete(`/catalog/items/variants/${variantId}`),
 }

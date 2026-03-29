@@ -1,16 +1,17 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { itemApi, type ItemSummary } from '@/features/catalog/api/itemApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 export const Route = createFileRoute('/_app/catalog/items')({
   component: ItemsPage,
@@ -28,6 +29,7 @@ function ItemsPage() {
   const pageSize = 20
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ItemSummary | null>(null)
+  const [deleting, setDeleting] = useState<ItemSummary | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.catalog.items({ page, pageSize }),
@@ -41,7 +43,10 @@ function ItemsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: itemApi.delete,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog', 'items'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['catalog', 'items'] })
+      setDeleting(null)
+    },
   })
 
   const updateMutation = useMutation({
@@ -62,7 +67,13 @@ function ItemsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create Item</DialogTitle></DialogHeader>
-            <ItemForm onSubmit={(v) => createMutation.mutate(v)} loading={createMutation.isPending} />
+            {/* key={open} forces remount on each open — clears previous values */}
+            <ItemForm
+              key={String(open)}
+              onSubmit={(v) => createMutation.mutate(v)}
+              onCancel={() => setOpen(false)}
+              loading={createMutation.isPending}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -96,10 +107,18 @@ function ItemsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
+                      <Link
+                        to="/catalog/items/$id"
+                        params={{ id: item.id }}
+                        className="text-slate-400 hover:text-blue-600 p-1 inline-flex"
+                        title="View variants"
+                      >
+                        <Eye size={14} />
+                      </Link>
                       <button onClick={() => setEditing(item)} className="text-slate-400 hover:text-slate-700 p-1">
                         <Pencil size={14} />
                       </button>
-                      <button onClick={() => deleteMutation.mutate(item.id)} className="text-slate-400 hover:text-red-600 p-1">
+                      <button onClick={() => setDeleting(item)} className="text-slate-400 hover:text-red-600 p-1">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -127,28 +146,43 @@ function ItemsPage() {
         )}
       </div>
 
-      {/* Edit dialog */}
+      {/* Edit dialog — key=editing.id forces remount with correct defaultValues */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Item</DialogTitle></DialogHeader>
           {editing && (
             <ItemForm
-              defaultValues={{ name: editing.name }}
+              key={editing.id}
+              defaultValues={{ name: editing.name, description: editing.description ?? '' }}
               onSubmit={(v) => updateMutation.mutate({ id: editing.id, data: v })}
+              onCancel={() => setEditing(null)}
               loading={updateMutation.isPending}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => { if (!o) setDeleting(null) }}
+        title="Delete Item"
+        description={`Delete "${deleting?.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }
 
 function ItemForm({
-  defaultValues, onSubmit, loading,
+  defaultValues, onSubmit, onCancel, loading,
 }: {
   defaultValues?: Partial<ItemFormValues>
   onSubmit: (v: ItemFormValues) => void
+  onCancel: () => void
   loading: boolean
 }) {
   const { register, handleSubmit, formState: { errors } } = useForm<ItemFormValues>({
@@ -159,16 +193,21 @@ function ItemForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-1">
         <Label>Name</Label>
-        <Input {...register('name')} />
+        <Input {...register('name')} autoFocus />
         {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
       </div>
       <div className="space-y-1">
         <Label>Description</Label>
         <Input {...register('description')} />
       </div>
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Saving…' : 'Save'}
-      </Button>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Saving…' : 'Save'}
+        </Button>
+      </DialogFooter>
     </form>
   )
 }
