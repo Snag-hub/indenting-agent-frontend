@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface DimensionValue { id: string; value: string }
@@ -53,6 +53,10 @@ interface CustomerTier {
   currency: string
 }
 
+interface EditableCustomerTier extends CustomerTier {
+  supplierItemId: string
+}
+
 const customerOverrideSchema = z.object({
   customerId: z.string().min(1, 'Select a customer'),
   minQty: z.number().min(0, 'Minimum quantity must be 0 or greater'),
@@ -74,7 +78,7 @@ export function ItemDetailPage() {
   // Pricing state
   const [selectedSupplierItemId, setSelectedSupplierItemId] = useState<string | undefined>()
   const [pricingDialogOpen, setPricingDialogOpen] = useState(false)
-  const [deletingCustomerTierId, setDeletingCustomerTierId] = useState<string | undefined>()
+  const [editingCustomerTier, setEditingCustomerTier] = useState<EditableCustomerTier | undefined>()
 
   const {
     register: registerPrice,
@@ -168,15 +172,53 @@ export function ItemDetailPage() {
     },
   })
 
-  const deleteCustomerTier = useMutation({
-    mutationFn: (tierId: string) => pricingApi.deleteCustomerTier(tierId),
+  const updateCustomerTier = useMutation({
+    mutationFn: (data: { tierId: string; minQty: number; unitPrice: number; currency: string }) =>
+      pricingApi.updateCustomerTier(data.tierId, {
+        minQty: data.minQty,
+        unitPrice: data.unitPrice,
+        currency: data.currency,
+      }),
     onSuccess: () => {
       if (selectedSupplierItemId) {
         qc.invalidateQueries({ queryKey: queryKeys.pricing.customerTiers(selectedSupplierItemId) })
       }
-      setDeletingCustomerTierId(undefined)
+      closePricingDialog()
     },
   })
+
+  const closePricingDialog = () => {
+    setPricingDialogOpen(false)
+    setSelectedSupplierItemId(undefined)
+    setEditingCustomerTier(undefined)
+    resetPrice({
+      customerId: '',
+      minQty: 0,
+      unitPrice: 0,
+    })
+  }
+
+  const openAddOverrideDialog = (supplierItemId: string) => {
+    setSelectedSupplierItemId(supplierItemId)
+    setEditingCustomerTier(undefined)
+    resetPrice({
+      customerId: '',
+      minQty: 0,
+      unitPrice: 0,
+    })
+    setPricingDialogOpen(true)
+  }
+
+  const openEditOverrideDialog = (tier: EditableCustomerTier) => {
+    setSelectedSupplierItemId(tier.supplierItemId)
+    setEditingCustomerTier(tier)
+    resetPrice({
+      customerId: tier.customerId,
+      minQty: tier.minQty,
+      unitPrice: tier.unitPrice,
+    })
+    setPricingDialogOpen(true)
+  }
 
   const updateRow = (index: number, field: keyof VariantValueRow, value: string) => {
     setVariantRows((prev) => {
@@ -338,10 +380,8 @@ export function ItemDetailPage() {
                 <PricingSection
                   key={supplierItem.id}
                   supplierItem={supplierItem}
-                  onAddOverride={() => {
-                    setSelectedSupplierItemId(supplierItem.id)
-                    setPricingDialogOpen(true)
-                  }}
+                  onAddOverride={() => openAddOverrideDialog(supplierItem.id)}
+                  onEditOverride={(tier) => openEditOverrideDialog({ ...tier, supplierItemId: supplierItem.id })}
                 />
               ))}
             </div>
@@ -447,20 +487,38 @@ export function ItemDetailPage() {
         isLoading={removeVariant.isPending}
       />
 
-      <Dialog open={pricingDialogOpen} onOpenChange={setPricingDialogOpen}>
+      <Dialog
+        open={pricingDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setPricingDialogOpen(true)
+            return
+          }
+          closePricingDialog()
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Customer Override</DialogTitle>
+            <DialogTitle>{editingCustomerTier ? 'Edit Customer Override' : 'Add Customer Override'}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={handlePriceSubmit((data) => {
               if (selectedSupplierItemId) {
-                addCustomerTier.mutate({
-                  supplierItemId: selectedSupplierItemId,
-                  customerId: data.customerId,
-                  minQty: data.minQty,
-                  unitPrice: data.unitPrice,
-                })
+                if (editingCustomerTier) {
+                  updateCustomerTier.mutate({
+                    tierId: editingCustomerTier.id,
+                    minQty: data.minQty,
+                    unitPrice: data.unitPrice,
+                    currency: editingCustomerTier.currency,
+                  })
+                } else {
+                  addCustomerTier.mutate({
+                    supplierItemId: selectedSupplierItemId,
+                    customerId: data.customerId,
+                    minQty: data.minQty,
+                    unitPrice: data.unitPrice,
+                  })
+                }
               }
             })}
             className="space-y-4"
@@ -470,6 +528,7 @@ export function ItemDetailPage() {
               <Select
                 value={selectedCustomerId || ''}
                 onValueChange={(value) => setPriceValue('customerId', value, { shouldValidate: true })}
+                disabled={!!editingCustomerTier}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
@@ -518,30 +577,21 @@ export function ItemDetailPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setPricingDialogOpen(false)}
+                onClick={closePricingDialog}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={addCustomerTier.isPending}>
-                {addCustomerTier.isPending ? 'Saving…' : 'Add Override'}
+              <Button type="submit" disabled={addCustomerTier.isPending || updateCustomerTier.isPending}>
+                {addCustomerTier.isPending || updateCustomerTier.isPending
+                  ? 'Saving…'
+                  : editingCustomerTier
+                    ? 'Save Changes'
+                    : 'Add Override'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={!!deletingCustomerTierId}
-        onOpenChange={(open) => {
-          if (!open) setDeletingCustomerTierId(undefined)
-        }}
-        title="Remove Override"
-        description="This will permanently remove this customer price override."
-        variant="destructive"
-        confirmLabel="Remove"
-        onConfirm={() => deletingCustomerTierId && deleteCustomerTier.mutate(deletingCustomerTierId)}
-        isLoading={deleteCustomerTier.isPending}
-      />
     </div>
   )
 }
@@ -553,9 +603,10 @@ function useItemDetailParams() {
 interface PricingSectionProps {
   supplierItem: SupplierItem
   onAddOverride: () => void
+  onEditOverride: (tier: CustomerTier) => void
 }
 
-function PricingSection({ supplierItem, onAddOverride }: PricingSectionProps) {
+function PricingSection({ supplierItem, onAddOverride, onEditOverride }: PricingSectionProps) {
   const qc = useQueryClient()
   const [deletingTierId, setDeletingTierId] = useState<string | undefined>()
 
@@ -656,14 +707,23 @@ function PricingSection({ supplierItem, onAddOverride }: PricingSectionProps) {
                           {tier.currency} {tier.unitPrice.toFixed(2)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeletingTierId(tier.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onEditOverride(tier)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeletingTierId(tier.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
