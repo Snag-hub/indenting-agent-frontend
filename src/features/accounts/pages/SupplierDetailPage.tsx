@@ -85,7 +85,7 @@ export function SupplierDetailPage() {
                     : 'No items in catalog yet.'}
                 </p>
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/supplier-items/browse" search={{ supplierId: id }}>
+                  <Link to="/item-mapping">
                     Browse Items
                   </Link>
                 </Button>
@@ -107,8 +107,5 @@ export function SupplierDetailPage() {
 }
 
 function useSupplierDetailParams() {
-  // This follows the pattern for route params in TanStack Router
-  // Will be called from route with Route.useParams()
-  const params = new URLSearchParams(window.location.search)
   return { id: window.location.pathname.split('/').pop() || '' }
 }

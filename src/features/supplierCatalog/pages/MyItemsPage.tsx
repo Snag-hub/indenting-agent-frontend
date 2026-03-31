@@ -22,9 +22,9 @@ import { Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
-  minOrderQty: z.coerce.number().int().min(1),
-  batchSize: z.coerce.number().int().min(1),
-  leadTimeDays: z.coerce.number().int().min(0),
+  minOrderQty: z.number().int().min(1),
+  batchSize: z.number().int().min(1),
+  leadTimeDays: z.number().int().min(0),
   categoryId: z.string().nullable().optional(),
 })
 type FormData = z.infer<typeof schema>
@@ -95,7 +95,7 @@ export function MyItemsPage() {
     setEditing(item)
     reset({
       name: item.name,
-      description: item.categoryName ?? '',
+      description: '',
       minOrderQty: item.minOrderQty,
       batchSize: item.batchSize,
       leadTimeDays: item.leadTimeDays,
@@ -168,7 +168,7 @@ export function MyItemsPage() {
             <div className="space-y-1">
               <Label>Category</Label>
               <Select
-                value={categoryIdValue ?? ''}
+                value={categoryIdValue || '__none__'}
                 onValueChange={(v) => setValue('categoryId', v === '__none__' ? null : v)}
               >
                 <SelectTrigger>
@@ -185,16 +185,16 @@ export function MyItemsPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label>MOQ *</Label>
-                <Input type="number" {...register('minOrderQty')} />
+                <Input type="number" {...register('minOrderQty', { valueAsNumber: true })} />
                 {errors.minOrderQty && <p className="text-xs text-red-500">{errors.minOrderQty.message}</p>}
               </div>
               <div className="space-y-1">
                 <Label>Batch Size *</Label>
-                <Input type="number" {...register('batchSize')} />
+                <Input type="number" {...register('batchSize', { valueAsNumber: true })} />
               </div>
               <div className="space-y-1">
                 <Label>Lead Time (days) *</Label>
-                <Input type="number" {...register('leadTimeDays')} />
+                <Input type="number" {...register('leadTimeDays', { valueAsNumber: true })} />
               </div>
             </div>
             <DialogFooter>

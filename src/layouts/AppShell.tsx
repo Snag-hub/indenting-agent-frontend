@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Outlet, Link, useRouter } from '@tanstack/react-router'
 import {
   LayoutDashboard, Users, Building2, Package, Tags,
@@ -8,7 +9,6 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 
 type NavItem = { label: string; to: string; icon: React.ReactNode }
 
@@ -50,6 +50,19 @@ function getNav(role: string) {
   if (role === 'Admin') return adminNav
   if (role === 'Customer') return customerNav
   return supplierNav
+}
+
+function PageLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 mb-4">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
+        </div>
+        <p className="text-slate-600 font-medium">Loading...</p>
+      </div>
+    </div>
+  )
 }
 
 export function AppShell() {
@@ -143,7 +156,9 @@ export function AppShell() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

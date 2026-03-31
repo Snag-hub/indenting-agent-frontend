@@ -1,8 +1,8 @@
+import { lazy } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { MyDimensionsPage } from '@/features/supplierCatalog/pages/MyDimensionsPage'
 
 export const Route = createFileRoute('/_app/my-dimensions')({
-  component: MyDimensionsPage,
+  component: lazy(() => import('@/features/supplierCatalog/pages/MyDimensionsPage').then(m => ({ default: m.MyDimensionsPage }))),
 })
 
 

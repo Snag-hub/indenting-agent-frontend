@@ -1,4 +1,4 @@
-import { Link, useRoute } from '@tanstack/react-router'
+import { Link, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -40,8 +40,7 @@ const variantSchema = z.object({
 type VariantForm = z.infer<typeof variantSchema>
 
 export function MyItemDetailPage() {
-  const route = useRoute({ from: '/_app/my-items/$id' })
-  const { id } = route.params
+  const { id } = useParams({ from: '/_app/my-items/$id' })
   const qc = useQueryClient()
 
   const [variantOpen, setVariantOpen] = useState(false)

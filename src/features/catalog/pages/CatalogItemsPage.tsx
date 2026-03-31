@@ -1,14 +1,16 @@
-import { Link } from '@tanstack/react-router'
+import { Link, Outlet, useChildMatches } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { itemApi, type ItemSummary } from '@/features/catalog/api/itemApi'
+import { categoryApi, type CategoryTreeNode } from '@/features/catalog/api/categoryApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
@@ -16,10 +18,19 @@ import { Plus, Trash2, Pencil, ChevronLeft, ChevronRight, Eye } from 'lucide-rea
 const itemSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().max(2000).optional(),
+  categoryId: z.string().nullable().optional(),
 })
 type ItemFormValues = z.infer<typeof itemSchema>
 
+function flattenTree(nodes: CategoryTreeNode[], depth = 0): { id: string; label: string }[] {
+  return nodes.flatMap((n) => [
+    { id: n.id, label: `${'  '.repeat(depth)}${n.name}` },
+    ...flattenTree(n.children, depth + 1),
+  ])
+}
+
 export function CatalogItemsPage() {
+  const childMatches = useChildMatches()
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const pageSize = 20
@@ -31,6 +42,13 @@ export function CatalogItemsPage() {
     queryKey: queryKeys.catalog.items({ page, pageSize }),
     queryFn: () => itemApi.list({ page, pageSize }),
   })
+
+  const { data: categoryTree } = useQuery({
+    queryKey: queryKeys.catalog.categoryTree(),
+    queryFn: categoryApi.getTree,
+  })
+
+  const categories = categoryTree ? flattenTree(categoryTree) : []
 
   const createMutation = useMutation({
     mutationFn: itemApi.create,
@@ -53,6 +71,8 @@ export function CatalogItemsPage() {
 
   const totalPages = data ? Math.ceil(data.totalCount / pageSize) : 1
 
+  if (childMatches.length > 0) return <Outlet />
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -65,7 +85,11 @@ export function CatalogItemsPage() {
             <DialogHeader><DialogTitle>Create Item</DialogTitle></DialogHeader>
             <ItemForm
               key={String(open)}
-              onSubmit={(v) => createMutation.mutate(v)}
+              categories={categories}
+              onSubmit={(v) => createMutation.mutate({
+                ...v,
+                categoryId: v.categoryId ?? undefined,
+              })}
               onCancel={() => setOpen(false)}
               loading={createMutation.isPending}
             />
@@ -145,7 +169,8 @@ export function CatalogItemsPage() {
           {editing && (
             <ItemForm
               key={editing.id}
-              defaultValues={{ name: editing.name, description: editing.description ?? '' }}
+              categories={categories}
+              defaultValues={{ name: editing.name, description: '', categoryId: editing.categoryId ?? null }}
               onSubmit={(v) => updateMutation.mutate({ id: editing.id, data: v })}
               onCancel={() => setEditing(null)}
               loading={updateMutation.isPending}
@@ -169,17 +194,19 @@ export function CatalogItemsPage() {
 }
 
 function ItemForm({
-  defaultValues, onSubmit, onCancel, loading,
+  defaultValues, categories, onSubmit, onCancel, loading,
 }: {
   defaultValues?: Partial<ItemFormValues>
+  categories: { id: string; label: string }[]
   onSubmit: (v: ItemFormValues) => void
   onCancel: () => void
   loading: boolean
 }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<ItemFormValues>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
     defaultValues,
   })
+  const categoryId = watch('categoryId')
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-1">
@@ -190,6 +217,23 @@ function ItemForm({
       <div className="space-y-1">
         <Label>Description</Label>
         <Input {...register('description')} />
+      </div>
+      <div className="space-y-1">
+        <Label>Category</Label>
+        <Select
+          value={categoryId || '__none__'}
+          onValueChange={(v) => setValue('categoryId', v === '__none__' ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select category..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>

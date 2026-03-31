@@ -146,6 +146,5 @@ export function CustomerDetailPage() {
 }
 
 function useCustomerDetailParams() {
-  const params = new URLSearchParams(window.location.search)
   return { id: window.location.pathname.split('/').pop() || '' }
 }

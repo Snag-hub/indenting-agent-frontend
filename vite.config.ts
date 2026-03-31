@@ -9,6 +9,19 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'react'
+          if (id.includes('@tanstack/react-query') || id.includes('@tanstack/react-router') || id.includes('@tanstack/react-table')) return 'tanstack'
+          if (id.includes('react-hook-form') || id.includes('@hookform/resolvers') || id.includes('/zod/')) return 'forms'
+          if (id.includes('lucide-react') || id.includes('date-fns')) return 'ui'
+          return undefined
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

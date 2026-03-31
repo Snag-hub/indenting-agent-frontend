@@ -1,5 +1,4 @@
-import { createRootRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useAuthStore } from '@/stores/authStore'
+import { createRootRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createRootRoute({
   component: Outlet,

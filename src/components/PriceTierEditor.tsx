@@ -15,9 +15,9 @@ import { Plus, Trash2, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 
 const schema = z.object({
-  minQty: z.coerce.number().int().min(1),
-  maxQty: z.coerce.number().int().min(1).optional().or(z.literal('')),
-  unitPrice: z.coerce.number().positive(),
+  minQty: z.number().int().min(1),
+  maxQty: z.number().int().min(1).optional().or(z.literal('')),
+  unitPrice: z.number().positive(),
   currency: z.string().min(1),
   effectiveFrom: z.string().min(1),
   effectiveTo: z.string().optional().or(z.literal('')),
@@ -42,7 +42,7 @@ export function PriceTierEditor({ supplierItemId }: Props) {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: editing ?? { currency: 'USD', effectiveFrom: new Date().toISOString().split('T')[0] },
+    defaultValues: { currency: 'USD', effectiveFrom: new Date().toISOString().split('T')[0] },
   })
 
   const add = useMutation({
@@ -154,16 +154,16 @@ export function PriceTierEditor({ supplierItemId }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Min Qty *</Label>
-                <Input type="number" {...register('minQty')} />
+                <Input type="number" {...register('minQty', { valueAsNumber: true })} />
                 {errors.minQty && <p className="text-xs text-red-500">{errors.minQty.message}</p>}
               </div>
               <div className="space-y-1">
                 <Label>Max Qty</Label>
-                <Input type="number" {...register('maxQty')} placeholder="Leave blank for unlimited" />
+                <Input type="number" {...register('maxQty', { valueAsNumber: true })} placeholder="Leave blank for unlimited" />
               </div>
               <div className="space-y-1">
                 <Label>Unit Price *</Label>
-                <Input type="number" step="0.01" {...register('unitPrice')} />
+                <Input type="number" step="0.01" {...register('unitPrice', { valueAsNumber: true })} />
                 {errors.unitPrice && <p className="text-xs text-red-500">{errors.unitPrice.message}</p>}
               </div>
               <div className="space-y-1">

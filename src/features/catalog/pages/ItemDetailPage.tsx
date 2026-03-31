@@ -1,11 +1,12 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { api } from '@/lib/api'
 import { itemApi } from '@/features/catalog/api/itemApi'
+import { pricingApi } from '@/features/pricing/api/pricingApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -18,11 +19,46 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { format } from 'date-fns'
 
 interface DimensionValue { id: string; value: string }
 interface Dimension { id: string; name: string; values: DimensionValue[] }
 interface VariantValueRow { dimensionId: string; dimensionValueId: string }
+
+interface SupplierItem {
+  id: string
+  supplierId: string
+  supplierName: string
+  name: string
+}
+
+interface PriceTier {
+  id: string
+  minQty: number
+  maxQty: number | null
+  unitPrice: number
+  currency: string
+  effectiveFrom: string
+  effectiveTo: string | null
+}
+
+interface CustomerTier {
+  id: string
+  customerId: string
+  customerName: string
+  minQty: number
+  unitPrice: number
+  currency: string
+}
+
+const customerOverrideSchema = z.object({
+  customerId: z.string().min(1, 'Select a customer'),
+  minQty: z.number().min(0, 'Minimum quantity must be 0 or greater'),
+  unitPrice: z.number().min(0, 'Unit price must be greater than 0'),
+})
+type CustomerOverrideForm = z.infer<typeof customerOverrideSchema>
 
 const variantSchema = z.object({ sku: z.string().max(100).optional() })
 type VariantForm = z.infer<typeof variantSchema>
@@ -35,6 +71,36 @@ export function ItemDetailPage() {
   const [deletingVariantId, setDeletingVariantId] = useState<string | undefined>()
   const [variantRows, setVariantRows] = useState<VariantValueRow[]>([{ dimensionId: '', dimensionValueId: '' }])
 
+  // Pricing state
+  const [selectedSupplierItemId, setSelectedSupplierItemId] = useState<string | undefined>()
+  const [pricingDialogOpen, setPricingDialogOpen] = useState(false)
+  const [deletingCustomerTierId, setDeletingCustomerTierId] = useState<string | undefined>()
+
+  const {
+    register: registerPrice,
+    handleSubmit: handlePriceSubmit,
+    reset: resetPrice,
+    setValue: setPriceValue,
+    control: priceControl,
+    formState: { errors: priceErrors },
+  } = useForm<CustomerOverrideForm>({
+    resolver: zodResolver(customerOverrideSchema),
+    defaultValues: {
+      customerId: '',
+      minQty: 0,
+      unitPrice: 0,
+    },
+  })
+
+  const selectedCustomerId = useWatch({
+    control: priceControl,
+    name: 'customerId',
+  })
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<VariantForm>({
+    resolver: zodResolver(variantSchema),
+  })
+
   const { data: item, isLoading } = useQuery({
     queryKey: queryKeys.catalog.item(id),
     queryFn: () => itemApi.getById(id),
@@ -45,8 +111,20 @@ export function ItemDetailPage() {
     queryFn: () => api.get('/my/dimensions').then((r) => r.data),
   })
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<VariantForm>({
-    resolver: zodResolver(variantSchema),
+  // Fetch supplier items linked to this catalog item
+  const { data: linkedSupplierItems = [] } = useQuery<SupplierItem[]>({
+    queryKey: queryKeys.supplierItems.list({ itemId: id }),
+    queryFn: () =>
+      api.get<{ data: SupplierItem[] }>('/my/supplier-items', { params: { itemId: id, pageSize: 1000 } })
+        .then((r) => r.data.data || []),
+  })
+
+  // Fetch customers for override selection
+  const { data: customers = [] } = useQuery({
+    queryKey: queryKeys.customers.list(),
+    queryFn: () =>
+      api.get<{ data: Array<{ id: string; name: string }> }>('/accounts/customers', { params: { pageSize: 1000 } })
+        .then((r) => r.data.data || []),
   })
 
   const addVariant = useMutation({
@@ -68,6 +146,35 @@ export function ItemDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.catalog.item(id) })
       setDeletingVariantId(undefined)
+    },
+  })
+
+  // Pricing mutations
+  const addCustomerTier = useMutation({
+    mutationFn: (data: { supplierItemId: string; customerId: string; minQty: number; unitPrice: number }) =>
+      pricingApi.addCustomerTier(data.supplierItemId, {
+        customerId: data.customerId,
+        minQty: data.minQty,
+        unitPrice: data.unitPrice,
+        currency: 'USD',
+      }),
+    onSuccess: () => {
+      if (selectedSupplierItemId) {
+        qc.invalidateQueries({ queryKey: queryKeys.pricing.customerTiers(selectedSupplierItemId) })
+      }
+      setPricingDialogOpen(false)
+      resetPrice()
+      setSelectedSupplierItemId(undefined)
+    },
+  })
+
+  const deleteCustomerTier = useMutation({
+    mutationFn: (tierId: string) => pricingApi.deleteCustomerTier(tierId),
+    onSuccess: () => {
+      if (selectedSupplierItemId) {
+        qc.invalidateQueries({ queryKey: queryKeys.pricing.customerTiers(selectedSupplierItemId) })
+      }
+      setDeletingCustomerTierId(undefined)
     },
   })
 
@@ -125,6 +232,7 @@ export function ItemDetailPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="pricing">Pricing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-4">
@@ -212,6 +320,29 @@ export function ItemDetailPage() {
                     </Button>
                   </CardContent>
                 </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="pricing" className="mt-4 space-y-4">
+          {linkedSupplierItems.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No supplier items linked to this catalog item yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {linkedSupplierItems.map((supplierItem) => (
+                <PricingSection
+                  key={supplierItem.id}
+                  supplierItem={supplierItem}
+                  onAddOverride={() => {
+                    setSelectedSupplierItemId(supplierItem.id)
+                    setPricingDialogOpen(true)
+                  }}
+                />
               ))}
             </div>
           )}
@@ -305,13 +436,111 @@ export function ItemDetailPage() {
 
       <ConfirmDialog
         open={!!deletingVariantId}
+        onOpenChange={(open) => {
+          if (!open) setDeletingVariantId(undefined)
+        }}
         title="Remove Variant"
         description="This will permanently remove this variant from the item."
         variant="destructive"
         confirmLabel="Remove"
         onConfirm={() => deletingVariantId && removeVariant.mutate(deletingVariantId)}
-        onCancel={() => setDeletingVariantId(undefined)}
-        loading={removeVariant.isPending}
+        isLoading={removeVariant.isPending}
+      />
+
+      <Dialog open={pricingDialogOpen} onOpenChange={setPricingDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Customer Override</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handlePriceSubmit((data) => {
+              if (selectedSupplierItemId) {
+                addCustomerTier.mutate({
+                  supplierItemId: selectedSupplierItemId,
+                  customerId: data.customerId,
+                  minQty: data.minQty,
+                  unitPrice: data.unitPrice,
+                })
+              }
+            })}
+            className="space-y-4"
+          >
+            <div className="space-y-1">
+              <Label htmlFor="customerId">Customer</Label>
+              <Select
+                value={selectedCustomerId || ''}
+                onValueChange={(value) => setPriceValue('customerId', value, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {priceErrors.customerId && (
+                <p className="text-xs text-destructive">{priceErrors.customerId.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="minQty">Minimum Quantity</Label>
+              <Input
+                id="minQty"
+                type="number"
+                placeholder="0"
+                {...registerPrice('minQty', { valueAsNumber: true })}
+              />
+              {priceErrors.minQty && (
+                <p className="text-xs text-destructive">{priceErrors.minQty.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="unitPrice">Unit Price</Label>
+              <Input
+                id="unitPrice"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                {...registerPrice('unitPrice', { valueAsNumber: true })}
+              />
+              {priceErrors.unitPrice && (
+                <p className="text-xs text-destructive">{priceErrors.unitPrice.message}</p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPricingDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={addCustomerTier.isPending}>
+                {addCustomerTier.isPending ? 'Saving…' : 'Add Override'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deletingCustomerTierId}
+        onOpenChange={(open) => {
+          if (!open) setDeletingCustomerTierId(undefined)
+        }}
+        title="Remove Override"
+        description="This will permanently remove this customer price override."
+        variant="destructive"
+        confirmLabel="Remove"
+        onConfirm={() => deletingCustomerTierId && deleteCustomerTier.mutate(deletingCustomerTierId)}
+        isLoading={deleteCustomerTier.isPending}
       />
     </div>
   )
@@ -319,4 +548,145 @@ export function ItemDetailPage() {
 
 function useItemDetailParams() {
   return { id: window.location.pathname.split('/').pop() || '' }
+}
+
+interface PricingSectionProps {
+  supplierItem: SupplierItem
+  onAddOverride: () => void
+}
+
+function PricingSection({ supplierItem, onAddOverride }: PricingSectionProps) {
+  const qc = useQueryClient()
+  const [deletingTierId, setDeletingTierId] = useState<string | undefined>()
+
+  const { data: baseTiers = [] } = useQuery<PriceTier[]>({
+    queryKey: queryKeys.pricing.baseTiers(supplierItem.id),
+    queryFn: () => pricingApi.getBaseTiers(supplierItem.id),
+  })
+
+  const { data: customerTiers = [] } = useQuery<CustomerTier[]>({
+    queryKey: queryKeys.pricing.customerTiers(supplierItem.id),
+    queryFn: () => pricingApi.getCustomerTiers(supplierItem.id),
+  })
+
+  const { mutate: deleteCustomerTier, isPending: isDeleting } = useMutation({
+    mutationFn: (tierId: string) => pricingApi.deleteCustomerTier(tierId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.pricing.customerTiers(supplierItem.id) })
+      setDeletingTierId(undefined)
+    },
+  })
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            {supplierItem.name}
+            <p className="text-sm font-normal text-muted-foreground">
+              Supplier: {supplierItem.supplierName}
+            </p>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Base Price Tiers */}
+          <div>
+            <h3 className="font-semibold mb-3">Base Price Tiers</h3>
+            {baseTiers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No base price tiers defined</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Min Qty</TableHead>
+                      <TableHead>Max Qty</TableHead>
+                      <TableHead>Unit Price</TableHead>
+                      <TableHead>Effective From</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {baseTiers.map((tier) => (
+                      <TableRow key={tier.id}>
+                        <TableCell className="text-sm">{tier.minQty}</TableCell>
+                        <TableCell className="text-sm">
+                          {tier.maxQty ?? '—'}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {tier.currency} {tier.unitPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {format(new Date(tier.effectiveFrom), 'dd MMM yyyy')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+
+          {/* Customer Overrides */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Customer-Specific Overrides</h3>
+              <Button size="sm" onClick={onAddOverride}>
+                <Plus className="mr-2 h-4 w-4" /> Add Override
+              </Button>
+            </div>
+            {customerTiers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No customer overrides defined</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Min Qty</TableHead>
+                      <TableHead>Unit Price</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customerTiers.map((tier) => (
+                      <TableRow key={tier.id}>
+                        <TableCell className="text-sm">{tier.customerName}</TableCell>
+                        <TableCell className="text-sm">{tier.minQty}</TableCell>
+                        <TableCell className="text-sm">
+                          {tier.currency} {tier.unitPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeletingTierId(tier.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <ConfirmDialog
+              open={!!deletingTierId}
+              onOpenChange={(open) => {
+                if (!open) setDeletingTierId(undefined)
+              }}
+              title="Remove Override"
+              description="This will permanently remove this customer price override."
+              variant="destructive"
+              confirmLabel="Remove"
+              onConfirm={() => deletingTierId && deleteCustomerTier(deletingTierId)}
+              isLoading={isDeleting}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
 }

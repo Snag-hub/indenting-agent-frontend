@@ -36,7 +36,13 @@ export function SupplierFormDialog({ open, onOpenChange, existing }: Props) {
   // Re-populate fields whenever the dialog opens or the target row changes
   useEffect(() => {
     if (open) {
-      reset(existing ?? { name: '', contactEmail: '', contactPhone: '' })
+      reset(existing
+        ? {
+          name: existing.name,
+          contactEmail: existing.contactEmail ?? '',
+          contactPhone: existing.contactPhone ?? '',
+        }
+        : { name: '', contactEmail: '', contactPhone: '' })
     }
   }, [open, existing, reset])
 
