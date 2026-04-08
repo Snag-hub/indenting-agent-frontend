@@ -50,8 +50,22 @@ export function EnquiryDetailPage() {
   })
 
   const columns: ColumnDef<EnquiryItemDto>[] = [
-    { accessorKey: 'itemName', header: 'Item Name' },
-    { accessorKey: 'quantity', header: 'Quantity' },
+    {
+      accessorKey: 'itemName',
+      header: 'Item',
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium text-sm">{row.original.itemName}</div>
+          {row.original.supplierName && (
+            <div className="text-xs text-muted-foreground">{row.original.supplierName}</div>
+          )}
+          {row.original.masterItemId && (
+            <div className="text-xs text-muted-foreground">Master Item</div>
+          )}
+        </div>
+      ),
+    },
+    { accessorKey: 'quantity', header: 'Qty' },
     {
       accessorKey: 'notes',
       header: 'Notes',
@@ -140,9 +154,23 @@ export function EnquiryDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enquiry.items.map((item) => (
+                {enquiry.items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground text-sm py-6">
+                      No line items specified.
+                    </TableCell>
+                  </TableRow>
+                ) : enquiry.items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="text-sm">{item.itemName}</TableCell>
+                    <TableCell className="text-sm">
+                      <div className="font-medium">{item.itemName}</div>
+                      {item.supplierName && (
+                        <div className="text-xs text-muted-foreground">{item.supplierName}</div>
+                      )}
+                      {item.masterItemId && (
+                        <div className="text-xs text-muted-foreground">Master Item</div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm">{item.quantity}</TableCell>
                     <TableCell className="text-sm">
                       {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}

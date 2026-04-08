@@ -49,4 +49,16 @@ export const queryKeys = {
       ["enquiries", "list", params ?? {}] as const,
     detail: (id: string) => ["enquiries", "detail", id] as const,
   },
+  rfqs: {
+    list: (params?: Record<string, unknown>) =>
+      ["rfqs", "list", params ?? {}] as const,
+    detail: (id: string) => ["rfqs", "detail", id] as const,
+    enquiryItems: (enquiryId: string, supplierId?: string) =>
+      ["rfqs", "enquiry-items", enquiryId, supplierId ?? ""] as const,
+  },
+  quotations: {
+    list: (params?: Record<string, unknown>) =>
+      ["quotations", "list", params ?? {}] as const,
+    detail: (id: string) => ["quotations", "detail", id] as const,
+  },
 };

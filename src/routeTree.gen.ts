@@ -14,6 +14,8 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
+import { Route as AppRfqsRouteImport } from './routes/_app.rfqs'
+import { Route as AppQuotationsRouteImport } from './routes/_app.quotations'
 import { Route as AppMyItemsRouteImport } from './routes/_app.my-items'
 import { Route as AppMyDimensionsRouteImport } from './routes/_app.my-dimensions'
 import { Route as AppItemMappingRouteImport } from './routes/_app.item-mapping'
@@ -21,6 +23,9 @@ import { Route as AppEnquiriesRouteImport } from './routes/_app.enquiries'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app.suppliers.$id'
+import { Route as AppRfqsNewRouteImport } from './routes/_app.rfqs.new'
+import { Route as AppRfqsIdRouteImport } from './routes/_app.rfqs.$id'
+import { Route as AppQuotationsIdRouteImport } from './routes/_app.quotations.$id'
 import { Route as AppMyItemsIdRouteImport } from './routes/_app.my-items.$id'
 import { Route as AppEnquiriesIdRouteImport } from './routes/_app.enquiries.$id'
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
@@ -49,6 +54,16 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRfqsRoute = AppRfqsRouteImport.update({
+  id: '/rfqs',
+  path: '/rfqs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuotationsRoute = AppQuotationsRouteImport.update({
+  id: '/quotations',
+  path: '/quotations',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyItemsRoute = AppMyItemsRouteImport.update({
@@ -85,6 +100,21 @@ const AppSuppliersIdRoute = AppSuppliersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppSuppliersRoute,
+} as any)
+const AppRfqsNewRoute = AppRfqsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppRfqsRoute,
+} as any)
+const AppRfqsIdRoute = AppRfqsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppRfqsRoute,
+} as any)
+const AppQuotationsIdRoute = AppQuotationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppQuotationsRoute,
 } as any)
 const AppMyItemsIdRoute = AppMyItemsIdRouteImport.update({
   id: '/$id',
@@ -125,6 +155,8 @@ export interface FileRoutesByFullPath {
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
+  '/quotations': typeof AppQuotationsRouteWithChildren
+  '/rfqs': typeof AppRfqsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
@@ -132,6 +164,9 @@ export interface FileRoutesByFullPath {
   '/customers/$id': typeof AppCustomersIdRoute
   '/enquiries/$id': typeof AppEnquiriesIdRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
+  '/quotations/$id': typeof AppQuotationsIdRoute
+  '/rfqs/$id': typeof AppRfqsIdRoute
+  '/rfqs/new': typeof AppRfqsNewRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/catalog/items/$id': typeof AppCatalogItemsIdRoute
 }
@@ -143,6 +178,8 @@ export interface FileRoutesByTo {
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
+  '/quotations': typeof AppQuotationsRouteWithChildren
+  '/rfqs': typeof AppRfqsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
@@ -150,6 +187,9 @@ export interface FileRoutesByTo {
   '/customers/$id': typeof AppCustomersIdRoute
   '/enquiries/$id': typeof AppEnquiriesIdRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
+  '/quotations/$id': typeof AppQuotationsIdRoute
+  '/rfqs/$id': typeof AppRfqsIdRoute
+  '/rfqs/new': typeof AppRfqsNewRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/catalog/items/$id': typeof AppCatalogItemsIdRoute
 }
@@ -164,6 +204,8 @@ export interface FileRoutesById {
   '/_app/item-mapping': typeof AppItemMappingRoute
   '/_app/my-dimensions': typeof AppMyDimensionsRoute
   '/_app/my-items': typeof AppMyItemsRouteWithChildren
+  '/_app/quotations': typeof AppQuotationsRouteWithChildren
+  '/_app/rfqs': typeof AppRfqsRouteWithChildren
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_app/catalog/categories': typeof AppCatalogCategoriesRoute
@@ -171,6 +213,9 @@ export interface FileRoutesById {
   '/_app/customers/$id': typeof AppCustomersIdRoute
   '/_app/enquiries/$id': typeof AppEnquiriesIdRoute
   '/_app/my-items/$id': typeof AppMyItemsIdRoute
+  '/_app/quotations/$id': typeof AppQuotationsIdRoute
+  '/_app/rfqs/$id': typeof AppRfqsIdRoute
+  '/_app/rfqs/new': typeof AppRfqsNewRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
   '/_app/catalog/items/$id': typeof AppCatalogItemsIdRoute
 }
@@ -184,6 +229,8 @@ export interface FileRouteTypes {
     | '/item-mapping'
     | '/my-dimensions'
     | '/my-items'
+    | '/quotations'
+    | '/rfqs'
     | '/suppliers'
     | '/login'
     | '/catalog/categories'
@@ -191,6 +238,9 @@ export interface FileRouteTypes {
     | '/customers/$id'
     | '/enquiries/$id'
     | '/my-items/$id'
+    | '/quotations/$id'
+    | '/rfqs/$id'
+    | '/rfqs/new'
     | '/suppliers/$id'
     | '/catalog/items/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -202,6 +252,8 @@ export interface FileRouteTypes {
     | '/item-mapping'
     | '/my-dimensions'
     | '/my-items'
+    | '/quotations'
+    | '/rfqs'
     | '/suppliers'
     | '/login'
     | '/catalog/categories'
@@ -209,6 +261,9 @@ export interface FileRouteTypes {
     | '/customers/$id'
     | '/enquiries/$id'
     | '/my-items/$id'
+    | '/quotations/$id'
+    | '/rfqs/$id'
+    | '/rfqs/new'
     | '/suppliers/$id'
     | '/catalog/items/$id'
   id:
@@ -222,6 +277,8 @@ export interface FileRouteTypes {
     | '/_app/item-mapping'
     | '/_app/my-dimensions'
     | '/_app/my-items'
+    | '/_app/quotations'
+    | '/_app/rfqs'
     | '/_app/suppliers'
     | '/_auth/login'
     | '/_app/catalog/categories'
@@ -229,6 +286,9 @@ export interface FileRouteTypes {
     | '/_app/customers/$id'
     | '/_app/enquiries/$id'
     | '/_app/my-items/$id'
+    | '/_app/quotations/$id'
+    | '/_app/rfqs/$id'
+    | '/_app/rfqs/new'
     | '/_app/suppliers/$id'
     | '/_app/catalog/items/$id'
   fileRoutesById: FileRoutesById
@@ -274,6 +334,20 @@ declare module '@tanstack/react-router' {
       path: '/suppliers'
       fullPath: '/suppliers'
       preLoaderRoute: typeof AppSuppliersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/rfqs': {
+      id: '/_app/rfqs'
+      path: '/rfqs'
+      fullPath: '/rfqs'
+      preLoaderRoute: typeof AppRfqsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quotations': {
+      id: '/_app/quotations'
+      path: '/quotations'
+      fullPath: '/quotations'
+      preLoaderRoute: typeof AppQuotationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-items': {
@@ -324,6 +398,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/suppliers/$id'
       preLoaderRoute: typeof AppSuppliersIdRouteImport
       parentRoute: typeof AppSuppliersRoute
+    }
+    '/_app/rfqs/new': {
+      id: '/_app/rfqs/new'
+      path: '/new'
+      fullPath: '/rfqs/new'
+      preLoaderRoute: typeof AppRfqsNewRouteImport
+      parentRoute: typeof AppRfqsRoute
+    }
+    '/_app/rfqs/$id': {
+      id: '/_app/rfqs/$id'
+      path: '/$id'
+      fullPath: '/rfqs/$id'
+      preLoaderRoute: typeof AppRfqsIdRouteImport
+      parentRoute: typeof AppRfqsRoute
+    }
+    '/_app/quotations/$id': {
+      id: '/_app/quotations/$id'
+      path: '/$id'
+      fullPath: '/quotations/$id'
+      preLoaderRoute: typeof AppQuotationsIdRouteImport
+      parentRoute: typeof AppQuotationsRoute
     }
     '/_app/my-items/$id': {
       id: '/_app/my-items/$id'
@@ -406,6 +501,31 @@ const AppMyItemsRouteWithChildren = AppMyItemsRoute._addFileChildren(
   AppMyItemsRouteChildren,
 )
 
+interface AppQuotationsRouteChildren {
+  AppQuotationsIdRoute: typeof AppQuotationsIdRoute
+}
+
+const AppQuotationsRouteChildren: AppQuotationsRouteChildren = {
+  AppQuotationsIdRoute: AppQuotationsIdRoute,
+}
+
+const AppQuotationsRouteWithChildren = AppQuotationsRoute._addFileChildren(
+  AppQuotationsRouteChildren,
+)
+
+interface AppRfqsRouteChildren {
+  AppRfqsIdRoute: typeof AppRfqsIdRoute
+  AppRfqsNewRoute: typeof AppRfqsNewRoute
+}
+
+const AppRfqsRouteChildren: AppRfqsRouteChildren = {
+  AppRfqsIdRoute: AppRfqsIdRoute,
+  AppRfqsNewRoute: AppRfqsNewRoute,
+}
+
+const AppRfqsRouteWithChildren =
+  AppRfqsRoute._addFileChildren(AppRfqsRouteChildren)
+
 interface AppSuppliersRouteChildren {
   AppSuppliersIdRoute: typeof AppSuppliersIdRoute
 }
@@ -437,6 +557,8 @@ interface AppRouteChildren {
   AppItemMappingRoute: typeof AppItemMappingRoute
   AppMyDimensionsRoute: typeof AppMyDimensionsRoute
   AppMyItemsRoute: typeof AppMyItemsRouteWithChildren
+  AppQuotationsRoute: typeof AppQuotationsRouteWithChildren
+  AppRfqsRoute: typeof AppRfqsRouteWithChildren
   AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
   AppCatalogItemsRoute: typeof AppCatalogItemsRouteWithChildren
@@ -449,6 +571,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppItemMappingRoute: AppItemMappingRoute,
   AppMyDimensionsRoute: AppMyDimensionsRoute,
   AppMyItemsRoute: AppMyItemsRouteWithChildren,
+  AppQuotationsRoute: AppQuotationsRouteWithChildren,
+  AppRfqsRoute: AppRfqsRouteWithChildren,
   AppSuppliersRoute: AppSuppliersRouteWithChildren,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,
   AppCatalogItemsRoute: AppCatalogItemsRouteWithChildren,

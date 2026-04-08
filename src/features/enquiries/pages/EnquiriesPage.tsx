@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useChildMatches, Outlet } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ColumnDef } from '@tanstack/react-table'
 import { enquiryApi, type EnquirySummaryDto } from '@/features/enquiries/api/enquiryApi'
-import { itemApi } from '@/features/catalog/api/itemApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { DataTable } from '@/components/DataTable'
 import { PageHeader } from '@/components/PageHeader'
@@ -31,7 +30,7 @@ const enquiryLineSchema = z.object({
 const enquiryFormSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   notes: z.string().optional(),
-  items: z.array(enquiryLineSchema).min(1, 'At least one item is required'),
+  items: z.array(enquiryLineSchema),
 })
 
 type EnquiryForm = z.infer<typeof enquiryFormSchema>
@@ -44,6 +43,7 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
 
 export function EnquiriesPage() {
   const navigate = useNavigate()
+  const childMatches = useChildMatches()
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -57,8 +57,8 @@ export function EnquiriesPage() {
   })
 
   const { data: availableItems = [] } = useQuery({
-    queryKey: queryKeys.catalog.items(),
-    queryFn: () => itemApi.list({ pageSize: 1000 }).then((r) => r.data || []),
+    queryKey: ['enquiries', 'available-items'],
+    queryFn: () => enquiryApi.availableItems(),
   })
 
   const { control, register, handleSubmit, reset, formState: { errors } } = useForm<EnquiryForm>({
@@ -66,7 +66,7 @@ export function EnquiriesPage() {
     defaultValues: {
       title: '',
       notes: '',
-      items: [{ itemId: '', quantity: 1, notes: undefined }],
+      items: [],
     },
   })
 
@@ -80,11 +80,15 @@ export function EnquiriesPage() {
       enquiryApi.create({
         title: data.title,
         notes: data.notes || undefined,
-        items: data.items.map((item) => ({
-          itemId: item.itemId,
-          quantity: item.quantity,
-          notes: item.notes || undefined,
-        })),
+        items: data.items.map((item) => {
+          const found = availableItems.find((a) => a.id === item.itemId)
+          return {
+            masterItemId: found?.type === 'Master' ? item.itemId : undefined,
+            supplierItemId: found?.type === 'Supplier' ? item.itemId : undefined,
+            quantity: item.quantity,
+            notes: item.notes || undefined,
+          }
+        }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.enquiries.list() })
@@ -108,6 +112,8 @@ export function EnquiriesPage() {
       setClosing(undefined)
     },
   })
+
+  if (childMatches.length > 0) return <Outlet />
 
   const columns: ColumnDef<EnquirySummaryDto>[] = [
     { accessorKey: 'title', header: 'Title' },
@@ -238,10 +244,7 @@ export function EnquiriesPage() {
             </div>
 
             <div className="space-y-3">
-              <Label>Line Items</Label>
-              {errors.items && (
-                <p className="text-xs text-destructive">{errors.items.message}</p>
-              )}
+              <Label>Line Items (optional)</Label>
 
               {fields.map((field, index) => (
                 <div key={field.id} className="flex gap-2 items-end">
@@ -251,14 +254,20 @@ export function EnquiriesPage() {
                       control={control}
                       name={`items.${index}.itemId`}
                       render={({ field }) => (
-                        <Select value={field.value || ''} onValueChange={field.onChange}>
+                        <Select value={field.value || '__none__'} onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select item" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="__none__" disabled>Select item</SelectItem>
                             {availableItems.map((item) => (
                               <SelectItem key={item.id} value={item.id}>
                                 {item.name}
+                                {item.type === 'Supplier' && item.supplierName
+                                  ? ` — ${item.supplierName}`
+                                  : item.type === 'Master'
+                                  ? ' (Master)'
+                                  : ''}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -300,30 +309,27 @@ export function EnquiriesPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => remove(index)}
-                    disabled={fields.length === 1}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
 
-              {fields.length < availableItems.length && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => append({ itemId: '', quantity: 1, notes: undefined })}
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Add Item
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ itemId: '', quantity: 1, notes: undefined })}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Item
+              </Button>
             </div>
 
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setDialogOpen(false)}
+                onClick={() => { setDialogOpen(false); reset() }}
               >
                 Cancel
               </Button>

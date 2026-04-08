@@ -115,11 +115,11 @@ export function ItemDetailPage() {
     queryFn: () => api.get('/my/dimensions').then((r) => r.data),
   })
 
-  // Fetch supplier items linked to this catalog item
+  // Fetch supplier items linked to this catalog item (admin-accessible browse endpoint)
   const { data: linkedSupplierItems = [] } = useQuery<SupplierItem[]>({
-    queryKey: queryKeys.supplierItems.list({ itemId: id }),
+    queryKey: queryKeys.supplierItems.browse({ masterItemId: id }),
     queryFn: () =>
-      api.get<{ data: SupplierItem[] }>('/my/supplier-items', { params: { itemId: id, pageSize: 1000 } })
+      api.get<{ data: SupplierItem[] }>('/supplier-items/browse', { params: { masterItemId: id, pageSize: 1000 } })
         .then((r) => r.data.data || []),
   })
 

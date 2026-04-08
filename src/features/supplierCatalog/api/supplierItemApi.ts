@@ -23,6 +23,7 @@ export interface SupplierItemSummaryDto {
   batchSize: number
   leadTimeDays: number
   itemId: string | null
+  masterItemName: string | null
   categoryId: string | null
   categoryName: string | null
   createdAt: string

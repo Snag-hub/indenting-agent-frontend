@@ -58,7 +58,7 @@ export function ItemMappingPage() {
       id: 'masterItem',
       header: 'Master Item',
       cell: ({ row }) => {
-        const item = row.original as SupplierItemSummaryDto & { masterItemName?: string }
+        const item = row.original
         return item.masterItemName ? (
           <Badge variant="secondary" className="bg-green-50 text-green-700">{item.masterItemName}</Badge>
         ) : (
@@ -70,10 +70,10 @@ export function ItemMappingPage() {
       id: 'actions',
       header: '',
       cell: ({ row }) => {
-        const item = row.original as SupplierItemSummaryDto & { masterItemId?: string }
+        const item = row.original
         return (
           <div className="flex items-center gap-2 justify-end">
-            {item.masterItemId ? (
+            {item.itemId ? (
               <Button size="sm" variant="outline" onClick={() => setUnlinking(row.original)}>
                 <Link2Off className="mr-1 h-4 w-4" /> Unlink
               </Button>

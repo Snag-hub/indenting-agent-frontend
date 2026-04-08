@@ -37,6 +37,7 @@ const customerNav: NavItem[] = [
 
 const supplierNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Enquiries', to: '/enquiries', icon: <FileText size={18} /> },
   { label: 'Items', to: '/my-items', icon: <Package size={18} /> },
   { label: 'Dimensions', to: '/my-dimensions', icon: <Tags size={18} /> },
   { label: 'Quotations', to: '/quotations', icon: <ClipboardList size={18} /> },
