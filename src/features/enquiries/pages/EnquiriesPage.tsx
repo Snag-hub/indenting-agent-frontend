@@ -266,8 +266,8 @@ export function EnquiriesPage() {
                                 {item.type === 'Supplier' && item.supplierName
                                   ? ` — ${item.supplierName}`
                                   : item.type === 'Master'
-                                  ? ' (Master)'
-                                  : ''}
+                                    ? ' (Master)'
+                                    : ''}
                               </SelectItem>
                             ))}
                           </SelectContent>

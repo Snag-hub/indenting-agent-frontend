@@ -457,7 +457,7 @@ export function CreateRFQPage() {
         </CardContent>
       </Card>
 
-          {itemFields.filter((f) => f.checked).length > 0 && (
+      {itemFields.filter((f) => f.checked).length > 0 && (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

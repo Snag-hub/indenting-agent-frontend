@@ -1,11 +1,11 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types/api";
 
-export type EnquiryType = 'General' | 'ItemSpecific'
+export type EnquiryType = "General" | "ItemSpecific";
 
 export interface EnquiryItemVariantInput {
-  supplierItemVariantId: string
-  quantity: number
+  supplierItemVariantId: string;
+  quantity: number;
 }
 
 export interface EnquiryItemInput {
@@ -13,7 +13,7 @@ export interface EnquiryItemInput {
   supplierItemId?: string;
   quantity: number;
   notes?: string;
-  variants?: EnquiryItemVariantInput[]
+  variants?: EnquiryItemVariantInput[];
 }
 
 export interface EnquiryItemDto {
@@ -25,12 +25,12 @@ export interface EnquiryItemDto {
   quantity: number;
   notes?: string;
   variants: {
-    id: string
-    supplierItemVariantId: string
-    dimensionSummary: string
-    sku?: string
-    quantity: number
-  }[]
+    id: string;
+    supplierItemVariantId: string;
+    dimensionSummary: string;
+    sku?: string;
+    quantity: number;
+  }[];
 }
 
 export interface EnquirySummaryDto {
@@ -58,8 +58,8 @@ export interface AvailableEnquiryItemDto {
   resolvedName: string;
   originalName?: string;
   supplierName?: string;
-  hasVariants: boolean
-  customerItemId?: string
+  hasVariants: boolean;
+  customerItemId?: string;
 }
 
 export const enquiryApi = {
@@ -87,10 +87,12 @@ export const enquiryApi = {
   submit: (id: string) =>
     api.post(`/enquiries/${id}/submit`).then((r) => r.data),
 
-  close: (id: string) =>
-    api.post(`/enquiries/${id}/close`).then((r) => r.data),
+  close: (id: string) => api.post(`/enquiries/${id}/close`).then((r) => r.data),
 
-  availableItems: (params?: { search?: string; supplierId?: string }): Promise<AvailableEnquiryItemDto[]> =>
+  availableItems: (params?: {
+    search?: string;
+    supplierId?: string;
+  }): Promise<AvailableEnquiryItemDto[]> =>
     api
       .get<AvailableEnquiryItemDto[]>("/enquiries/available-items", { params })
       .then((r) => r.data),
