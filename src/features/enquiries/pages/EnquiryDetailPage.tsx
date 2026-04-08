@@ -160,23 +160,44 @@ export function EnquiryDetailPage() {
                       No line items specified.
                     </TableCell>
                   </TableRow>
-                ) : enquiry.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-sm">
-                      <div className="font-medium">{item.itemName}</div>
-                      {item.supplierName && (
-                        <div className="text-xs text-muted-foreground">{item.supplierName}</div>
-                      )}
-                      {item.masterItemId && (
-                        <div className="text-xs text-muted-foreground">Master Item</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">{item.quantity}</TableCell>
-                    <TableCell className="text-sm">
-                      {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                ) : enquiry.items.flatMap((item) => {
+                  // Create parent row
+                  const rows: React.ReactNode[] = [
+                    <TableRow key={item.id}>
+                      <TableCell className="text-sm">
+                        <div className="font-medium">{item.itemName}</div>
+                        {item.supplierName && (
+                          <div className="text-xs text-muted-foreground">{item.supplierName}</div>
+                        )}
+                        {item.masterItemId && (
+                          <div className="text-xs text-muted-foreground">Master Item</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{item.quantity}</TableCell>
+                      <TableCell className="text-sm">
+                        {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>,
+                  ]
+
+                  // Add variant sub-rows if variants exist
+                  if (item.variants && item.variants.length > 0) {
+                    item.variants.forEach((variant) => {
+                      rows.push(
+                        <TableRow key={`${item.id}-variant-${variant.id}`} className="bg-slate-50">
+                          <TableCell className="text-xs pl-8">
+                            <div className="font-medium text-slate-700">Variant: {variant.dimensionSummary}</div>
+                            {variant.sku && <div className="text-muted-foreground">SKU: {variant.sku}</div>}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-700">{variant.quantity}</TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      )
+                    })
+                  }
+
+                  return rows
+                })}
               </TableBody>
             </Table>
           </div>
