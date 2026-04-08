@@ -262,7 +262,7 @@ export function EnquiriesPage() {
                             <SelectItem value="__none__" disabled>Select item</SelectItem>
                             {availableItems.map((item) => (
                               <SelectItem key={item.id} value={item.id}>
-                                {item.name}
+                                {item.resolvedName}
                                 {item.type === 'Supplier' && item.supplierName
                                   ? ` — ${item.supplierName}`
                                   : item.type === 'Master'

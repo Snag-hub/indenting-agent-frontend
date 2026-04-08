@@ -1,11 +1,19 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types/api";
 
+export type EnquiryType = 'General' | 'ItemSpecific'
+
+export interface EnquiryItemVariantInput {
+  supplierItemVariantId: string
+  quantity: number
+}
+
 export interface EnquiryItemInput {
   masterItemId?: string;
   supplierItemId?: string;
   quantity: number;
   notes?: string;
+  variants?: EnquiryItemVariantInput[]
 }
 
 export interface EnquiryItemDto {
@@ -16,6 +24,13 @@ export interface EnquiryItemDto {
   supplierName?: string;
   quantity: number;
   notes?: string;
+  variants: {
+    id: string
+    supplierItemVariantId: string
+    dimensionSummary: string
+    sku?: string
+    quantity: number
+  }[]
 }
 
 export interface EnquirySummaryDto {
@@ -40,8 +55,11 @@ export interface EnquiryDetailDto {
 export interface AvailableEnquiryItemDto {
   id: string;
   type: "Master" | "Supplier";
-  name: string;
+  resolvedName: string;
+  originalName?: string;
   supplierName?: string;
+  hasVariants: boolean
+  customerItemId?: string
 }
 
 export const enquiryApi = {
@@ -56,9 +74,11 @@ export const enquiryApi = {
       .then((r) => r.data),
 
   create: (data: {
+    enquiryType?: EnquiryType;
+    supplierId?: string;
     title: string;
     notes?: string;
-    items: EnquiryItemInput[];
+    items?: EnquiryItemInput[];
   }) => api.post<string>("/enquiries", data).then((r) => r.data),
 
   get: (id: string): Promise<EnquiryDetailDto> =>
@@ -70,10 +90,8 @@ export const enquiryApi = {
   close: (id: string) =>
     api.post(`/enquiries/${id}/close`).then((r) => r.data),
 
-  availableItems: (search?: string): Promise<AvailableEnquiryItemDto[]> =>
+  availableItems: (params?: { search?: string; supplierId?: string }): Promise<AvailableEnquiryItemDto[]> =>
     api
-      .get<AvailableEnquiryItemDto[]>("/enquiries/available-items", {
-        params: search ? { search } : undefined,
-      })
+      .get<AvailableEnquiryItemDto[]>("/enquiries/available-items", { params })
       .then((r) => r.data),
 };
