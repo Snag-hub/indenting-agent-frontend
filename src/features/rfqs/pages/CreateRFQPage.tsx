@@ -9,6 +9,7 @@ import { enquiryApi } from '@/features/enquiries/api/enquiryApi'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
 import { queryKeys } from '@/lib/queryKeys'
+import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
 import { MultiStepForm } from '@/components/MultiStepForm'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -18,14 +19,23 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { Checkbox } from '@/components/ui/checkbox'
 
 // Zod schema
+const rfqItemVariantSchema = z.object({
+  supplierItemVariantId: z.string(),
+  quantity: z.number().min(1),
+})
+
 const rfqItemSchema = z.object({
   supplierItemId: z.string().min(1, 'Item ID required'),
+  itemName: z.string().optional(),
+  hasVariants: z.boolean().optional(),
   quantity: z.number().min(1, 'Quantity must be at least 1'),
+  variants: z.array(rfqItemVariantSchema).optional(),
   notes: z.string().optional(),
   checked: z.boolean(),
 })
@@ -47,6 +57,8 @@ export function CreateRFQPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [itemSearch, setItemSearch] = useState('')
   const [selectedEnquiryId, setSelectedEnquiryId] = useState<string | undefined>()
+  const [variantDialogOpen, setVariantDialogOpen] = useState(false)
+  const [selectedItemForVariant, setSelectedItemForVariant] = useState<{ id: string; name: string } | undefined>()
 
   const { control, register, watch, setValue, formState: { errors } } = useForm<CreateRFQForm>({
     resolver: zodResolver(createRFQSchema),
@@ -155,12 +167,41 @@ export function CreateRFQPage() {
   const handleAddSupplierItem = (itemId: string) => {
     const item = supplierItemsResult?.data?.find((i) => i.id === itemId)
     if (item) {
+      // Check if item has variants
+      const supplierItem = supplierItemsResult?.data?.find((i) => i.id === itemId)
+      if (supplierItem) {
+        // For now, add directly with quantity 1 and check variants separately
+        appendItem({
+          supplierItemId: item.id,
+          itemName: item.name,
+          hasVariants: false,
+          quantity: 1,
+          variants: undefined,
+          notes: '',
+          checked: true,
+        })
+        setItemSearch('')
+      }
+    }
+  }
+
+  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number }>) => {
+    if (selectedItemForVariant) {
+      const totalQty = variants.reduce((sum, v) => sum + v.quantity, 0)
       appendItem({
-        supplierItemId: item.id,
-        quantity: 1,
+        supplierItemId: selectedItemForVariant.id,
+        itemName: selectedItemForVariant.name,
+        hasVariants: true,
+        quantity: totalQty,
+        variants: variants.map(v => ({
+          supplierItemVariantId: v.variantId,
+          quantity: v.quantity,
+        })),
         notes: '',
         checked: true,
       })
+      setVariantDialogOpen(false)
+      setSelectedItemForVariant(undefined)
       setItemSearch('')
     }
   }
@@ -416,7 +457,7 @@ export function CreateRFQPage() {
         </CardContent>
       </Card>
 
-      {itemFields.filter((f) => f.checked).length > 0 && (
+          {itemFields.filter((f) => f.checked).length > 0 && (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -429,19 +470,47 @@ export function CreateRFQPage() {
             <TableBody>
               {itemFields
                 .filter((f) => f.checked)
-                .map((field) => (
-                  <TableRow key={field.id}>
-                    <TableCell className="text-sm">
-                      {enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)?.itemName ||
-                        supplierItemsResult?.data?.find((i) => i.id === field.supplierItemId)?.name ||
-                        field.supplierItemId}
-                    </TableCell>
-                    <TableCell className="text-sm">{field.quantity}</TableCell>
-                    <TableCell className="text-sm">
-                      {field.notes || <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                .flatMap((field) => {
+                  const itemName =
+                    enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)?.itemName ||
+                    supplierItemsResult?.data?.find((i) => i.id === field.supplierItemId)?.name ||
+                    field.itemName ||
+                    field.supplierItemId
+
+                  const rows: React.ReactNode[] = [
+                    <TableRow key={field.id}>
+                      <TableCell className="text-sm font-medium">{itemName}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {field.quantity}
+                        {field.hasVariants && field.variants && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {field.variants.length} variant(s)
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {field.notes || <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>,
+                  ]
+
+                  // Add variant sub-rows if exists
+                  if (field.hasVariants && field.variants && field.variants.length > 0) {
+                    field.variants.forEach((variant) => {
+                      rows.push(
+                        <TableRow key={`${field.id}-variant-${variant.supplierItemVariantId}`} className="bg-slate-50">
+                          <TableCell className="text-xs pl-8 text-slate-600">
+                            Variant Detail
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">{variant.quantity}</TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      )
+                    })
+                  }
+
+                  return rows
+                })}
             </TableBody>
           </Table>
         </div>
@@ -507,6 +576,17 @@ export function CreateRFQPage() {
         {currentStep === 1 && Step2}
         {currentStep === 2 && Step3}
       </MultiStepForm>
+
+      {/* Variant Selection Dialog */}
+      {selectedItemForVariant && (
+        <VariantQuantityDialog
+          open={variantDialogOpen}
+          onOpenChange={setVariantDialogOpen}
+          supplierItemId={selectedItemForVariant.id}
+          supplierItemName={selectedItemForVariant.name}
+          onConfirm={handleVariantConfirm}
+        />
+      )}
     </div>
   )
 }
