@@ -27,6 +27,7 @@ const adminNav: NavItem[] = [
 const customerNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
   { label: 'Browse', to: '/browse', icon: <Package size={18} /> },
+  { label: 'My Items', to: '/my-items', icon: <Package size={18} /> },
   { label: 'Enquiries', to: '/enquiries', icon: <FileText size={18} /> },
   { label: 'RFQs', to: '/rfqs', icon: <ClipboardList size={18} /> },
   { label: 'Purchase Orders', to: '/purchase-orders', icon: <ShoppingCart size={18} /> },

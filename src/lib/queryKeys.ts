@@ -61,4 +61,9 @@ export const queryKeys = {
       ["quotations", "list", params ?? {}] as const,
     detail: (id: string) => ["quotations", "detail", id] as const,
   },
+  customerItems: {
+    list: (params?: Record<string, unknown>) =>
+      ["customerItems", "list", params ?? {}] as const,
+    detail: (id: string) => ["customerItems", "detail", id] as const,
+  },
 };
