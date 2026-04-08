@@ -331,29 +331,50 @@ export function RFQDetailPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rfq.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-sm">
-                        <div className="font-medium">{item.supplierItemName}</div>
-                        <div className="text-xs text-muted-foreground">{item.supplierName}</div>
-                      </TableCell>
-                      <TableCell className="text-sm">{item.quantity}</TableCell>
-                      <TableCell className="text-sm">
-                        {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      {rfq.status === 'Draft' && (
-                        <TableCell className="text-sm text-right">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setRemovingItemId(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  rfq.items.flatMap((item) => {
+                    const rows: React.ReactNode[] = [
+                      <TableRow key={item.id}>
+                        <TableCell className="text-sm">
+                          <div className="font-medium">{item.supplierItemName}</div>
+                          <div className="text-xs text-muted-foreground">{item.supplierName}</div>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))
+                        <TableCell className="text-sm font-medium">{item.quantity}</TableCell>
+                        <TableCell className="text-sm">
+                          {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        {rfq.status === 'Draft' && (
+                          <TableCell className="text-sm text-right">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setRemovingItemId(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>,
+                    ]
+
+                    // Add variant sub-rows if variants exist
+                    if ((item as any).variants && (item as any).variants.length > 0) {
+                      (item as any).variants.forEach((variant: any) => {
+                        rows.push(
+                          <TableRow key={`${item.id}-variant-${variant.id}`} className="bg-slate-50">
+                            <TableCell className="text-xs pl-8">
+                              <div className="font-medium text-slate-700">Variant: {variant.dimensionSummary}</div>
+                              {variant.sku && <div className="text-muted-foreground">SKU: {variant.sku}</div>}
+                            </TableCell>
+                            <TableCell className="text-xs text-slate-700">{variant.quantity}</TableCell>
+                            <TableCell></TableCell>
+                            {rfq.status === 'Draft' && <TableCell></TableCell>}
+                          </TableRow>
+                        )
+                      })
+                    }
+
+                    return rows
+                  })
                 )}
               </TableBody>
             </Table>
