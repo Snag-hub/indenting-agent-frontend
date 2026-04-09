@@ -60,6 +60,7 @@ export interface AvailableEnquiryItemDto {
   supplierName?: string;
   hasVariants: boolean;
   customerItemId?: string;
+  supplierItemId?: string;  // For Master type: the linked supplier item ID to use for variant loading; for Supplier type: same as id
 }
 
 export const enquiryApi = {
@@ -92,6 +93,7 @@ export const enquiryApi = {
   availableItems: (params?: {
     search?: string;
     supplierId?: string;
+    categoryId?: string;
   }): Promise<AvailableEnquiryItemDto[]> =>
     api
       .get<AvailableEnquiryItemDto[]>("/enquiries/available-items", { params })

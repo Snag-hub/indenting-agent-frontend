@@ -1,6 +1,15 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types/api";
 
+export interface QuotationItemVariantDto {
+  id: string;
+  supplierItemVariantId: string;
+  dimensionSummary: string;
+  sku?: string;
+  quantity: number;
+  unitPrice?: number;
+}
+
 export interface QuotationItemDto {
   id: string;
   supplierItemId: string;
@@ -9,6 +18,8 @@ export interface QuotationItemDto {
   unitPrice: number;
   totalPrice: number;
   notes?: string;
+  variants: QuotationItemVariantDto[];
+  variantPrices?: Record<string, number>;
 }
 
 export interface QuotationVersionDto {

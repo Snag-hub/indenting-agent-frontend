@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
 import {
   Dialog,
@@ -25,7 +25,9 @@ interface VariantQuantityDialogProps {
   onOpenChange: (open: boolean) => void
   supplierItemId: string
   supplierItemName: string
-  onConfirm: (variants: Array<{ variantId: string; quantity: number }>) => void
+  initialQuantities?: Record<string, number>
+  maxTotal?: number   // optional cap: sum of all variant quantities must not exceed this
+  onConfirm: (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => void
 }
 
 export function VariantQuantityDialog({
@@ -33,15 +35,23 @@ export function VariantQuantityDialog({
   onOpenChange,
   supplierItemId,
   supplierItemName,
+  initialQuantities,
+  maxTotal,
   onConfirm,
 }: VariantQuantityDialogProps) {
-  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [quantities, setQuantities] = useState<Record<string, number>>(initialQuantities ?? {})
 
-  const { data: itemDetail, isLoading } = useQuery({
-    queryKey: ['supplier-items', supplierItemId],
-    queryFn: () => supplierItemApi.get(supplierItemId),
-    enabled: open,
+  const { data: variants = [], isLoading } = useQuery({
+    queryKey: ['supplier-item-variants', supplierItemId],
+    queryFn: () => supplierItemApi.getVariants(supplierItemId),
+    enabled: open && !!supplierItemId,
   })
+
+  // Sync initial quantities each time the dialog opens
+  useEffect(() => {
+    if (open) setQuantities(initialQuantities ?? {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const handleQuantityChange = (variantId: string, qty: number) => {
     setQuantities((prev) => ({
@@ -51,13 +61,16 @@ export function VariantQuantityDialog({
   }
 
   const totalQuantity = Object.values(quantities).reduce((sum, q) => sum + q, 0)
+  const remaining = maxTotal !== undefined ? maxTotal - totalQuantity : undefined
 
   const handleConfirm = () => {
-    const selected = (itemDetail?.variants ?? [])
+    const selected = variants
       .filter((v) => (quantities[v.id] ?? 0) > 0)
       .map((v) => ({
         variantId: v.id,
         quantity: quantities[v.id] ?? 0,
+        dimensionSummary: v.dimensionSummary,
+        sku: v.sku,
       }))
 
     if (selected.length > 0) {
@@ -91,7 +104,7 @@ export function VariantQuantityDialog({
           </div>
         ) : (
           <div>
-            {!itemDetail?.variants || itemDetail.variants.length === 0 ? (
+            {variants.length === 0 ? (
               <p className="text-slate-600 py-4">No variants available for this item.</p>
             ) : (
               <div className="rounded-md border border-slate-200">
@@ -104,41 +117,47 @@ export function VariantQuantityDialog({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {itemDetail.variants.map((variant) => {
-                      const dimensionSummary = variant.values
-                        .map((v) => `${v.value}`)
-                        .join(', ')
-
-                      return (
-                        <TableRow key={variant.id}>
-                          <TableCell className="font-medium">
-                            {dimensionSummary || '—'}
-                          </TableCell>
-                          <TableCell className="text-slate-600">
-                            {variant.sku || '—'}
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={quantities[variant.id] ?? 0}
-                              onChange={(e) =>
-                                handleQuantityChange(
-                                  variant.id,
-                                  parseInt(e.target.value, 10) || 0
-                                )
-                              }
-                              className="w-20"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
+                    {variants.map((variant) => (
+                      <TableRow key={variant.id}>
+                        <TableCell className="font-medium">
+                          {variant.dimensionSummary || '—'}
+                        </TableCell>
+                        <TableCell className="text-slate-600">
+                          {variant.sku || '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            max={
+                              maxTotal !== undefined
+                                ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
+                                : undefined
+                            }
+                            value={quantities[variant.id] ?? 0}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10) || 0
+                              const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
+                              const capped = maxTotal !== undefined
+                                ? Math.min(val, Math.max(0, maxTotal - otherTotal))
+                                : val
+                              handleQuantityChange(variant.id, capped)
+                            }}
+                            className="w-20"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
 
-                <div className="px-4 py-3 border-t border-slate-200 bg-slate-50 text-sm font-medium text-slate-700">
-                  Total Quantity: <span className="text-slate-900">{totalQuantity}</span>
+                <div className="px-4 py-3 border-t border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 flex justify-between">
+                  <span>Total: <span className="text-slate-900">{totalQuantity}</span></span>
+                  {maxTotal !== undefined && (
+                    <span className={remaining! < 0 ? 'text-red-600' : 'text-slate-600'}>
+                      Max: {maxTotal} — Remaining: {remaining}
+                    </span>
+                  )}
                 </div>
               </div>
             )}

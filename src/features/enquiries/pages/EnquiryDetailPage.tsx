@@ -59,9 +59,6 @@ export function EnquiryDetailPage() {
           {row.original.supplierName && (
             <div className="text-xs text-muted-foreground">{row.original.supplierName}</div>
           )}
-          {row.original.masterItemId && (
-            <div className="text-xs text-muted-foreground">Master Item</div>
-          )}
         </div>
       ),
     },
@@ -168,9 +165,6 @@ export function EnquiryDetailPage() {
                         <div className="font-medium">{item.itemName}</div>
                         {item.supplierName && (
                           <div className="text-xs text-muted-foreground">{item.supplierName}</div>
-                        )}
-                        {item.masterItemId && (
-                          <div className="text-xs text-muted-foreground">Master Item</div>
                         )}
                       </TableCell>
                       <TableCell className="text-sm font-medium">{item.quantity}</TableCell>

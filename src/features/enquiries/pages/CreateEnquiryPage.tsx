@@ -16,17 +16,20 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { MultiStepForm } from '@/components/MultiStepForm'
 import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
-import { enquiryApi, type EnquiryItemVariantInput } from '../api/enquiryApi'
+import { enquiryApi } from '../api/enquiryApi'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { useAuthStore } from '@/stores/authStore'
 
 const enquiryItemVariantSchema = z.object({
   supplierItemVariantId: z.string(),
   quantity: z.number().positive(),
+  dimensionSummary: z.string().optional(),
+  sku: z.string().nullable().optional(),
 })
 
 const enquiryItemSchema = z.object({
   supplierItemId: z.string(),
+  availableItemId: z.string(), // tracks which dropdown option is selected (for display)
   quantity: z.number().positive('Quantity must be greater than 0'),
   notes: z.string().optional(),
   variants: z.array(enquiryItemVariantSchema).optional(),
@@ -51,6 +54,7 @@ export function CreateEnquiryPage() {
   const [variantDialogOpen, setVariantDialogOpen] = useState(false)
   const [selectedItemForVariants, setSelectedItemForVariants] = useState<{
     index: number
+    availableItemId: string
     supplierItemId: string
     itemName: string
   } | null>(null)
@@ -93,23 +97,19 @@ export function CreateEnquiryPage() {
   const createMutation = useMutation({
     mutationFn: (data: CreateEnquiryFormData) => enquiryApi.create(data),
     onSuccess: (enquiryId) => {
-      navigate({ to: `/enquiries/${enquiryId}` })
+      navigate({ to: '/enquiries/$id', params: { id: enquiryId } })
     },
   })
 
   // Determine which steps to show based on enquiry type
-  const allSteps = [
-    { title: 'Details', description: 'Enquiry type and basic information' },
-    { title: 'Supplier', description: 'Select a supplier' },
-    { title: 'Items', description: 'Add items to the enquiry' },
-    { title: 'Review', description: 'Review and submit' },
-  ]
-
   const visibleSteps = useMemo(() => {
-    if (enquiryType === 'General') {
-      return [allSteps[0], allSteps[3]]
-    }
-    return allSteps
+    const all = [
+      { title: 'Details', description: 'Enquiry type and basic information' },
+      { title: 'Supplier', description: 'Select a supplier' },
+      { title: 'Items', description: 'Add items to the enquiry' },
+      { title: 'Review', description: 'Review and submit' },
+    ]
+    return enquiryType === 'General' ? [all[0], all[3]] : all
   }, [enquiryType])
 
   // Map current visual step to allSteps index
@@ -132,21 +132,39 @@ export function CreateEnquiryPage() {
     }
   }
 
-  const handleSubmit = form.handleSubmit((data) => {
-    // For General enquiries, don't send supplier/items
-    const submitData: CreateEnquiryFormData = data.enquiryType === 'General'
-      ? {
-          ...data,
-          supplierId: undefined,
-          items: undefined,
-        }
-      : data
-    createMutation.mutate(submitData)
-  })
+  const handleSubmit = () => {
+    const data = form.getValues()
+
+    if (data.enquiryType === 'General') {
+      createMutation.mutate({
+        enquiryType: 'General',
+        title: data.title,
+        notes: data.notes || undefined,
+        items: [],
+      })
+    } else {
+      createMutation.mutate({
+        enquiryType: 'ItemSpecific',
+        supplierId: data.supplierId,
+        title: data.title,
+        notes: data.notes || undefined,
+        items: (data.items ?? []).map((item) => ({
+          supplierItemId: item.supplierItemId,
+          quantity: item.quantity,
+          notes: item.notes || undefined,
+          variants: item.variants?.map((v) => ({
+            supplierItemVariantId: v.supplierItemVariantId,
+            quantity: v.quantity,
+          })),
+        })),
+      })
+    }
+  }
 
   const handleAddItem = () => {
     appendItem({
       supplierItemId: '',
+      availableItemId: '',
       quantity: 1,
       itemName: '',
       hasVariants: false,
@@ -156,16 +174,22 @@ export function CreateEnquiryPage() {
   const handleItemSelect = (itemIndex: number, availableItemId: string) => {
     const availableItem = availableItems.find((item) => item.id === availableItemId)
     if (availableItem) {
+      // For Master type items, use the linked supplierItemId for variant loading and as the line item FK.
+      // For Supplier type items, supplierItemId === id.
+      const resolvedSupplierItemId = availableItem.supplierItemId ?? availableItemId
+
       if (availableItem.hasVariants) {
         setSelectedItemForVariants({
           index: itemIndex,
-          supplierItemId: availableItemId,
+          availableItemId: availableItemId,
+          supplierItemId: resolvedSupplierItemId,
           itemName: availableItem.resolvedName,
         })
         setVariantDialogOpen(true)
       } else {
         updateItem(itemIndex, {
-          supplierItemId: availableItemId,
+          supplierItemId: resolvedSupplierItemId,
+          availableItemId: availableItemId,
           quantity: 1,
           itemName: availableItem.resolvedName,
           hasVariants: false,
@@ -174,15 +198,18 @@ export function CreateEnquiryPage() {
     }
   }
 
-  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number }>) => {
+  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => {
     if (selectedItemForVariants) {
       const totalQty = variants.reduce((sum, v) => sum + v.quantity, 0)
-      const mappedVariants: EnquiryItemVariantInput[] = variants.map((v) => ({
+      const mappedVariants = variants.map((v) => ({
         supplierItemVariantId: v.variantId,
         quantity: v.quantity,
+        dimensionSummary: v.dimensionSummary,
+        sku: v.sku,
       }))
       updateItem(selectedItemForVariants.index, {
         supplierItemId: selectedItemForVariants.supplierItemId,
+        availableItemId: selectedItemForVariants.availableItemId,
         quantity: totalQty,
         itemName: selectedItemForVariants.itemName,
         hasVariants: true,
@@ -196,12 +223,12 @@ export function CreateEnquiryPage() {
   const canProceedToNext = () => {
     const actualStep = getActualStepIndex(currentStep)
     switch (actualStep) {
-      case 0: // Details
-        return form.formState.isValid && form.watch('title').trim() !== ''
-      case 1: // Supplier
-        return form.formState.isValid && supplierId !== undefined
-      case 2: // Items
-        return form.formState.isValid && itemFields.length > 0 && itemFields.every((item) => item.supplierItemId)
+      case 0: // Details — just need a non-empty title
+        return form.watch('title').trim() !== ''
+      case 1: // Supplier — need a real supplier id selected
+        return !!supplierId && supplierId.trim() !== ''
+      case 2: // Items — at least one item with a supplier item selected
+        return itemFields.length > 0 && itemFields.every((item) => item.supplierItemId !== '')
       case 3: // Review
         return true
       default:
@@ -222,7 +249,13 @@ export function CreateEnquiryPage() {
                 control={form.control}
                 name="enquiryType"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => {
+                      field.onChange(v)
+                      setCurrentStep(0)
+                    }}
+                  >
                     <SelectTrigger id="enquiryType">
                       <SelectValue />
                     </SelectTrigger>
@@ -294,30 +327,22 @@ export function CreateEnquiryPage() {
                         <div className="flex items-end gap-4">
                           <div className="flex-1">
                             <Label htmlFor={`item-${index}`}>Item</Label>
-                            <Controller
-                              control={form.control}
-                              name={`items.${index}.supplierItemId`}
-                              render={({ field: selectField }) => (
-                                <Select
-                                  value={selectField.value || ''}
-                                  onValueChange={(value) =>
-                                    handleItemSelect(index, value)
-                                  }
-                                >
-                                  <SelectTrigger id={`item-${index}`}>
-                                    <SelectValue placeholder="Select item..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {availableItems.map((item) => (
-                                      <SelectItem key={item.id} value={item.id}>
-                                        {item.resolvedName}
-                                        {item.hasVariants && ' (has variants)'}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            />
+                              <Select
+                              value={items?.[index]?.availableItemId || ''}
+                              onValueChange={(value) => handleItemSelect(index, value)}
+                            >
+                              <SelectTrigger id={`item-${index}`}>
+                                <SelectValue placeholder="Select item..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableItems.map((item) => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.resolvedName}
+                                    {item.hasVariants && ' (has variants)'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <Button
                             variant="ghost"
@@ -348,7 +373,7 @@ export function CreateEnquiryPage() {
                             <div className="mt-2 space-y-1 text-sm">
                               {items[index].variants.map((v, vIdx) => (
                                 <p key={vIdx} className="text-gray-600">
-                                  Variant {vIdx + 1}: Qty {v.quantity}
+                                  {v.dimensionSummary || v.sku || `Variant ${vIdx + 1}`}: Qty {v.quantity}
                                 </p>
                               ))}
                             </div>

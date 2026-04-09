@@ -307,8 +307,8 @@ export function QuotationDetailPage() {
                             ]
 
                             // Add variant sub-rows if variants exist
-                            if ((item as any).variants && (item as any).variants.length > 0) {
-                              (item as any).variants.forEach((variant: any) => {
+                            if (item.variants && item.variants.length > 0) {
+                              item.variants.forEach((variant) => {
                                 rows.push(
                                   <TableRow key={`${item.id}-variant-${variant.id}`} className="bg-slate-50">
                                     <TableCell className="text-xs pl-8">
@@ -317,10 +317,10 @@ export function QuotationDetailPage() {
                                     </TableCell>
                                     <TableCell className="text-xs text-slate-700">{variant.quantity} units</TableCell>
                                     <TableCell className="text-xs text-slate-700">
-                                      {formatCurrency((item as any).variantPrices?.[variant.id] ?? (item as any).unitPrice)}
+                                      {formatCurrency(item.variantPrices?.[variant.id] ?? item.unitPrice)}
                                     </TableCell>
                                     <TableCell className="text-xs text-slate-700">
-                                      {formatCurrency(Number(variant.quantity) * ((item as any).variantPrices?.[variant.id] ?? (item as any).unitPrice))}
+                                      {formatCurrency(Number(variant.quantity) * (item.variantPrices?.[variant.id] ?? item.unitPrice))}
                                     </TableCell>
                                     <TableCell></TableCell>
                                     {quotation.status === 'Draft' && <TableCell></TableCell>}

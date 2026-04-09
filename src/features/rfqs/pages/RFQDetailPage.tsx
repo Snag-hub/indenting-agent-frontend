@@ -357,8 +357,8 @@ export function RFQDetailPage() {
                     ]
 
                     // Add variant sub-rows if variants exist
-                    if ((item as any).variants && (item as any).variants.length > 0) {
-                      (item as any).variants.forEach((variant: any) => {
+                    if (item.variants && item.variants.length > 0) {
+                      item.variants.forEach((variant) => {
                         rows.push(
                           <TableRow key={`${item.id}-variant-${variant.id}`} className="bg-slate-50">
                             <TableCell className="text-xs pl-8">

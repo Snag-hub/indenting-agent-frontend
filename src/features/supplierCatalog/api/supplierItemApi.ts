@@ -14,6 +14,12 @@ export interface SupplierItemVariantDto {
   values: SupplierItemVariantValueDto[]
 }
 
+export interface SupplierItemVariantSummaryDto {
+  id: string
+  sku: string | null
+  dimensionSummary: string
+}
+
 export interface SupplierItemSummaryDto {
   id: string
   supplierId: string
@@ -99,4 +105,7 @@ export const supplierItemApi = {
 
   removeVariant: (variantId: string) =>
     api.delete(`/my/supplier-items/variants/${variantId}`),
+
+  getVariants: (id: string) =>
+    api.get<SupplierItemVariantSummaryDto[]>(`/supplier-items/${id}/variants`).then((r) => r.data),
 }

@@ -1,6 +1,14 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types/api";
 
+export interface RFQItemVariantDto {
+  id: string;
+  supplierItemVariantId: string;
+  dimensionSummary: string;
+  sku?: string;
+  quantity: number;
+}
+
 export interface RFQItemDto {
   id: string;
   supplierItemId: string;
@@ -8,6 +16,7 @@ export interface RFQItemDto {
   supplierName: string;
   quantity: number;
   notes?: string;
+  variants: RFQItemVariantDto[];
 }
 
 export interface RFQSummaryDto {
@@ -33,13 +42,23 @@ export interface RFQDetailDto {
   createdAt: string;
 }
 
+export interface CreateRFQItemVariantInput {
+  supplierItemVariantId: string;
+  quantity: number;
+}
+
 export interface CreateRFQInput {
   title: string;
   notes?: string;
   dueDate?: string;
   enquiryId?: string;
   supplierId: string;
-  items?: { supplierItemId: string; quantity: number; notes?: string }[];
+  items?: {
+    supplierItemId: string;
+    quantity: number;
+    notes?: string;
+    variants?: CreateRFQItemVariantInput[];
+  }[];
 }
 
 export interface UpdateRFQInput {
@@ -55,11 +74,15 @@ export interface AddRFQItemInput {
 }
 
 export interface EnquiryItemForRFQDto {
+  enquiryItemId: string;
   supplierItemId: string;
   itemName: string;
   supplierName: string;
   suggestedQuantity: number;
   notes?: string;
+  hasVariants: boolean;
+  allocatedQuantity: number;
+  availableQuantity: number;
 }
 
 export const rfqApi = {

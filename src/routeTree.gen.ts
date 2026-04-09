@@ -27,6 +27,7 @@ import { Route as AppRfqsNewRouteImport } from './routes/_app.rfqs.new'
 import { Route as AppRfqsIdRouteImport } from './routes/_app.rfqs.$id'
 import { Route as AppQuotationsIdRouteImport } from './routes/_app.quotations.$id'
 import { Route as AppMyItemsIdRouteImport } from './routes/_app.my-items.$id'
+import { Route as AppEnquiriesNewRouteImport } from './routes/_app.enquiries.new'
 import { Route as AppEnquiriesIdRouteImport } from './routes/_app.enquiries.$id'
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
 import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog.items'
@@ -121,6 +122,11 @@ const AppMyItemsIdRoute = AppMyItemsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppMyItemsRoute,
 } as any)
+const AppEnquiriesNewRoute = AppEnquiriesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppEnquiriesRoute,
+} as any)
 const AppEnquiriesIdRoute = AppEnquiriesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
   '/enquiries/$id': typeof AppEnquiriesIdRoute
+  '/enquiries/new': typeof AppEnquiriesNewRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
   '/quotations/$id': typeof AppQuotationsIdRoute
   '/rfqs/$id': typeof AppRfqsIdRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
   '/enquiries/$id': typeof AppEnquiriesIdRoute
+  '/enquiries/new': typeof AppEnquiriesNewRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
   '/quotations/$id': typeof AppQuotationsIdRoute
   '/rfqs/$id': typeof AppRfqsIdRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/_app/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/_app/customers/$id': typeof AppCustomersIdRoute
   '/_app/enquiries/$id': typeof AppEnquiriesIdRoute
+  '/_app/enquiries/new': typeof AppEnquiriesNewRoute
   '/_app/my-items/$id': typeof AppMyItemsIdRoute
   '/_app/quotations/$id': typeof AppQuotationsIdRoute
   '/_app/rfqs/$id': typeof AppRfqsIdRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/catalog/items'
     | '/customers/$id'
     | '/enquiries/$id'
+    | '/enquiries/new'
     | '/my-items/$id'
     | '/quotations/$id'
     | '/rfqs/$id'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/catalog/items'
     | '/customers/$id'
     | '/enquiries/$id'
+    | '/enquiries/new'
     | '/my-items/$id'
     | '/quotations/$id'
     | '/rfqs/$id'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/_app/catalog/items'
     | '/_app/customers/$id'
     | '/_app/enquiries/$id'
+    | '/_app/enquiries/new'
     | '/_app/my-items/$id'
     | '/_app/quotations/$id'
     | '/_app/rfqs/$id'
@@ -427,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMyItemsIdRouteImport
       parentRoute: typeof AppMyItemsRoute
     }
+    '/_app/enquiries/new': {
+      id: '/_app/enquiries/new'
+      path: '/new'
+      fullPath: '/enquiries/new'
+      preLoaderRoute: typeof AppEnquiriesNewRouteImport
+      parentRoute: typeof AppEnquiriesRoute
+    }
     '/_app/enquiries/$id': {
       id: '/_app/enquiries/$id'
       path: '/$id'
@@ -479,10 +498,12 @@ const AppCustomersRouteWithChildren = AppCustomersRoute._addFileChildren(
 
 interface AppEnquiriesRouteChildren {
   AppEnquiriesIdRoute: typeof AppEnquiriesIdRoute
+  AppEnquiriesNewRoute: typeof AppEnquiriesNewRoute
 }
 
 const AppEnquiriesRouteChildren: AppEnquiriesRouteChildren = {
   AppEnquiriesIdRoute: AppEnquiriesIdRoute,
+  AppEnquiriesNewRoute: AppEnquiriesNewRoute,
 }
 
 const AppEnquiriesRouteWithChildren = AppEnquiriesRoute._addFileChildren(

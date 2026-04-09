@@ -5,11 +5,11 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { rfqApi } from '@/features/rfqs/api/rfqApi'
-import { enquiryApi } from '@/features/enquiries/api/enquiryApi'
+import { enquiryApi, type AvailableEnquiryItemDto } from '@/features/enquiries/api/enquiryApi'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
-import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
+import { ItemPicker } from '@/components/ItemPicker'
 import { MultiStepForm } from '@/components/MultiStepForm'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 const rfqItemVariantSchema = z.object({
   supplierItemVariantId: z.string(),
   quantity: z.number().min(1),
+  dimensionSummary: z.string().optional(),
+  sku: z.string().nullable().optional(),
 })
 
 const rfqItemSchema = z.object({
@@ -55,10 +57,13 @@ export function CreateRFQPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [currentStep, setCurrentStep] = useState(0)
-  const [itemSearch, setItemSearch] = useState('')
   const [selectedEnquiryId, setSelectedEnquiryId] = useState<string | undefined>()
   const [variantDialogOpen, setVariantDialogOpen] = useState(false)
-  const [selectedItemForVariant, setSelectedItemForVariant] = useState<{ id: string; name: string } | undefined>()
+  const [selectedItemForVariant, setSelectedItemForVariant] = useState<{
+    fieldIndex?: number   // set when editing an existing item
+    id: string            // supplierItemId for the variant dialog
+    name: string
+  } | undefined>()
 
   const { control, register, watch, setValue, formState: { errors } } = useForm<CreateRFQForm>({
     resolver: zodResolver(createRFQSchema),
@@ -72,7 +77,7 @@ export function CreateRFQPage() {
     },
   })
 
-  const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
+  const { fields: itemFields, append: appendItem, remove: removeItem, update: updateItem } = useFieldArray({
     control,
     name: 'items',
   })
@@ -99,14 +104,6 @@ export function CreateRFQPage() {
     enabled: !!selectedEnquiryId && !!watchedSupplierId,
   })
 
-  // Fetch supplier items for search
-  const { data: supplierItemsResult } = useQuery({
-    queryKey: ['supplier-items', 'browse', itemSearch, watchedSupplierId],
-    queryFn: () =>
-      supplierItemApi.browse({ page: 1, pageSize: 100, search: itemSearch, supplierId: watchedSupplierId }),
-    enabled: currentStep === 1 && !selectedEnquiryId && itemSearch.length > 0 && !!watchedSupplierId,
-  })
-
   // Create RFQ mutation
   const createRFQ = useMutation({
     mutationFn: (data: CreateRFQForm) => {
@@ -117,10 +114,11 @@ export function CreateRFQPage() {
         dueDate: data.dueDate || undefined,
         enquiryId: data.enquiryId || undefined,
         supplierId: data.supplierId,
-        items: checkedItems.map(({ supplierItemId, quantity, notes }) => ({
+        items: checkedItems.map(({ supplierItemId, quantity, notes, variants }) => ({
           supplierItemId,
           quantity,
-          notes,
+          notes: notes || undefined,
+          variants: variants && variants.length > 0 ? variants : undefined,
         })),
       })
     },
@@ -136,7 +134,10 @@ export function CreateRFQPage() {
       enquiryItems.forEach((item) => {
         appendItem({
           supplierItemId: item.supplierItemId,
+          itemName: item.itemName,
+          hasVariants: item.hasVariants,
           quantity: item.suggestedQuantity,
+          variants: [],
           notes: item.notes || '',
           checked: true,
         })
@@ -164,46 +165,66 @@ export function CreateRFQPage() {
     itemFields.forEach((_, idx) => removeItem(idx))
   }
 
-  const handleAddSupplierItem = (itemId: string) => {
-    const item = supplierItemsResult?.data?.find((i) => i.id === itemId)
-    if (item) {
-      // Check if item has variants
-      const supplierItem = supplierItemsResult?.data?.find((i) => i.id === itemId)
-      if (supplierItem) {
-        // For now, add directly with quantity 1 and check variants separately
-        appendItem({
-          supplierItemId: item.id,
-          itemName: item.name,
-          hasVariants: false,
-          quantity: 1,
-          variants: undefined,
-          notes: '',
-          checked: true,
-        })
-        setItemSearch('')
-      }
+  const handleAddAvailableItem = (item: AvailableEnquiryItemDto) => {
+    const resolvedSupplierItemId = item.supplierItemId ?? item.id
+
+    if (item.hasVariants) {
+      setSelectedItemForVariant({ id: resolvedSupplierItemId, name: item.resolvedName })
+      setVariantDialogOpen(true)
+    } else {
+      appendItem({
+        supplierItemId: resolvedSupplierItemId,
+        itemName: item.resolvedName,
+        hasVariants: false,
+        quantity: 1,
+        variants: [],
+        notes: '',
+        checked: true,
+      })
     }
   }
 
-  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number }>) => {
-    if (selectedItemForVariant) {
-      const totalQty = variants.reduce((sum, v) => sum + v.quantity, 0)
+  const handleEditVariants = (idx: number) => {
+    const field = itemFields[idx]
+    if (!field) return
+    setSelectedItemForVariant({ fieldIndex: idx, id: field.supplierItemId, name: field.itemName ?? '' })
+    setVariantDialogOpen(true)
+  }
+
+  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => {
+    if (!selectedItemForVariant) return
+    const totalQty = variants.reduce((sum, v) => sum + v.quantity, 0)
+    const mappedVariants = variants.map((v) => ({
+      supplierItemVariantId: v.variantId,
+      quantity: v.quantity,
+      dimensionSummary: v.dimensionSummary,
+      sku: v.sku,
+    }))
+
+    if (selectedItemForVariant.fieldIndex !== undefined) {
+      // Editing existing item
+      const existing = itemFields[selectedItemForVariant.fieldIndex]
+      updateItem(selectedItemForVariant.fieldIndex, {
+        ...existing,
+        quantity: totalQty,
+        hasVariants: true,
+        variants: mappedVariants,
+      })
+    } else {
+      // Adding new item
       appendItem({
         supplierItemId: selectedItemForVariant.id,
         itemName: selectedItemForVariant.name,
         hasVariants: true,
         quantity: totalQty,
-        variants: variants.map(v => ({
-          supplierItemVariantId: v.variantId,
-          quantity: v.quantity,
-        })),
+        variants: mappedVariants,
         notes: '',
         checked: true,
       })
-      setVariantDialogOpen(false)
-      setSelectedItemForVariant(undefined)
-      setItemSearch('')
     }
+
+    setVariantDialogOpen(false)
+    setSelectedItemForVariant(undefined)
   }
 
   // Step 1: RFQ Details
@@ -305,36 +326,15 @@ export function CreateRFQPage() {
       {watchedSupplierId && (
         <div className="space-y-4">
           {!selectedEnquiryId ? (
-            // No enquiry: supplier item search
-            <>
-              <div className="space-y-1">
-                <Label htmlFor="itemSearch">Search Items</Label>
-                <Input
-                  id="itemSearch"
-                  placeholder="Search by name…"
-                  value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
-                />
-              </div>
-
-              {itemSearch && supplierItemsResult?.data && supplierItemsResult.data.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Available Items</Label>
-                  <div className="space-y-1">
-                    {supplierItemsResult.data.map((item) => (
-                      <Button
-                        key={item.id}
-                        variant="outline"
-                        className="w-full justify-start"
-                        onClick={() => handleAddSupplierItem(item.id)}
-                      >
-                        {item.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+            // No enquiry: item browser
+            <div className="space-y-2">
+              <Label>Browse & Add Items</Label>
+              <ItemPicker
+                supplierId={watchedSupplierId}
+                selectedItemIds={itemFields.map((f) => f.supplierItemId)}
+                onSelect={handleAddAvailableItem}
+              />
+            </div>
           ) : (
             // Enquiry selected: show enquiry items table
             enquiryItems.length > 0 ? (
@@ -344,57 +344,112 @@ export function CreateRFQPage() {
                     <TableRow>
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Item Name</TableHead>
-                      <TableHead>Qty</TableHead>
+                      <TableHead className="text-right">Enquiry</TableHead>
+                      <TableHead className="text-right">Allocated</TableHead>
+                      <TableHead className="w-24">This RFQ</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
                       <TableHead>Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {itemFields.map((field, idx) => {
-                      const item = enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)
+                      const enquiryItem = enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)
+                      const enquiryQty = enquiryItem?.suggestedQuantity ?? 0
+                      const allocated = enquiryItem?.allocatedQuantity ?? 0
+                      const available = enquiryItem?.availableQuantity ?? enquiryQty
+                      const currentQty = field.quantity ?? 0
+                      const balance = available - currentQty
+
                       return (
-                        <TableRow key={field.id}>
-                          <TableCell>
-                            <Controller
-                              control={control}
-                              name={`items.${idx}.checked`}
-                              render={({ field: checkField }) => (
-                                <Checkbox
-                                  checked={checkField.value}
-                                  onChange={(e) => checkField.onChange(e.currentTarget.checked)}
+                        <>
+                          <TableRow key={field.id} className={available === 0 ? 'opacity-50' : ''}>
+                            <TableCell>
+                              <Controller
+                                control={control}
+                                name={`items.${idx}.checked`}
+                                render={({ field: checkField }) => (
+                                  <Checkbox
+                                    checked={checkField.value && available > 0}
+                                    disabled={available === 0}
+                                    onChange={(e) => checkField.onChange(e.currentTarget.checked)}
+                                  />
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <div className="flex items-center gap-2">
+                                {enquiryItem?.itemName ?? field.itemName}
+                                {field.hasVariants && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-xs px-2"
+                                    onClick={() => handleEditVariants(idx)}
+                                  >
+                                    {field.variants && field.variants.length > 0
+                                      ? `Edit Variants (${field.variants.length})`
+                                      : 'Select Variants'}
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">{enquiryQty}</TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">{allocated}</TableCell>
+                            <TableCell>
+                              {field.hasVariants ? (
+                                <span className="text-xs text-muted-foreground">{currentQty} total</span>
+                              ) : (
+                                <Controller
+                                  control={control}
+                                  name={`items.${idx}.quantity`}
+                                  render={({ field: qtyField }) => (
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max={available}
+                                      className="w-16"
+                                      {...qtyField}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value) || 1
+                                        qtyField.onChange(Math.min(val, available))
+                                      }}
+                                    />
+                                  )}
                                 />
                               )}
-                            />
-                          </TableCell>
-                          <TableCell className="text-sm">{item?.itemName}</TableCell>
-                          <TableCell className="text-sm">
-                            <Controller
-                              control={control}
-                              name={`items.${idx}.quantity`}
-                              render={({ field: qtyField }) => (
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  className="w-16"
-                                  {...qtyField}
-                                  onChange={(e) => qtyField.onChange(parseInt(e.target.value))}
-                                />
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            <Controller
-                              control={control}
-                              name={`items.${idx}.notes`}
-                              render={({ field: notesField }) => (
-                                <Input
-                                  placeholder="—"
-                                  className="text-xs"
-                                  {...notesField}
-                                />
-                              )}
-                            />
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                            <TableCell className={`text-right text-sm font-medium ${balance < 0 ? 'text-red-600' : balance === 0 ? 'text-slate-400' : 'text-green-700'}`}>
+                              {balance}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <Controller
+                                control={control}
+                                name={`items.${idx}.notes`}
+                                render={({ field: notesField }) => (
+                                  <Input
+                                    placeholder="—"
+                                    className="text-xs"
+                                    {...notesField}
+                                  />
+                                )}
+                              />
+                            </TableCell>
+                          </TableRow>
+                          {field.hasVariants && field.variants && field.variants.length > 0 &&
+                            field.variants.map((v) => (
+                              <TableRow key={`${field.id}-v-${v.supplierItemVariantId}`} className="bg-slate-50">
+                                <TableCell />
+                                <TableCell className="text-xs pl-8 text-slate-500" colSpan={3}>
+                                  {v.dimensionSummary || v.sku || v.supplierItemVariantId.slice(0, 8) + '…'}
+                                </TableCell>
+                                <TableCell className="text-xs text-slate-500">{v.quantity}</TableCell>
+                                <TableCell />
+                                <TableCell />
+                              </TableRow>
+                            ))
+                          }
+                        </>
                       )
                     })}
                   </TableBody>
@@ -473,7 +528,7 @@ export function CreateRFQPage() {
                 .flatMap((field) => {
                   const itemName =
                     enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)?.itemName ||
-                    supplierItemsResult?.data?.find((i) => i.id === field.supplierItemId)?.name ||
+                    field.itemName ||
                     field.itemName ||
                     field.supplierItemId
 
@@ -500,7 +555,7 @@ export function CreateRFQPage() {
                       rows.push(
                         <TableRow key={`${field.id}-variant-${variant.supplierItemVariantId}`} className="bg-slate-50">
                           <TableCell className="text-xs pl-8 text-slate-600">
-                            Variant Detail
+                            {variant.dimensionSummary || variant.sku || variant.supplierItemVariantId.slice(0, 8) + '…'}
                           </TableCell>
                           <TableCell className="text-xs text-slate-600">{variant.quantity}</TableCell>
                           <TableCell></TableCell>
@@ -577,13 +632,29 @@ export function CreateRFQPage() {
         {currentStep === 2 && Step3}
       </MultiStepForm>
 
-      {/* Variant Selection Dialog */}
+      {/* Variant Selection / Edit Dialog */}
       {selectedItemForVariant && (
         <VariantQuantityDialog
           open={variantDialogOpen}
           onOpenChange={setVariantDialogOpen}
           supplierItemId={selectedItemForVariant.id}
           supplierItemName={selectedItemForVariant.name}
+          initialQuantities={
+            selectedItemForVariant.fieldIndex !== undefined
+              ? Object.fromEntries(
+                  (itemFields[selectedItemForVariant.fieldIndex]?.variants ?? []).map(
+                    (v) => [v.supplierItemVariantId, v.quantity]
+                  )
+                )
+              : undefined
+          }
+          maxTotal={
+            selectedItemForVariant.fieldIndex !== undefined
+              ? enquiryItems.find(
+                  (i) => i.supplierItemId === itemFields[selectedItemForVariant.fieldIndex!]?.supplierItemId
+                )?.availableQuantity
+              : undefined
+          }
           onConfirm={handleVariantConfirm}
         />
       )}
