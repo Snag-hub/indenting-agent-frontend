@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 // Typed route gives access to the optional `enquiryId` search param
 import { Route } from '@/routes/_app.rfqs.new'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
@@ -394,8 +394,8 @@ export function CreateRFQPage() {
                       const balance = available - currentQty
 
                       return (
-                        <>
-                          <TableRow key={field.id} className={available === 0 ? 'opacity-50' : ''}>
+                        <React.Fragment key={field.id}>
+                          <TableRow className={available === 0 ? 'opacity-50' : ''}>
                             <TableCell>
                               <Controller
                                 control={control}
@@ -404,7 +404,7 @@ export function CreateRFQPage() {
                                   <Checkbox
                                     checked={checkField.value && available > 0}
                                     disabled={available === 0}
-                                    onChange={(e) => checkField.onChange(e.currentTarget.checked)}
+                                    onCheckedChange={(checked) => checkField.onChange(!!checked)}
                                   />
                                 )}
                               />
@@ -486,7 +486,7 @@ export function CreateRFQPage() {
                               </TableRow>
                             ))
                           }
-                        </>
+                        </React.Fragment>
                       )
                     })}
                   </TableBody>
@@ -636,7 +636,9 @@ export function CreateRFQPage() {
   }
 
   const canProceedStep1 = !!watch('title') && !errors.title
-  const canProceedStep2 = watchedSupplierIds.length > 0 && itemFields.some((f) => f.checked)
+  // itemFields from useFieldArray is a snapshot — use watch('items') for live checked state
+  const watchedItems = watch('items') ?? []
+  const canProceedStep2 = watchedSupplierIds.length > 0 && watchedItems.some((f) => f.checked)
 
   return (
     <div className="space-y-6">
