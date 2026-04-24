@@ -61,9 +61,46 @@ export const queryKeys = {
       ["quotations", "list", params ?? {}] as const,
     detail: (id: string) => ["quotations", "detail", id] as const,
   },
+  pos: {
+    list: (params?: Record<string, unknown>) =>
+      ["pos", "list", params ?? {}] as const,
+    detail: (id: string) => ["pos", "detail", id] as const,
+    dispatchBalance: (id: string) => ["pos", "dispatch-balance", id] as const,
+    invoiceBalance: (id: string) => ["pos", "invoice-balance", id] as const,
+  },
   customerItems: {
     list: (params?: Record<string, unknown>) =>
       ["customerItems", "list", params ?? {}] as const,
     detail: (id: string) => ["customerItems", "detail", id] as const,
+  },
+  notifications: {
+    list: (params?: Record<string, unknown>) =>
+      ["notifications", "list", params ?? {}] as const,
+  },
+  proformaInvoices: {
+    list: (params?: Record<string, unknown>) =>
+      ["proforma-invoices", "list", params ?? {}] as const,
+    detail: (id: string) => ["proforma-invoices", "detail", id] as const,
+  },
+  deliveryOrders: {
+    list: (params?: Record<string, unknown>) =>
+      ["delivery-orders", "list", params ?? {}] as const,
+    detail: (id: string) => ["delivery-orders", "detail", id] as const,
+  },
+  payments: {
+    list: (params?: Record<string, unknown>) =>
+      ["payments", "list", params ?? {}] as const,
+    detail: (id: string) => ["payments", "detail", id] as const,
+  },
+  reports: {
+    activity: (count?: number) => ["reports", "activity", count ?? 10] as const,
+  },
+  tickets: {
+    list: (params?: Record<string, unknown>) =>
+      ["tickets", "list", params ?? {}] as const,
+    detail: (id: string) => ["tickets", "detail", id] as const,
+  },
+  dashboard: {
+    overview: () => ["dashboard", "overview"] as const,
   },
 };

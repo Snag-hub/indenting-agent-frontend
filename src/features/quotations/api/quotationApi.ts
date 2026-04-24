@@ -4,10 +4,11 @@ import type { PagedResult } from "@/types/api";
 export interface QuotationItemVariantDto {
   id: string;
   supplierItemVariantId: string;
-  dimensionSummary: string;
-  sku?: string;
   quantity: number;
   unitPrice?: number;
+  dimensionSummary?: string | null;
+  sku?: string | null;
+  notes?: string | null;
 }
 
 export interface QuotationItemDto {
@@ -32,6 +33,7 @@ export interface QuotationVersionDto {
 
 export interface QuotationSummaryDto {
   id: string;
+  documentNumber?: string;
   rfqId: string;
   rfqTitle: string;
   supplierName: string;
@@ -48,6 +50,7 @@ export interface QuotationDetailDto {
   status: string;
   versions: QuotationVersionDto[];
   createdAt: string;
+  purchaseOrderId?: string | null;
 }
 
 export interface AddQuotationItemInput {
@@ -57,10 +60,18 @@ export interface AddQuotationItemInput {
   notes?: string;
 }
 
+export interface UpdateQuotationVariantInput {
+  supplierItemVariantId: string;
+  quantity: number;
+  unitPrice: number;
+  notes?: string;
+}
+
 export interface UpdateQuotationItemInput {
   quantity?: number;
   unitPrice?: number;
   notes?: string;
+  variants?: UpdateQuotationVariantInput[];
 }
 
 export interface ReviseQuotationInput {
@@ -72,6 +83,7 @@ export const quotationApi = {
   list: (params?: {
     search?: string;
     status?: string;
+    rfqId?: string;
     page?: number;
     pageSize?: number;
   }) =>

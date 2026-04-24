@@ -95,7 +95,7 @@ export function CreateEnquiryPage() {
 
   // Create enquiry mutation
   const createMutation = useMutation({
-    mutationFn: (data: CreateEnquiryFormData) => enquiryApi.create(data),
+    mutationFn: (data: Parameters<typeof enquiryApi.create>[0]) => enquiryApi.create(data),
     onSuccess: (enquiryId) => {
       navigate({ to: '/enquiries/$id', params: { id: enquiryId } })
     },

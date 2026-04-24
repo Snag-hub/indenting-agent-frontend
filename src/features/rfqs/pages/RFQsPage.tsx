@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Send, Lock } from 'lucide-react'
 import { format } from 'date-fns'
+import { useAuthStore } from '@/stores/authStore'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -24,6 +25,8 @@ export function RFQsPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
   const qc = useQueryClient()
+  const { user } = useAuthStore()
+  const role = user?.role
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [sending, setSending] = useState<string | undefined>()
@@ -53,8 +56,17 @@ export function RFQsPage() {
   if (childMatches.length > 0) return <Outlet />
 
   const columns: ColumnDef<RFQSummaryDto>[] = [
+    {
+      accessorKey: 'documentNumber',
+      header: 'Doc #',
+      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
+    },
     { accessorKey: 'title', header: 'Title' },
-    { accessorKey: 'supplierName', header: 'Supplier' },
+    {
+      accessorKey: 'supplierName',
+      header: 'Supplier',
+      cell: ({ getValue }) => <span>{(getValue() as string) || '—'}</span>,
+    },
     {
       accessorKey: 'status',
       header: 'Status',
@@ -95,7 +107,7 @@ export function RFQsPage() {
             <Eye className="h-4 w-4" />
           </Button>
 
-          {row.original.status === 'Draft' && (
+          {role === 'Customer' && row.original.status === 'Draft' && (
             <Button
               size="icon"
               variant="ghost"
@@ -106,7 +118,7 @@ export function RFQsPage() {
             </Button>
           )}
 
-          {row.original.status === 'Sent' && (
+          {role === 'Customer' && row.original.status === 'Sent' && (
             <Button
               size="icon"
               variant="ghost"
@@ -127,9 +139,11 @@ export function RFQsPage() {
         title="RFQs"
         description="Create and manage request for quotations"
         action={
-          <Button onClick={() => navigate({ to: '/rfqs/new' })}>
-            <Plus className="mr-2 h-4 w-4" /> New RFQ
-          </Button>
+          role === 'Customer' ? (
+            <Button onClick={() => navigate({ to: '/rfqs/new' })}>
+              <Plus className="mr-2 h-4 w-4" /> New RFQ
+            </Button>
+          ) : undefined
         }
       />
 

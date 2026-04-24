@@ -128,7 +128,7 @@ export function ItemPicker({ supplierId, selectedItemIds = [], onSelect }: ItemP
                     <Button
                       type="button"
                       size="sm"
-                      variant={selected ? 'secondary' : 'outline'}
+                      variant={selected ? 'outline' : 'outline'}
                       className="h-7 w-7 p-0"
                       onClick={() => !selected && onSelect(item)}
                       disabled={selected}

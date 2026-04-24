@@ -13,25 +13,47 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
+import { Route as AppTicketsRouteImport } from './routes/_app.tickets'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
 import { Route as AppRfqsRouteImport } from './routes/_app.rfqs'
+import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuotationsRouteImport } from './routes/_app.quotations'
+import { Route as AppPurchaseOrdersRouteImport } from './routes/_app.purchase-orders'
+import { Route as AppProformaInvoicesRouteImport } from './routes/_app.proforma-invoices'
+import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
 import { Route as AppMyItemsRouteImport } from './routes/_app.my-items'
 import { Route as AppMyDimensionsRouteImport } from './routes/_app.my-dimensions'
 import { Route as AppItemMappingRouteImport } from './routes/_app.item-mapping'
 import { Route as AppEnquiriesRouteImport } from './routes/_app.enquiries'
+import { Route as AppDeliveryOrdersRouteImport } from './routes/_app.delivery-orders'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppTicketsNewRouteImport } from './routes/_app.tickets.new'
+import { Route as AppTicketsIdRouteImport } from './routes/_app.tickets.$id'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app.suppliers.$id'
+import { Route as AppSettingsDocumentNumberSettingsRouteImport } from './routes/_app.settings.document-number-settings'
 import { Route as AppRfqsNewRouteImport } from './routes/_app.rfqs.new'
 import { Route as AppRfqsIdRouteImport } from './routes/_app.rfqs.$id'
+import { Route as AppQuotationsNewRouteImport } from './routes/_app.quotations.new'
 import { Route as AppQuotationsIdRouteImport } from './routes/_app.quotations.$id'
+import { Route as AppPurchaseOrdersIdRouteImport } from './routes/_app.purchase-orders.$id'
+import { Route as AppProformaInvoicesNewRouteImport } from './routes/_app.proforma-invoices.new'
+import { Route as AppProformaInvoicesIdRouteImport } from './routes/_app.proforma-invoices.$id'
+import { Route as AppPaymentsNewRouteImport } from './routes/_app.payments.new'
+import { Route as AppPaymentsIdRouteImport } from './routes/_app.payments.$id'
 import { Route as AppMyItemsIdRouteImport } from './routes/_app.my-items.$id'
 import { Route as AppEnquiriesNewRouteImport } from './routes/_app.enquiries.new'
 import { Route as AppEnquiriesIdRouteImport } from './routes/_app.enquiries.$id'
+import { Route as AppDeliveryOrdersNewRouteImport } from './routes/_app.delivery-orders.new'
+import { Route as AppDeliveryOrdersIdRouteImport } from './routes/_app.delivery-orders.$id'
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
 import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog.items'
 import { Route as AppCatalogCategoriesRouteImport } from './routes/_app.catalog.categories'
+import { Route as AppAdminDocumentNumberSettingsRouteImport } from './routes/_app.admin.document-number-settings'
+import { Route as AppRfqsIdComparisonRouteImport } from './routes/_app.rfqs.$id.comparison'
+import { Route as AppPurchaseOrdersIdPrintRouteImport } from './routes/_app.purchase-orders.$id.print'
+import { Route as AppProformaInvoicesIdPrintRouteImport } from './routes/_app.proforma-invoices.$id.print'
+import { Route as AppDeliveryOrdersIdPrintRouteImport } from './routes/_app.delivery-orders.$id.print'
 import { Route as AppCatalogItemsIdRouteImport } from './routes/_app.catalog.items.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -52,6 +74,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AuthRoute,
 } as any)
+const AppTicketsRoute = AppTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
@@ -62,9 +89,29 @@ const AppRfqsRoute = AppRfqsRouteImport.update({
   path: '/rfqs',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppQuotationsRoute = AppQuotationsRouteImport.update({
   id: '/quotations',
   path: '/quotations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPurchaseOrdersRoute = AppPurchaseOrdersRouteImport.update({
+  id: '/purchase-orders',
+  path: '/purchase-orders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProformaInvoicesRoute = AppProformaInvoicesRouteImport.update({
+  id: '/proforma-invoices',
+  path: '/proforma-invoices',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPaymentsRoute = AppPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyItemsRoute = AppMyItemsRouteImport.update({
@@ -87,6 +134,11 @@ const AppEnquiriesRoute = AppEnquiriesRouteImport.update({
   path: '/enquiries',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDeliveryOrdersRoute = AppDeliveryOrdersRouteImport.update({
+  id: '/delivery-orders',
+  path: '/delivery-orders',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -97,11 +149,27 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTicketsNewRoute = AppTicketsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppTicketsRoute,
+} as any)
+const AppTicketsIdRoute = AppTicketsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppTicketsRoute,
+} as any)
 const AppSuppliersIdRoute = AppSuppliersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppSuppliersRoute,
 } as any)
+const AppSettingsDocumentNumberSettingsRoute =
+  AppSettingsDocumentNumberSettingsRouteImport.update({
+    id: '/settings/document-number-settings',
+    path: '/settings/document-number-settings',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppRfqsNewRoute = AppRfqsNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -112,10 +180,40 @@ const AppRfqsIdRoute = AppRfqsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppRfqsRoute,
 } as any)
+const AppQuotationsNewRoute = AppQuotationsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppQuotationsRoute,
+} as any)
 const AppQuotationsIdRoute = AppQuotationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppQuotationsRoute,
+} as any)
+const AppPurchaseOrdersIdRoute = AppPurchaseOrdersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppPurchaseOrdersRoute,
+} as any)
+const AppProformaInvoicesNewRoute = AppProformaInvoicesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppProformaInvoicesRoute,
+} as any)
+const AppProformaInvoicesIdRoute = AppProformaInvoicesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppProformaInvoicesRoute,
+} as any)
+const AppPaymentsNewRoute = AppPaymentsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppPaymentsRoute,
+} as any)
+const AppPaymentsIdRoute = AppPaymentsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppPaymentsRoute,
 } as any)
 const AppMyItemsIdRoute = AppMyItemsIdRouteImport.update({
   id: '/$id',
@@ -132,6 +230,16 @@ const AppEnquiriesIdRoute = AppEnquiriesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppEnquiriesRoute,
 } as any)
+const AppDeliveryOrdersNewRoute = AppDeliveryOrdersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppDeliveryOrdersRoute,
+} as any)
+const AppDeliveryOrdersIdRoute = AppDeliveryOrdersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppDeliveryOrdersRoute,
+} as any)
 const AppCustomersIdRoute = AppCustomersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -147,6 +255,35 @@ const AppCatalogCategoriesRoute = AppCatalogCategoriesRouteImport.update({
   path: '/catalog/categories',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminDocumentNumberSettingsRoute =
+  AppAdminDocumentNumberSettingsRouteImport.update({
+    id: '/admin/document-number-settings',
+    path: '/admin/document-number-settings',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppRfqsIdComparisonRoute = AppRfqsIdComparisonRouteImport.update({
+  id: '/comparison',
+  path: '/comparison',
+  getParentRoute: () => AppRfqsIdRoute,
+} as any)
+const AppPurchaseOrdersIdPrintRoute =
+  AppPurchaseOrdersIdPrintRouteImport.update({
+    id: '/print',
+    path: '/print',
+    getParentRoute: () => AppPurchaseOrdersIdRoute,
+  } as any)
+const AppProformaInvoicesIdPrintRoute =
+  AppProformaInvoicesIdPrintRouteImport.update({
+    id: '/print',
+    path: '/print',
+    getParentRoute: () => AppProformaInvoicesIdRoute,
+  } as any)
+const AppDeliveryOrdersIdPrintRoute =
+  AppDeliveryOrdersIdPrintRouteImport.update({
+    id: '/print',
+    path: '/print',
+    getParentRoute: () => AppDeliveryOrdersIdRoute,
+  } as any)
 const AppCatalogItemsIdRoute = AppCatalogItemsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -157,49 +294,93 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/customers': typeof AppCustomersRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/delivery-orders': typeof AppDeliveryOrdersRouteWithChildren
   '/enquiries': typeof AppEnquiriesRouteWithChildren
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
+  '/payments': typeof AppPaymentsRouteWithChildren
+  '/proforma-invoices': typeof AppProformaInvoicesRouteWithChildren
+  '/purchase-orders': typeof AppPurchaseOrdersRouteWithChildren
   '/quotations': typeof AppQuotationsRouteWithChildren
+  '/reports': typeof AppReportsRoute
   '/rfqs': typeof AppRfqsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
+  '/tickets': typeof AppTicketsRouteWithChildren
   '/login': typeof AuthLoginRoute
+  '/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
   '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
+  '/delivery-orders/$id': typeof AppDeliveryOrdersIdRouteWithChildren
+  '/delivery-orders/new': typeof AppDeliveryOrdersNewRoute
   '/enquiries/$id': typeof AppEnquiriesIdRoute
   '/enquiries/new': typeof AppEnquiriesNewRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
+  '/payments/$id': typeof AppPaymentsIdRoute
+  '/payments/new': typeof AppPaymentsNewRoute
+  '/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
+  '/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
+  '/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
   '/quotations/$id': typeof AppQuotationsIdRoute
-  '/rfqs/$id': typeof AppRfqsIdRoute
+  '/quotations/new': typeof AppQuotationsNewRoute
+  '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
   '/rfqs/new': typeof AppRfqsNewRoute
+  '/settings/document-number-settings': typeof AppSettingsDocumentNumberSettingsRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/tickets/$id': typeof AppTicketsIdRoute
+  '/tickets/new': typeof AppTicketsNewRoute
   '/catalog/items/$id': typeof AppCatalogItemsIdRoute
+  '/delivery-orders/$id/print': typeof AppDeliveryOrdersIdPrintRoute
+  '/proforma-invoices/$id/print': typeof AppProformaInvoicesIdPrintRoute
+  '/purchase-orders/$id/print': typeof AppPurchaseOrdersIdPrintRoute
+  '/rfqs/$id/comparison': typeof AppRfqsIdComparisonRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/customers': typeof AppCustomersRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/delivery-orders': typeof AppDeliveryOrdersRouteWithChildren
   '/enquiries': typeof AppEnquiriesRouteWithChildren
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
+  '/payments': typeof AppPaymentsRouteWithChildren
+  '/proforma-invoices': typeof AppProformaInvoicesRouteWithChildren
+  '/purchase-orders': typeof AppPurchaseOrdersRouteWithChildren
   '/quotations': typeof AppQuotationsRouteWithChildren
+  '/reports': typeof AppReportsRoute
   '/rfqs': typeof AppRfqsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
+  '/tickets': typeof AppTicketsRouteWithChildren
   '/login': typeof AuthLoginRoute
+  '/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
   '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
+  '/delivery-orders/$id': typeof AppDeliveryOrdersIdRouteWithChildren
+  '/delivery-orders/new': typeof AppDeliveryOrdersNewRoute
   '/enquiries/$id': typeof AppEnquiriesIdRoute
   '/enquiries/new': typeof AppEnquiriesNewRoute
   '/my-items/$id': typeof AppMyItemsIdRoute
+  '/payments/$id': typeof AppPaymentsIdRoute
+  '/payments/new': typeof AppPaymentsNewRoute
+  '/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
+  '/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
+  '/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
   '/quotations/$id': typeof AppQuotationsIdRoute
-  '/rfqs/$id': typeof AppRfqsIdRoute
+  '/quotations/new': typeof AppQuotationsNewRoute
+  '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
   '/rfqs/new': typeof AppRfqsNewRoute
+  '/settings/document-number-settings': typeof AppSettingsDocumentNumberSettingsRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
+  '/tickets/$id': typeof AppTicketsIdRoute
+  '/tickets/new': typeof AppTicketsNewRoute
   '/catalog/items/$id': typeof AppCatalogItemsIdRoute
+  '/delivery-orders/$id/print': typeof AppDeliveryOrdersIdPrintRoute
+  '/proforma-invoices/$id/print': typeof AppProformaInvoicesIdPrintRoute
+  '/purchase-orders/$id/print': typeof AppPurchaseOrdersIdPrintRoute
+  '/rfqs/$id/comparison': typeof AppRfqsIdComparisonRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -208,25 +389,47 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_app/customers': typeof AppCustomersRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/delivery-orders': typeof AppDeliveryOrdersRouteWithChildren
   '/_app/enquiries': typeof AppEnquiriesRouteWithChildren
   '/_app/item-mapping': typeof AppItemMappingRoute
   '/_app/my-dimensions': typeof AppMyDimensionsRoute
   '/_app/my-items': typeof AppMyItemsRouteWithChildren
+  '/_app/payments': typeof AppPaymentsRouteWithChildren
+  '/_app/proforma-invoices': typeof AppProformaInvoicesRouteWithChildren
+  '/_app/purchase-orders': typeof AppPurchaseOrdersRouteWithChildren
   '/_app/quotations': typeof AppQuotationsRouteWithChildren
+  '/_app/reports': typeof AppReportsRoute
   '/_app/rfqs': typeof AppRfqsRouteWithChildren
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
+  '/_app/tickets': typeof AppTicketsRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
+  '/_app/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
   '/_app/catalog/categories': typeof AppCatalogCategoriesRoute
   '/_app/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/_app/customers/$id': typeof AppCustomersIdRoute
+  '/_app/delivery-orders/$id': typeof AppDeliveryOrdersIdRouteWithChildren
+  '/_app/delivery-orders/new': typeof AppDeliveryOrdersNewRoute
   '/_app/enquiries/$id': typeof AppEnquiriesIdRoute
   '/_app/enquiries/new': typeof AppEnquiriesNewRoute
   '/_app/my-items/$id': typeof AppMyItemsIdRoute
+  '/_app/payments/$id': typeof AppPaymentsIdRoute
+  '/_app/payments/new': typeof AppPaymentsNewRoute
+  '/_app/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
+  '/_app/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
+  '/_app/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
   '/_app/quotations/$id': typeof AppQuotationsIdRoute
-  '/_app/rfqs/$id': typeof AppRfqsIdRoute
+  '/_app/quotations/new': typeof AppQuotationsNewRoute
+  '/_app/rfqs/$id': typeof AppRfqsIdRouteWithChildren
   '/_app/rfqs/new': typeof AppRfqsNewRoute
+  '/_app/settings/document-number-settings': typeof AppSettingsDocumentNumberSettingsRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
+  '/_app/tickets/$id': typeof AppTicketsIdRoute
+  '/_app/tickets/new': typeof AppTicketsNewRoute
   '/_app/catalog/items/$id': typeof AppCatalogItemsIdRoute
+  '/_app/delivery-orders/$id/print': typeof AppDeliveryOrdersIdPrintRoute
+  '/_app/proforma-invoices/$id/print': typeof AppProformaInvoicesIdPrintRoute
+  '/_app/purchase-orders/$id/print': typeof AppPurchaseOrdersIdPrintRoute
+  '/_app/rfqs/$id/comparison': typeof AppRfqsIdComparisonRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -234,49 +437,93 @@ export interface FileRouteTypes {
     | '/'
     | '/customers'
     | '/dashboard'
+    | '/delivery-orders'
     | '/enquiries'
     | '/item-mapping'
     | '/my-dimensions'
     | '/my-items'
+    | '/payments'
+    | '/proforma-invoices'
+    | '/purchase-orders'
     | '/quotations'
+    | '/reports'
     | '/rfqs'
     | '/suppliers'
+    | '/tickets'
     | '/login'
+    | '/admin/document-number-settings'
     | '/catalog/categories'
     | '/catalog/items'
     | '/customers/$id'
+    | '/delivery-orders/$id'
+    | '/delivery-orders/new'
     | '/enquiries/$id'
     | '/enquiries/new'
     | '/my-items/$id'
+    | '/payments/$id'
+    | '/payments/new'
+    | '/proforma-invoices/$id'
+    | '/proforma-invoices/new'
+    | '/purchase-orders/$id'
     | '/quotations/$id'
+    | '/quotations/new'
     | '/rfqs/$id'
     | '/rfqs/new'
+    | '/settings/document-number-settings'
     | '/suppliers/$id'
+    | '/tickets/$id'
+    | '/tickets/new'
     | '/catalog/items/$id'
+    | '/delivery-orders/$id/print'
+    | '/proforma-invoices/$id/print'
+    | '/purchase-orders/$id/print'
+    | '/rfqs/$id/comparison'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/customers'
     | '/dashboard'
+    | '/delivery-orders'
     | '/enquiries'
     | '/item-mapping'
     | '/my-dimensions'
     | '/my-items'
+    | '/payments'
+    | '/proforma-invoices'
+    | '/purchase-orders'
     | '/quotations'
+    | '/reports'
     | '/rfqs'
     | '/suppliers'
+    | '/tickets'
     | '/login'
+    | '/admin/document-number-settings'
     | '/catalog/categories'
     | '/catalog/items'
     | '/customers/$id'
+    | '/delivery-orders/$id'
+    | '/delivery-orders/new'
     | '/enquiries/$id'
     | '/enquiries/new'
     | '/my-items/$id'
+    | '/payments/$id'
+    | '/payments/new'
+    | '/proforma-invoices/$id'
+    | '/proforma-invoices/new'
+    | '/purchase-orders/$id'
     | '/quotations/$id'
+    | '/quotations/new'
     | '/rfqs/$id'
     | '/rfqs/new'
+    | '/settings/document-number-settings'
     | '/suppliers/$id'
+    | '/tickets/$id'
+    | '/tickets/new'
     | '/catalog/items/$id'
+    | '/delivery-orders/$id/print'
+    | '/proforma-invoices/$id/print'
+    | '/purchase-orders/$id/print'
+    | '/rfqs/$id/comparison'
   id:
     | '__root__'
     | '/'
@@ -284,25 +531,47 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/_app/customers'
     | '/_app/dashboard'
+    | '/_app/delivery-orders'
     | '/_app/enquiries'
     | '/_app/item-mapping'
     | '/_app/my-dimensions'
     | '/_app/my-items'
+    | '/_app/payments'
+    | '/_app/proforma-invoices'
+    | '/_app/purchase-orders'
     | '/_app/quotations'
+    | '/_app/reports'
     | '/_app/rfqs'
     | '/_app/suppliers'
+    | '/_app/tickets'
     | '/_auth/login'
+    | '/_app/admin/document-number-settings'
     | '/_app/catalog/categories'
     | '/_app/catalog/items'
     | '/_app/customers/$id'
+    | '/_app/delivery-orders/$id'
+    | '/_app/delivery-orders/new'
     | '/_app/enquiries/$id'
     | '/_app/enquiries/new'
     | '/_app/my-items/$id'
+    | '/_app/payments/$id'
+    | '/_app/payments/new'
+    | '/_app/proforma-invoices/$id'
+    | '/_app/proforma-invoices/new'
+    | '/_app/purchase-orders/$id'
     | '/_app/quotations/$id'
+    | '/_app/quotations/new'
     | '/_app/rfqs/$id'
     | '/_app/rfqs/new'
+    | '/_app/settings/document-number-settings'
     | '/_app/suppliers/$id'
+    | '/_app/tickets/$id'
+    | '/_app/tickets/new'
     | '/_app/catalog/items/$id'
+    | '/_app/delivery-orders/$id/print'
+    | '/_app/proforma-invoices/$id/print'
+    | '/_app/purchase-orders/$id/print'
+    | '/_app/rfqs/$id/comparison'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -341,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_app/tickets': {
+      id: '/_app/tickets'
+      path: '/tickets'
+      fullPath: '/tickets'
+      preLoaderRoute: typeof AppTicketsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/suppliers': {
       id: '/_app/suppliers'
       path: '/suppliers'
@@ -355,11 +631,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRfqsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/quotations': {
       id: '/_app/quotations'
       path: '/quotations'
       fullPath: '/quotations'
       preLoaderRoute: typeof AppQuotationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/purchase-orders': {
+      id: '/_app/purchase-orders'
+      path: '/purchase-orders'
+      fullPath: '/purchase-orders'
+      preLoaderRoute: typeof AppPurchaseOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/proforma-invoices': {
+      id: '/_app/proforma-invoices'
+      path: '/proforma-invoices'
+      fullPath: '/proforma-invoices'
+      preLoaderRoute: typeof AppProformaInvoicesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/payments': {
+      id: '/_app/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof AppPaymentsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-items': {
@@ -390,6 +694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEnquiriesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/delivery-orders': {
+      id: '/_app/delivery-orders'
+      path: '/delivery-orders'
+      fullPath: '/delivery-orders'
+      preLoaderRoute: typeof AppDeliveryOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -404,12 +715,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/tickets/new': {
+      id: '/_app/tickets/new'
+      path: '/new'
+      fullPath: '/tickets/new'
+      preLoaderRoute: typeof AppTicketsNewRouteImport
+      parentRoute: typeof AppTicketsRoute
+    }
+    '/_app/tickets/$id': {
+      id: '/_app/tickets/$id'
+      path: '/$id'
+      fullPath: '/tickets/$id'
+      preLoaderRoute: typeof AppTicketsIdRouteImport
+      parentRoute: typeof AppTicketsRoute
+    }
     '/_app/suppliers/$id': {
       id: '/_app/suppliers/$id'
       path: '/$id'
       fullPath: '/suppliers/$id'
       preLoaderRoute: typeof AppSuppliersIdRouteImport
       parentRoute: typeof AppSuppliersRoute
+    }
+    '/_app/settings/document-number-settings': {
+      id: '/_app/settings/document-number-settings'
+      path: '/settings/document-number-settings'
+      fullPath: '/settings/document-number-settings'
+      preLoaderRoute: typeof AppSettingsDocumentNumberSettingsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/rfqs/new': {
       id: '/_app/rfqs/new'
@@ -425,12 +757,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRfqsIdRouteImport
       parentRoute: typeof AppRfqsRoute
     }
+    '/_app/quotations/new': {
+      id: '/_app/quotations/new'
+      path: '/new'
+      fullPath: '/quotations/new'
+      preLoaderRoute: typeof AppQuotationsNewRouteImport
+      parentRoute: typeof AppQuotationsRoute
+    }
     '/_app/quotations/$id': {
       id: '/_app/quotations/$id'
       path: '/$id'
       fullPath: '/quotations/$id'
       preLoaderRoute: typeof AppQuotationsIdRouteImport
       parentRoute: typeof AppQuotationsRoute
+    }
+    '/_app/purchase-orders/$id': {
+      id: '/_app/purchase-orders/$id'
+      path: '/$id'
+      fullPath: '/purchase-orders/$id'
+      preLoaderRoute: typeof AppPurchaseOrdersIdRouteImport
+      parentRoute: typeof AppPurchaseOrdersRoute
+    }
+    '/_app/proforma-invoices/new': {
+      id: '/_app/proforma-invoices/new'
+      path: '/new'
+      fullPath: '/proforma-invoices/new'
+      preLoaderRoute: typeof AppProformaInvoicesNewRouteImport
+      parentRoute: typeof AppProformaInvoicesRoute
+    }
+    '/_app/proforma-invoices/$id': {
+      id: '/_app/proforma-invoices/$id'
+      path: '/$id'
+      fullPath: '/proforma-invoices/$id'
+      preLoaderRoute: typeof AppProformaInvoicesIdRouteImport
+      parentRoute: typeof AppProformaInvoicesRoute
+    }
+    '/_app/payments/new': {
+      id: '/_app/payments/new'
+      path: '/new'
+      fullPath: '/payments/new'
+      preLoaderRoute: typeof AppPaymentsNewRouteImport
+      parentRoute: typeof AppPaymentsRoute
+    }
+    '/_app/payments/$id': {
+      id: '/_app/payments/$id'
+      path: '/$id'
+      fullPath: '/payments/$id'
+      preLoaderRoute: typeof AppPaymentsIdRouteImport
+      parentRoute: typeof AppPaymentsRoute
     }
     '/_app/my-items/$id': {
       id: '/_app/my-items/$id'
@@ -453,6 +827,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEnquiriesIdRouteImport
       parentRoute: typeof AppEnquiriesRoute
     }
+    '/_app/delivery-orders/new': {
+      id: '/_app/delivery-orders/new'
+      path: '/new'
+      fullPath: '/delivery-orders/new'
+      preLoaderRoute: typeof AppDeliveryOrdersNewRouteImport
+      parentRoute: typeof AppDeliveryOrdersRoute
+    }
+    '/_app/delivery-orders/$id': {
+      id: '/_app/delivery-orders/$id'
+      path: '/$id'
+      fullPath: '/delivery-orders/$id'
+      preLoaderRoute: typeof AppDeliveryOrdersIdRouteImport
+      parentRoute: typeof AppDeliveryOrdersRoute
+    }
     '/_app/customers/$id': {
       id: '/_app/customers/$id'
       path: '/$id'
@@ -473,6 +861,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/catalog/categories'
       preLoaderRoute: typeof AppCatalogCategoriesRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/admin/document-number-settings': {
+      id: '/_app/admin/document-number-settings'
+      path: '/admin/document-number-settings'
+      fullPath: '/admin/document-number-settings'
+      preLoaderRoute: typeof AppAdminDocumentNumberSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/rfqs/$id/comparison': {
+      id: '/_app/rfqs/$id/comparison'
+      path: '/comparison'
+      fullPath: '/rfqs/$id/comparison'
+      preLoaderRoute: typeof AppRfqsIdComparisonRouteImport
+      parentRoute: typeof AppRfqsIdRoute
+    }
+    '/_app/purchase-orders/$id/print': {
+      id: '/_app/purchase-orders/$id/print'
+      path: '/print'
+      fullPath: '/purchase-orders/$id/print'
+      preLoaderRoute: typeof AppPurchaseOrdersIdPrintRouteImport
+      parentRoute: typeof AppPurchaseOrdersIdRoute
+    }
+    '/_app/proforma-invoices/$id/print': {
+      id: '/_app/proforma-invoices/$id/print'
+      path: '/print'
+      fullPath: '/proforma-invoices/$id/print'
+      preLoaderRoute: typeof AppProformaInvoicesIdPrintRouteImport
+      parentRoute: typeof AppProformaInvoicesIdRoute
+    }
+    '/_app/delivery-orders/$id/print': {
+      id: '/_app/delivery-orders/$id/print'
+      path: '/print'
+      fullPath: '/delivery-orders/$id/print'
+      preLoaderRoute: typeof AppDeliveryOrdersIdPrintRouteImport
+      parentRoute: typeof AppDeliveryOrdersIdRoute
     }
     '/_app/catalog/items/$id': {
       id: '/_app/catalog/items/$id'
@@ -495,6 +918,30 @@ const AppCustomersRouteChildren: AppCustomersRouteChildren = {
 const AppCustomersRouteWithChildren = AppCustomersRoute._addFileChildren(
   AppCustomersRouteChildren,
 )
+
+interface AppDeliveryOrdersIdRouteChildren {
+  AppDeliveryOrdersIdPrintRoute: typeof AppDeliveryOrdersIdPrintRoute
+}
+
+const AppDeliveryOrdersIdRouteChildren: AppDeliveryOrdersIdRouteChildren = {
+  AppDeliveryOrdersIdPrintRoute: AppDeliveryOrdersIdPrintRoute,
+}
+
+const AppDeliveryOrdersIdRouteWithChildren =
+  AppDeliveryOrdersIdRoute._addFileChildren(AppDeliveryOrdersIdRouteChildren)
+
+interface AppDeliveryOrdersRouteChildren {
+  AppDeliveryOrdersIdRoute: typeof AppDeliveryOrdersIdRouteWithChildren
+  AppDeliveryOrdersNewRoute: typeof AppDeliveryOrdersNewRoute
+}
+
+const AppDeliveryOrdersRouteChildren: AppDeliveryOrdersRouteChildren = {
+  AppDeliveryOrdersIdRoute: AppDeliveryOrdersIdRouteWithChildren,
+  AppDeliveryOrdersNewRoute: AppDeliveryOrdersNewRoute,
+}
+
+const AppDeliveryOrdersRouteWithChildren =
+  AppDeliveryOrdersRoute._addFileChildren(AppDeliveryOrdersRouteChildren)
 
 interface AppEnquiriesRouteChildren {
   AppEnquiriesIdRoute: typeof AppEnquiriesIdRoute
@@ -522,25 +969,101 @@ const AppMyItemsRouteWithChildren = AppMyItemsRoute._addFileChildren(
   AppMyItemsRouteChildren,
 )
 
+interface AppPaymentsRouteChildren {
+  AppPaymentsIdRoute: typeof AppPaymentsIdRoute
+  AppPaymentsNewRoute: typeof AppPaymentsNewRoute
+}
+
+const AppPaymentsRouteChildren: AppPaymentsRouteChildren = {
+  AppPaymentsIdRoute: AppPaymentsIdRoute,
+  AppPaymentsNewRoute: AppPaymentsNewRoute,
+}
+
+const AppPaymentsRouteWithChildren = AppPaymentsRoute._addFileChildren(
+  AppPaymentsRouteChildren,
+)
+
+interface AppProformaInvoicesIdRouteChildren {
+  AppProformaInvoicesIdPrintRoute: typeof AppProformaInvoicesIdPrintRoute
+}
+
+const AppProformaInvoicesIdRouteChildren: AppProformaInvoicesIdRouteChildren = {
+  AppProformaInvoicesIdPrintRoute: AppProformaInvoicesIdPrintRoute,
+}
+
+const AppProformaInvoicesIdRouteWithChildren =
+  AppProformaInvoicesIdRoute._addFileChildren(
+    AppProformaInvoicesIdRouteChildren,
+  )
+
+interface AppProformaInvoicesRouteChildren {
+  AppProformaInvoicesIdRoute: typeof AppProformaInvoicesIdRouteWithChildren
+  AppProformaInvoicesNewRoute: typeof AppProformaInvoicesNewRoute
+}
+
+const AppProformaInvoicesRouteChildren: AppProformaInvoicesRouteChildren = {
+  AppProformaInvoicesIdRoute: AppProformaInvoicesIdRouteWithChildren,
+  AppProformaInvoicesNewRoute: AppProformaInvoicesNewRoute,
+}
+
+const AppProformaInvoicesRouteWithChildren =
+  AppProformaInvoicesRoute._addFileChildren(AppProformaInvoicesRouteChildren)
+
+interface AppPurchaseOrdersIdRouteChildren {
+  AppPurchaseOrdersIdPrintRoute: typeof AppPurchaseOrdersIdPrintRoute
+}
+
+const AppPurchaseOrdersIdRouteChildren: AppPurchaseOrdersIdRouteChildren = {
+  AppPurchaseOrdersIdPrintRoute: AppPurchaseOrdersIdPrintRoute,
+}
+
+const AppPurchaseOrdersIdRouteWithChildren =
+  AppPurchaseOrdersIdRoute._addFileChildren(AppPurchaseOrdersIdRouteChildren)
+
+interface AppPurchaseOrdersRouteChildren {
+  AppPurchaseOrdersIdRoute: typeof AppPurchaseOrdersIdRouteWithChildren
+}
+
+const AppPurchaseOrdersRouteChildren: AppPurchaseOrdersRouteChildren = {
+  AppPurchaseOrdersIdRoute: AppPurchaseOrdersIdRouteWithChildren,
+}
+
+const AppPurchaseOrdersRouteWithChildren =
+  AppPurchaseOrdersRoute._addFileChildren(AppPurchaseOrdersRouteChildren)
+
 interface AppQuotationsRouteChildren {
   AppQuotationsIdRoute: typeof AppQuotationsIdRoute
+  AppQuotationsNewRoute: typeof AppQuotationsNewRoute
 }
 
 const AppQuotationsRouteChildren: AppQuotationsRouteChildren = {
   AppQuotationsIdRoute: AppQuotationsIdRoute,
+  AppQuotationsNewRoute: AppQuotationsNewRoute,
 }
 
 const AppQuotationsRouteWithChildren = AppQuotationsRoute._addFileChildren(
   AppQuotationsRouteChildren,
 )
 
+interface AppRfqsIdRouteChildren {
+  AppRfqsIdComparisonRoute: typeof AppRfqsIdComparisonRoute
+}
+
+const AppRfqsIdRouteChildren: AppRfqsIdRouteChildren = {
+  AppRfqsIdComparisonRoute: AppRfqsIdComparisonRoute,
+}
+
+const AppRfqsIdRouteWithChildren = AppRfqsIdRoute._addFileChildren(
+  AppRfqsIdRouteChildren,
+)
+
 interface AppRfqsRouteChildren {
-  AppRfqsIdRoute: typeof AppRfqsIdRoute
+  AppRfqsIdRoute: typeof AppRfqsIdRouteWithChildren
   AppRfqsNewRoute: typeof AppRfqsNewRoute
 }
 
 const AppRfqsRouteChildren: AppRfqsRouteChildren = {
-  AppRfqsIdRoute: AppRfqsIdRoute,
+  AppRfqsIdRoute: AppRfqsIdRouteWithChildren,
   AppRfqsNewRoute: AppRfqsNewRoute,
 }
 
@@ -559,6 +1082,20 @@ const AppSuppliersRouteWithChildren = AppSuppliersRoute._addFileChildren(
   AppSuppliersRouteChildren,
 )
 
+interface AppTicketsRouteChildren {
+  AppTicketsIdRoute: typeof AppTicketsIdRoute
+  AppTicketsNewRoute: typeof AppTicketsNewRoute
+}
+
+const AppTicketsRouteChildren: AppTicketsRouteChildren = {
+  AppTicketsIdRoute: AppTicketsIdRoute,
+  AppTicketsNewRoute: AppTicketsNewRoute,
+}
+
+const AppTicketsRouteWithChildren = AppTicketsRoute._addFileChildren(
+  AppTicketsRouteChildren,
+)
+
 interface AppCatalogItemsRouteChildren {
   AppCatalogItemsIdRoute: typeof AppCatalogItemsIdRoute
 }
@@ -574,29 +1111,46 @@ const AppCatalogItemsRouteWithChildren = AppCatalogItemsRoute._addFileChildren(
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDeliveryOrdersRoute: typeof AppDeliveryOrdersRouteWithChildren
   AppEnquiriesRoute: typeof AppEnquiriesRouteWithChildren
   AppItemMappingRoute: typeof AppItemMappingRoute
   AppMyDimensionsRoute: typeof AppMyDimensionsRoute
   AppMyItemsRoute: typeof AppMyItemsRouteWithChildren
+  AppPaymentsRoute: typeof AppPaymentsRouteWithChildren
+  AppProformaInvoicesRoute: typeof AppProformaInvoicesRouteWithChildren
+  AppPurchaseOrdersRoute: typeof AppPurchaseOrdersRouteWithChildren
   AppQuotationsRoute: typeof AppQuotationsRouteWithChildren
+  AppReportsRoute: typeof AppReportsRoute
   AppRfqsRoute: typeof AppRfqsRouteWithChildren
   AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
+  AppTicketsRoute: typeof AppTicketsRouteWithChildren
+  AppAdminDocumentNumberSettingsRoute: typeof AppAdminDocumentNumberSettingsRoute
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
   AppCatalogItemsRoute: typeof AppCatalogItemsRouteWithChildren
+  AppSettingsDocumentNumberSettingsRoute: typeof AppSettingsDocumentNumberSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppCustomersRoute: AppCustomersRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppDeliveryOrdersRoute: AppDeliveryOrdersRouteWithChildren,
   AppEnquiriesRoute: AppEnquiriesRouteWithChildren,
   AppItemMappingRoute: AppItemMappingRoute,
   AppMyDimensionsRoute: AppMyDimensionsRoute,
   AppMyItemsRoute: AppMyItemsRouteWithChildren,
+  AppPaymentsRoute: AppPaymentsRouteWithChildren,
+  AppProformaInvoicesRoute: AppProformaInvoicesRouteWithChildren,
+  AppPurchaseOrdersRoute: AppPurchaseOrdersRouteWithChildren,
   AppQuotationsRoute: AppQuotationsRouteWithChildren,
+  AppReportsRoute: AppReportsRoute,
   AppRfqsRoute: AppRfqsRouteWithChildren,
   AppSuppliersRoute: AppSuppliersRouteWithChildren,
+  AppTicketsRoute: AppTicketsRouteWithChildren,
+  AppAdminDocumentNumberSettingsRoute: AppAdminDocumentNumberSettingsRoute,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,
   AppCatalogItemsRoute: AppCatalogItemsRouteWithChildren,
+  AppSettingsDocumentNumberSettingsRoute:
+    AppSettingsDocumentNumberSettingsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

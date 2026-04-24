@@ -1,11 +1,14 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { quotationApi } from '@/features/quotations/api/quotationApi'
 import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
+import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
+import { useAuthStore } from '@/stores/authStore'
 import { queryKeys } from '@/lib/queryKeys'
 import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -20,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Send, Check, X, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, Check, X, Plus, Trash2, ChevronRight, ChevronDown, ShoppingCart, Eye } from 'lucide-react'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -56,6 +59,8 @@ export function QuotationDetailPage() {
   const { id } = useParams({ from: '/_app/quotations/$id' })
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const { user } = useAuthStore()
+  const role = user?.role
   const [submitting, setSubmitting] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [rejecting, setRejecting] = useState(false)
@@ -64,6 +69,7 @@ export function QuotationDetailPage() {
   const [itemSearch, setItemSearch] = useState('')
   const [removingItemId, setRemovingItemId] = useState<string | undefined>()
   const [activeVersionId, setActiveVersionId] = useState<string | undefined>()
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
   const { data: quotation, isLoading } = useQuery({
     queryKey: queryKeys.quotations.detail(id),
@@ -92,24 +98,30 @@ export function QuotationDetailPage() {
     mutationFn: () => quotationApi.submit(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Quotation submitted')
       setSubmitting(false)
     },
+    onError: () => toast.error('Failed to submit quotation'),
   })
 
   const acceptQuotation = useMutation({
     mutationFn: () => quotationApi.accept(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Quotation accepted')
       setAccepting(false)
     },
+    onError: () => toast.error('Failed to accept quotation'),
   })
 
   const rejectQuotation = useMutation({
     mutationFn: () => quotationApi.reject(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Quotation rejected')
       setRejecting(false)
     },
+    onError: () => toast.error('Failed to reject quotation'),
   })
 
   const reviseQuotation = useMutation({
@@ -119,9 +131,11 @@ export function QuotationDetailPage() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Revision requested')
       setReviseDialogOpen(false)
       resetRevise()
     },
+    onError: () => toast.error('Failed to request revision'),
   })
 
   const addItemMutation = useMutation({
@@ -136,10 +150,12 @@ export function QuotationDetailPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Item added')
       setAddItemDialogOpen(false)
       resetAddItem()
       setItemSearch('')
     },
+    onError: () => toast.error('Failed to add item'),
   })
 
   const removeItem = useMutation({
@@ -147,8 +163,21 @@ export function QuotationDetailPage() {
       quotationApi.removeItem(id, itemId, activeVersionId ?? quotation?.versions[0]?.id ?? ''),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Item removed')
       setRemovingItemId(undefined)
     },
+    onError: () => toast.error('Failed to remove item'),
+  })
+
+  const createPO = useMutation({
+    mutationFn: () =>
+      purchaseOrderApi.create({ quotationId: id }),
+    onSuccess: (poId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Purchase Order created')
+      navigate({ to: '/purchase-orders/$id', params: { id: poId } })
+    },
+    onError: () => toast.error('Failed to create Purchase Order'),
   })
 
   if (isLoading) {
@@ -175,7 +204,7 @@ export function QuotationDetailPage() {
               {quotation.status}
             </Badge>
 
-            {quotation.status === 'Draft' && (
+            {role === 'Supplier' && quotation.status === 'Draft' && (
               <Button
                 size="sm"
                 onClick={() => setSubmitting(true)}
@@ -184,7 +213,17 @@ export function QuotationDetailPage() {
               </Button>
             )}
 
-            {quotation.status === 'Submitted' && (
+            {role === 'Supplier' && quotation.status === 'Submitted' && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setReviseDialogOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Revise
+              </Button>
+            )}
+
+            {role === 'Customer' && quotation.status === 'Submitted' && (
               <>
                 <Button
                   size="sm"
@@ -202,13 +241,17 @@ export function QuotationDetailPage() {
               </>
             )}
 
-            {quotation.status === 'Submitted' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setReviseDialogOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" /> Revise
+            {role === 'Customer' && quotation.status === 'Accepted' && !quotation.purchaseOrderId && (
+              <Button size="sm" onClick={() => createPO.mutate()} disabled={createPO.isPending}>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {createPO.isPending ? 'Creating PO…' : 'Create PO'}
+              </Button>
+            )}
+
+            {role === 'Customer' && quotation.status === 'Accepted' && quotation.purchaseOrderId && (
+              <Button size="sm" variant="outline"
+                onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: quotation.purchaseOrderId! } })}>
+                <Eye className="mr-2 h-4 w-4" /> View PO
               </Button>
             )}
 
@@ -263,7 +306,7 @@ export function QuotationDetailPage() {
                           <TableHead>Unit Price</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Notes</TableHead>
-                          {quotation.status === 'Draft' && <TableHead></TableHead>}
+                          {role === 'Supplier' && quotation.status === 'Draft' && <TableHead></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -275,13 +318,42 @@ export function QuotationDetailPage() {
                           </TableRow>
                         ) : (
                           version.items.flatMap((item) => {
+                            const hasVariants = item.variants && item.variants.length > 0
+                            const isExpanded = expandedItems.has(item.id)
+                            const toggleExpand = () => {
+                              const newExpanded = new Set(expandedItems)
+                              if (isExpanded) {
+                                newExpanded.delete(item.id)
+                              } else {
+                                newExpanded.add(item.id)
+                              }
+                              setExpandedItems(newExpanded)
+                            }
+
                             const rows: React.ReactNode[] = [
-                              <TableRow key={item.id}>
+                              <TableRow key={item.id}
+                                onClick={hasVariants ? toggleExpand : undefined}
+                                className={hasVariants ? 'cursor-pointer select-none hover:bg-muted/50' : ''}>
                                 <TableCell className="text-sm font-medium">
-                                  {item.supplierItemName}
+                                  <div className="flex items-center gap-2">
+                                    {hasVariants && (
+                                      <span className="w-4">
+                                        {isExpanded ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronRight className="h-4 w-4" />
+                                        )}
+                                      </span>
+                                    )}
+                                    {item.supplierItemName}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-sm font-medium">
-                                  {item.quantity} units
+                                  {hasVariants ? (
+                                    <Badge variant="outline">{item.variants?.length} variants</Badge>
+                                  ) : (
+                                    `${item.quantity} units`
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {formatCurrency(item.unitPrice)}
@@ -292,12 +364,15 @@ export function QuotationDetailPage() {
                                 <TableCell className="text-sm">
                                   {item.notes || <span className="text-muted-foreground">—</span>}
                                 </TableCell>
-                                {quotation.status === 'Draft' && (
+                                {role === 'Supplier' && quotation.status === 'Draft' && (
                                   <TableCell className="text-sm text-right">
                                     <Button
                                       size="icon"
                                       variant="ghost"
-                                      onClick={() => setRemovingItemId(item.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setRemovingItemId(item.id)
+                                      }}
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -306,24 +381,26 @@ export function QuotationDetailPage() {
                               </TableRow>,
                             ]
 
-                            // Add variant sub-rows if variants exist
-                            if (item.variants && item.variants.length > 0) {
+                            // Add variant sub-rows if variants exist and expanded
+                            if (isExpanded && item.variants && item.variants.length > 0) {
                               item.variants.forEach((variant) => {
                                 rows.push(
-                                  <TableRow key={`${item.id}-variant-${variant.id}`} className="bg-slate-50">
-                                    <TableCell className="text-xs pl-8">
-                                      <div className="font-medium text-slate-700">Variant: {variant.dimensionSummary}</div>
-                                      {variant.sku && <div className="text-muted-foreground">SKU: {variant.sku}</div>}
+                                  <TableRow key={`${item.id}-variant-${variant.id}`} className="text-muted-foreground">
+                                    <TableCell className="text-xs pl-8 py-2">
+                                      {variant.dimensionSummary || variant.sku || variant.supplierItemVariantId.slice(0, 8) + '…'}
+                                      {variant.sku && variant.dimensionSummary && ` · ${variant.sku}`}
                                     </TableCell>
-                                    <TableCell className="text-xs text-slate-700">{variant.quantity} units</TableCell>
-                                    <TableCell className="text-xs text-slate-700">
-                                      {formatCurrency(item.variantPrices?.[variant.id] ?? item.unitPrice)}
+                                    <TableCell className="text-xs py-2">{variant.quantity} units</TableCell>
+                                    <TableCell className="text-xs py-2">
+                                      {variant.unitPrice ? formatCurrency(variant.unitPrice) : '—'}
                                     </TableCell>
-                                    <TableCell className="text-xs text-slate-700">
-                                      {formatCurrency(Number(variant.quantity) * (item.variantPrices?.[variant.id] ?? item.unitPrice))}
+                                    <TableCell className="text-xs py-2">
+                                      {variant.unitPrice ? formatCurrency(Number(variant.quantity) * variant.unitPrice) : '—'}
                                     </TableCell>
-                                    <TableCell></TableCell>
-                                    {quotation.status === 'Draft' && <TableCell></TableCell>}
+                                    <TableCell className="text-xs py-2">
+                                      {variant.notes || '—'}
+                                    </TableCell>
+                                    {role === 'Supplier' && quotation.status === 'Draft' && <TableCell></TableCell>}
                                   </TableRow>
                                 )
                               })
@@ -336,7 +413,7 @@ export function QuotationDetailPage() {
                     </Table>
                   </div>
 
-                  {quotation.status === 'Draft' && (
+                  {role === 'Supplier' && quotation.status === 'Draft' && (
                     <Button
                       size="sm"
                       variant="outline"

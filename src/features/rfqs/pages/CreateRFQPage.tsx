@@ -1,6 +1,8 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
+// Typed route gives access to the optional `enquiryId` search param
+import { Route } from '@/routes/_app.rfqs.new'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -23,6 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from 'sonner'
 
 // Zod schema
 const rfqItemVariantSchema = z.object({
@@ -47,7 +50,7 @@ const createRFQSchema = z.object({
   notes: z.string().optional(),
   dueDate: z.string().optional(),
   enquiryId: z.string().optional(),
-  supplierId: z.string().min(1, 'A supplier must be selected'),
+  supplierIds: z.array(z.string()).min(1, 'Select at least one supplier'),
   items: z.array(rfqItemSchema),
 })
 
@@ -57,6 +60,9 @@ export function CreateRFQPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [currentStep, setCurrentStep] = useState(0)
+
+  // Read optional `enquiryId` URL param set by the EnquiryDetailPage "Create RFQ" button
+  const { enquiryId: enquiryIdParam } = Route.useSearch()
   const [selectedEnquiryId, setSelectedEnquiryId] = useState<string | undefined>()
   const [variantDialogOpen, setVariantDialogOpen] = useState(false)
   const [selectedItemForVariant, setSelectedItemForVariant] = useState<{
@@ -72,7 +78,7 @@ export function CreateRFQPage() {
       notes: '',
       dueDate: '',
       enquiryId: undefined,
-      supplierId: '',
+      supplierIds: [],
       items: [],
     },
   })
@@ -95,13 +101,15 @@ export function CreateRFQPage() {
     queryFn: () => supplierApi.list({ page: 1, pageSize: 1000 }).then((r) => r.data ?? []),
   })
 
-  const watchedSupplierId = watch('supplierId')
+  const watchedSupplierIds = watch('supplierIds')
+  // Use the first selected supplier only for the manual ItemPicker filter
+  const primarySupplierId = watchedSupplierIds[0]
 
-  // Fetch enquiry items when enquiry is selected
+  // Fetch ALL enquiry items across all suppliers — backend will split items per supplier on create
   const { data: enquiryItems = [] } = useQuery({
-    queryKey: queryKeys.rfqs.enquiryItems(selectedEnquiryId ?? '', watchedSupplierId ?? ''),
-    queryFn: () => rfqApi.getEnquiryItems(selectedEnquiryId!, watchedSupplierId),
-    enabled: !!selectedEnquiryId && !!watchedSupplierId,
+    queryKey: queryKeys.rfqs.enquiryItems(selectedEnquiryId ?? '', 'all'),
+    queryFn: () => rfqApi.getEnquiryItems(selectedEnquiryId!),
+    enabled: !!selectedEnquiryId,
   })
 
   // Create RFQ mutation
@@ -113,7 +121,7 @@ export function CreateRFQPage() {
         notes: data.notes || undefined,
         dueDate: data.dueDate || undefined,
         enquiryId: data.enquiryId || undefined,
-        supplierId: data.supplierId,
+        supplierIds: data.supplierIds,
         items: checkedItems.map(({ supplierItemId, quantity, notes, variants }) => ({
           supplierItemId,
           quantity,
@@ -122,11 +130,29 @@ export function CreateRFQPage() {
         })),
       })
     },
-    onSuccess: (rfqId) => {
+    onSuccess: (rfqIds) => {
       qc.invalidateQueries({ queryKey: queryKeys.rfqs.list() })
-      navigate({ to: '/rfqs/$id', params: { id: rfqId } })
+      toast.success(`${rfqIds.length} RFQ${rfqIds.length !== 1 ? 's' : ''} created successfully`)
+      // Navigate back to the enquiry if one was linked, otherwise go to RFQ list
+      const linkedEnquiryId = watch('enquiryId')
+      if (linkedEnquiryId) {
+        navigate({ to: '/enquiries/$id', params: { id: linkedEnquiryId } })
+      } else {
+        navigate({ to: '/rfqs' })
+      }
     },
+    onError: () => toast.error('Failed to create RFQ'),
   })
+
+  // Auto-select the enquiry passed via URL param (from EnquiryDetailPage "Create RFQ" button).
+  // Runs once after the enquiries list loads so the form value and local state stay in sync.
+  useEffect(() => {
+    if (enquiryIdParam && enquiries.length > 0) {
+      setValue('enquiryId', enquiryIdParam)
+      handleEnquiryChange(enquiryIdParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enquiryIdParam, enquiries.length])
 
   // Populate items when enquiry items are fetched
   useEffect(() => {
@@ -148,21 +174,26 @@ export function CreateRFQPage() {
   const handleEnquiryChange = (enquiryId: string) => {
     const actualId = enquiryId === '__none__' ? undefined : enquiryId
     if (actualId) {
-      // Clear existing items before selecting new enquiry
-      itemFields.forEach((_, idx) => removeItem(idx))
+      // Remove all items safely by iterating in reverse (avoids index-shift bug)
+      for (let i = itemFields.length - 1; i >= 0; i--) removeItem(i)
       setSelectedEnquiryId(actualId)
     } else {
       setSelectedEnquiryId(undefined)
-      // Clear items from enquiry
-      itemFields.forEach((_, idx) => removeItem(idx))
+      for (let i = itemFields.length - 1; i >= 0; i--) removeItem(i)
     }
   }
 
-  const handleSupplierChange = (supplierId: string) => {
-    const actualId = supplierId === '__none__' ? '' : supplierId
-    setValue('supplierId', actualId)
-    // Clear items when supplier changes
-    itemFields.forEach((_, idx) => removeItem(idx))
+  /**
+   * Toggle a supplier in/out of the selected set.
+   * Items are NOT cleared when toggling suppliers — in a multi-supplier RFQ the
+   * same item list is sent to all suppliers. Each supplier quotes on the same items.
+   */
+  const handleSupplierToggle = (supplierId: string) => {
+    const current = watchedSupplierIds
+    const next = current.includes(supplierId)
+      ? current.filter((id) => id !== supplierId)
+      : [...current, supplierId]
+    setValue('supplierIds', next)
   }
 
   const handleAddAvailableItem = (item: AvailableEnquiryItemDto) => {
@@ -295,42 +326,43 @@ export function CreateRFQPage() {
   // Step 2: Supplier + Items
   const Step2 = (
     <div className="space-y-6">
-      {/* Supplier Selection */}
+      {/* Supplier Selection — multi-select checkboxes; each chosen supplier receives this RFQ */}
       <div className="space-y-2">
-        <Label htmlFor="supplierId">Select Supplier *</Label>
-        <Controller
-          control={control}
-          name="supplierId"
-          render={({ field }) => (
-            <Select value={field.value ?? '__none__'} onValueChange={handleSupplierChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__" disabled>
-                  Select supplier
-                </SelectItem>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <Label>Select Suppliers * <span className="text-xs text-muted-foreground">(pick one or more)</span></Label>
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 max-h-48 overflow-y-auto border rounded-md p-2">
+          {suppliers.map((s) => (
+            // NOTE: do NOT use <label> wrapper here — Radix Checkbox renders a hidden <input>
+            // inside, so a <label> parent causes double-firing (toggle on + toggle off = no change).
+            // Instead: Checkbox handles its own click; span handles text click.
+            <div key={s.id} className="flex items-center gap-2 hover:bg-muted/50 px-2 py-1 rounded">
+              <Checkbox
+                checked={watchedSupplierIds.includes(s.id)}
+                onCheckedChange={() => handleSupplierToggle(s.id)}
+              />
+              <span
+                className="text-sm cursor-pointer select-none flex-1"
+                onClick={() => handleSupplierToggle(s.id)}
+              >
+                {s.name}
+              </span>
+            </div>
+          ))}
+          {suppliers.length === 0 && (
+            <p className="text-sm text-muted-foreground p-2">No suppliers available</p>
           )}
-        />
-        {errors.supplierId && <p className="text-xs text-destructive">{errors.supplierId.message}</p>}
+        </div>
+        {errors.supplierIds && <p className="text-xs text-destructive">{errors.supplierIds.message}</p>}
       </div>
 
-      {/* Items Section - Only show if supplier selected */}
-      {watchedSupplierId && (
+      {/* Items Section - Only show once at least one supplier is selected */}
+      {watchedSupplierIds.length > 0 && (
         <div className="space-y-4">
           {!selectedEnquiryId ? (
-            // No enquiry: item browser
+            // No enquiry: item browser (filtered by primary supplier catalog)
             <div className="space-y-2">
               <Label>Browse & Add Items</Label>
               <ItemPicker
-                supplierId={watchedSupplierId}
+                supplierId={primarySupplierId}
                 selectedItemIds={itemFields.map((f) => f.supplierItemId)}
                 onSelect={handleAddAvailableItem}
               />
@@ -344,6 +376,7 @@ export function CreateRFQPage() {
                     <TableRow>
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Item Name</TableHead>
+                      <TableHead>Supplier</TableHead>
                       <TableHead className="text-right">Enquiry</TableHead>
                       <TableHead className="text-right">Allocated</TableHead>
                       <TableHead className="w-24">This RFQ</TableHead>
@@ -393,6 +426,9 @@ export function CreateRFQPage() {
                                   </Button>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {enquiryItem?.supplierName ?? '—'}
                             </TableCell>
                             <TableCell className="text-right text-sm text-muted-foreground">{enquiryQty}</TableCell>
                             <TableCell className="text-right text-sm text-muted-foreground">{allocated}</TableCell>
@@ -446,6 +482,7 @@ export function CreateRFQPage() {
                                 <TableCell className="text-xs text-slate-500">{v.quantity}</TableCell>
                                 <TableCell />
                                 <TableCell />
+                                <TableCell />
                               </TableRow>
                             ))
                           }
@@ -480,9 +517,11 @@ export function CreateRFQPage() {
             <span className="font-medium">{watch('title') || '—'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Supplier:</span>
-            <span className="font-medium">
-              {suppliers.find((s) => s.id === watchedSupplierId)?.name || '—'}
+            <span className="text-muted-foreground">Supplier(s):</span>
+            <span className="font-medium text-right">
+              {watchedSupplierIds.length > 0
+                ? suppliers.filter((s) => watchedSupplierIds.includes(s.id)).map((s) => s.name).join(', ')
+                : '—'}
             </span>
           </div>
           <div className="flex justify-between">
@@ -597,7 +636,7 @@ export function CreateRFQPage() {
   }
 
   const canProceedStep1 = !!watch('title') && !errors.title
-  const canProceedStep2 = !!watchedSupplierId && itemFields.some((f) => f.checked)
+  const canProceedStep2 = watchedSupplierIds.length > 0 && itemFields.some((f) => f.checked)
 
   return (
     <div className="space-y-6">

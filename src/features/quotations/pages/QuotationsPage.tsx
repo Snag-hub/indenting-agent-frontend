@@ -34,6 +34,11 @@ export function QuotationsPage() {
   if (childMatches.length > 0) return <Outlet />
 
   const columns: ColumnDef<QuotationSummaryDto>[] = [
+    {
+      accessorKey: 'documentNumber',
+      header: 'Doc #',
+      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
+    },
     { accessorKey: 'rfqTitle', header: 'RFQ Title' },
     { accessorKey: 'supplierName', header: 'Supplier' },
     {

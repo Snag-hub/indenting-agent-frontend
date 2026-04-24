@@ -1,13 +1,18 @@
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, Link, useRouter } from '@tanstack/react-router'
 import {
   LayoutDashboard, Users, Building2, Package, Tags,
   ShoppingCart, FileText, ClipboardList, Truck,
   CreditCard, Ticket, Bell, Settings, ChevronLeft,
-  ChevronRight, LogOut, Menu
+  ChevronRight, LogOut, Menu, AlertCircle, Hash
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useNotificationStore } from '@/stores/notificationStore'
+import { useSignalR } from '@/hooks/useSignalR'
+import { NotificationsPanel } from '@/features/notifications/NotificationsPanel'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 type NavItem = { label: string; to: string; icon: React.ReactNode }
@@ -21,30 +26,38 @@ const adminNav: NavItem[] = [
   { label: 'Master Items', to: '/catalog/items', icon: <Package size={18} /> },
   { label: 'Tickets', to: '/tickets', icon: <Ticket size={18} /> },
   { label: 'Audit Logs', to: '/audit-logs', icon: <FileText size={18} /> },
+  { label: 'Doc # Settings', to: '/admin/document-number-settings', icon: <Hash size={18} /> },
   { label: 'Settings', to: '/settings', icon: <Settings size={18} /> },
 ]
 
 const customerNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
-  { label: 'Browse', to: '/browse', icon: <Package size={18} /> },
+  { label: 'Pending Actions', to: '/reports', icon: <AlertCircle size={18} /> },
   { label: 'My Items', to: '/my-items', icon: <Package size={18} /> },
   { label: 'Enquiries', to: '/enquiries', icon: <FileText size={18} /> },
   { label: 'RFQs', to: '/rfqs', icon: <ClipboardList size={18} /> },
+  { label: 'Quotations', to: '/quotations', icon: <ClipboardList size={18} /> },
   { label: 'Purchase Orders', to: '/purchase-orders', icon: <ShoppingCart size={18} /> },
+  { label: 'Proforma Invoices', to: '/proforma-invoices', icon: <FileText size={18} /> },
+  { label: 'Delivery Orders', to: '/delivery-orders', icon: <Truck size={18} /> },
   { label: 'Payments', to: '/payments', icon: <CreditCard size={18} /> },
   { label: 'Tickets', to: '/tickets', icon: <Ticket size={18} /> },
+  { label: 'Doc # Settings', to: '/settings/document-number-settings', icon: <Hash size={18} /> },
   { label: 'Settings', to: '/settings', icon: <Settings size={18} /> },
 ]
 
 const supplierNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Pending Actions', to: '/reports', icon: <AlertCircle size={18} /> },
   { label: 'Enquiries', to: '/enquiries', icon: <FileText size={18} /> },
+  { label: 'RFQs', to: '/rfqs', icon: <ClipboardList size={18} /> },
   { label: 'Items', to: '/my-items', icon: <Package size={18} /> },
   { label: 'Dimensions', to: '/my-dimensions', icon: <Tags size={18} /> },
   { label: 'Quotations', to: '/quotations', icon: <ClipboardList size={18} /> },
   { label: 'Proforma Invoices', to: '/proforma-invoices', icon: <FileText size={18} /> },
   { label: 'Delivery Orders', to: '/delivery-orders', icon: <Truck size={18} /> },
   { label: 'Tickets', to: '/tickets', icon: <Ticket size={18} /> },
+  { label: 'Doc # Settings', to: '/settings/document-number-settings', icon: <Hash size={18} /> },
   { label: 'Settings', to: '/settings', icon: <Settings size={18} /> },
 ]
 
@@ -70,7 +83,12 @@ function PageLoadingFallback() {
 export function AppShell() {
   const { user, clearAuth } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
+  const { unreadCount } = useNotificationStore()
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const router = useRouter()
+
+  // Initialize SignalR connection
+  useSignalR()
 
   const nav = getNav(user?.role ?? 'Admin')
 
@@ -148,9 +166,27 @@ export function AppShell() {
             <Menu size={20} />
           </button>
           <div className="flex-1" />
-          <button className="text-slate-500 hover:text-slate-900 relative">
-            <Bell size={20} />
-          </button>
+          <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={() => setNotificationsOpen(true)}
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-medium">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+            <DialogContent className="max-w-md p-0">
+              <NotificationsPanel
+                isOpen={notificationsOpen}
+                onClose={() => setNotificationsOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
           <div className="w-8 h-8 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-medium">
             {user?.fullName?.[0] ?? '?'}
           </div>

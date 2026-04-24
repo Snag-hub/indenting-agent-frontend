@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft, Send, Lock } from 'lucide-react'
+import { ArrowLeft, Send, Lock, ChevronRight, ChevronDown, FileText } from 'lucide-react'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -25,6 +25,7 @@ export function EnquiryDetailPage() {
   const qc = useQueryClient()
   const [submitting, setSubmitting] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
   const { data: enquiry, isLoading } = useQuery({
     queryKey: queryKeys.enquiries.detail(id),
@@ -103,13 +104,22 @@ export function EnquiryDetailPage() {
             )}
 
             {enquiry.status === 'Open' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setClosing(true)}
-              >
-                <Lock className="mr-2 h-4 w-4" /> Close
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate({ to: '/rfqs/new', search: { enquiryId: id } })}
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Create RFQ
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setClosing(true)}
+                >
+                  <Lock className="mr-2 h-4 w-4" /> Close
+                </Button>
+              </>
             )}
 
             <Button
@@ -158,33 +168,69 @@ export function EnquiryDetailPage() {
                     </TableCell>
                   </TableRow>
                 ) : enquiry.items.flatMap((item) => {
-                  // Create parent row
+                  const hasVariants = item.variants && item.variants.length > 0
+                  const isExpanded = expandedItems.has(item.id)
+                  const toggleExpand = () =>
+                    setExpandedItems((prev) => {
+                      const next = new Set(prev)
+                      next.has(item.id) ? next.delete(item.id) : next.add(item.id)
+                      return next
+                    })
+
                   const rows: React.ReactNode[] = [
                     <TableRow key={item.id}>
                       <TableCell className="text-sm">
-                        <div className="font-medium">{item.itemName}</div>
-                        {item.supplierName && (
-                          <div className="text-xs text-muted-foreground">{item.supplierName}</div>
+                        <div className="flex items-center gap-1">
+                          {hasVariants && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-5 w-5 shrink-0"
+                              onClick={toggleExpand}
+                            >
+                              {isExpanded
+                                ? <ChevronDown className="h-3.5 w-3.5" />
+                                : <ChevronRight className="h-3.5 w-3.5" />}
+                            </Button>
+                          )}
+                          <div>
+                            <div className="font-medium">{item.itemName}</div>
+                            {item.supplierName && (
+                              <div className="text-xs text-muted-foreground">{item.supplierName}</div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {item.quantity}
+                        {hasVariants && (
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {item.variants!.length} variant{item.variants!.length !== 1 ? 's' : ''}
+                          </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm font-medium">{item.quantity}</TableCell>
                       <TableCell className="text-sm">
                         {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                     </TableRow>,
                   ]
 
-                  // Add variant sub-rows if variants exist
-                  if (item.variants && item.variants.length > 0) {
-                    item.variants.forEach((variant) => {
+                  // Add variant sub-rows when expanded
+                  if (hasVariants && isExpanded) {
+                    item.variants!.forEach((variant) => {
                       rows.push(
-                        <TableRow key={`${item.id}-variant-${variant.id}`} className="bg-slate-50">
-                          <TableCell className="text-xs pl-8">
-                            <div className="font-medium text-slate-700">Variant: {variant.dimensionSummary}</div>
-                            {variant.sku && <div className="text-muted-foreground">SKU: {variant.sku}</div>}
+                        <TableRow key={`${item.id}-variant-${variant.id}`}>
+                          <TableCell className="text-xs pl-10 py-2">
+                            <span className="text-muted-foreground">
+                              {variant.dimensionSummary || variant.supplierItemVariantId.slice(0, 8) + '…'}
+                              {variant.sku && (
+                                <span className="ml-2 font-mono text-[11px]">· {variant.sku}</span>
+                              )}
+                            </span>
                           </TableCell>
-                          <TableCell className="text-xs text-slate-700">{variant.quantity}</TableCell>
-                          <TableCell></TableCell>
+                          <TableCell className="text-xs text-muted-foreground py-2">{variant.quantity}</TableCell>
+                          <TableCell className="py-2"></TableCell>
                         </TableRow>
                       )
                     })

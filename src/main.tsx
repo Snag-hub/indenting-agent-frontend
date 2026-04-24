@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
+import { Toaster } from '@/components/ui/sonner'
 import './index.css'
 
 const router = createRouter({ routeTree })
@@ -19,6 +20,8 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      {/* Global toast provider — call toast.success() / toast.error() from any mutation */}
+      <Toaster />
     </QueryClientProvider>
   </StrictMode>,
 )
