@@ -112,13 +112,13 @@ export function AttachmentPanel({ entityType, entityId }: AttachmentPanelProps) 
                 <Paperclip className="h-4 w-4 text-slate-400" />
                 <div>
                   <p className="text-sm font-medium text-slate-800">{a.fileName}</p>
-                  <p className="text-xs text-slate-400">
-                    {formatBytes(a.fileSizeBytes)} · {format(new Date(a.uploadedAt), 'dd MMM yyyy')} ·
-                    <span className="ml-1 inline-flex items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-slate-400">
+                      {formatBytes(a.fileSizeBytes)} · {format(new Date(a.uploadedAt), 'dd MMM yyyy')} ·{' '}
                       {a.uploadedByName}
-                      <RoleBadge role={a.uploadedByRole} />
-                    </span>
-                  </p>
+                    </p>
+                    <RoleBadge role={a.uploadedByRole} />
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-1">
