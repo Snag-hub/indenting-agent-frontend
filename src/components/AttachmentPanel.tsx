@@ -1,18 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Paperclip, Trash2, Upload } from 'lucide-react'
+import { Download, Paperclip, Trash2, Upload } from 'lucide-react'
 import { useRef } from 'react'
 import { format } from 'date-fns'
+import { useAuthStore } from '@/stores/authStore'
 
 interface Attachment {
   id: string
   fileName: string
   fileType: string
-  fileSize: number
+  fileSizeBytes: number
   uploadedAt: string
   uploadedByName: string
+  uploadedByRole: string
+  uploadedById: string
 }
 
 interface AttachmentPanelProps {
@@ -20,9 +24,19 @@ interface AttachmentPanelProps {
   entityId: string
 }
 
+function RoleBadge({ role }: { role: string }) {
+  const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    Customer: 'default',
+    Supplier: 'secondary',
+    Admin: 'outline',
+  }
+  return <Badge variant={variants[role] || 'default'}>{role}</Badge>
+}
+
 export function AttachmentPanel({ entityType, entityId }: AttachmentPanelProps) {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
+  const { user } = useAuthStore()
 
   const { data, isLoading } = useQuery<Attachment[]>({
     queryKey: ['attachments', entityType, entityId],
@@ -45,6 +59,18 @@ export function AttachmentPanel({ entityType, entityId }: AttachmentPanelProps) 
     mutationFn: (id: string) => api.delete(`/attachments/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attachments', entityType, entityId] }),
   })
+
+  const download = async (attachmentId: string, fileName: string) => {
+    const response = await api.get(`/attachments/${attachmentId}/download`, { responseType: 'blob' })
+    const url = URL.createObjectURL(response.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
@@ -87,18 +113,33 @@ export function AttachmentPanel({ entityType, entityId }: AttachmentPanelProps) 
                 <div>
                   <p className="text-sm font-medium text-slate-800">{a.fileName}</p>
                   <p className="text-xs text-slate-400">
-                    {formatBytes(a.fileSize)} · {format(new Date(a.uploadedAt), 'dd MMM yyyy')} · {a.uploadedByName}
+                    {formatBytes(a.fileSizeBytes)} · {format(new Date(a.uploadedAt), 'dd MMM yyyy')} ·
+                    <span className="ml-1 inline-flex items-center gap-1">
+                      {a.uploadedByName}
+                      <RoleBadge role={a.uploadedByRole} />
+                    </span>
                   </p>
                 </div>
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => remove.mutate(a.id)}
-                disabled={remove.isPending}
-              >
-                <Trash2 className="h-4 w-4 text-red-400" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => download(a.id, a.fileName)}
+                >
+                  <Download className="h-4 w-4 text-slate-400" />
+                </Button>
+                {(user?.id === a.uploadedById || user?.role === 'Admin') && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => remove.mutate(a.id)}
+                    disabled={remove.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-400" />
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
