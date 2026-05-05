@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { Outlet, Link, useRouter } from '@tanstack/react-router'
 import {
   LayoutDashboard, Users, Building2, Package, Tags,
@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useSignalR } from '@/hooks/useSignalR'
+import { notificationApi } from '@/lib/notificationApi'
 import { NotificationsPanel } from '@/features/notifications/NotificationsPanel'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -85,12 +86,25 @@ function PageLoadingFallback() {
 export function AppShell() {
   const { user, clearAuth } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
-  const { unreadCount } = useNotificationStore()
+  const { unreadCount, setUnreadCount } = useNotificationStore()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const router = useRouter()
 
   // Initialize SignalR connection
   useSignalR()
+
+  // Load unread notification count on app init
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const count = await notificationApi.getUnreadCount()
+        setUnreadCount(count)
+      } catch (error) {
+        console.error('Failed to load unread notification count:', error)
+      }
+    }
+    loadUnreadCount()
+  }, [setUnreadCount])
 
   const nav = getNav(user?.role ?? 'Admin')
 
