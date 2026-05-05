@@ -69,6 +69,8 @@ export function CreateRFQPage() {
     fieldIndex?: number   // set when editing an existing item
     id: string            // supplierItemId for the variant dialog
     name: string
+    enquiryVariants?: Array<{ id: string; quantity: number }>  // variants from enquiry, if creating from enquiry
+    enquiryItemVariants?: Array<{ id: string }>  // variant IDs for filtering when editing enquiry-linked items
   } | undefined>()
 
   const { control, register, watch, setValue, formState: { errors } } = useForm<CreateRFQForm>({
@@ -106,6 +108,7 @@ export function CreateRFQPage() {
   const primarySupplierId = watchedSupplierIds[0]
 
   // Fetch ALL enquiry items across all suppliers — backend will split items per supplier on create
+  // This includes variant data for the selected item
   const { data: enquiryItems = [] } = useQuery({
     queryKey: queryKeys.rfqs.enquiryItems(selectedEnquiryId ?? '', 'all'),
     queryFn: () => rfqApi.getEnquiryItems(selectedEnquiryId!),
@@ -122,12 +125,21 @@ export function CreateRFQPage() {
         dueDate: data.dueDate || undefined,
         enquiryId: data.enquiryId || undefined,
         supplierIds: data.supplierIds,
-        items: checkedItems.map(({ supplierItemId, quantity, notes, variants }) => ({
-          supplierItemId,
-          quantity,
-          notes: notes || undefined,
-          variants: variants && variants.length > 0 ? variants : undefined,
-        })),
+        items: checkedItems.map(({ supplierItemId, quantity, notes, variants }) => {
+          // CRITICAL: Filter out any variants with 0 quantity - only send variants that were explicitly selected
+          const hasVariants = variants && Array.isArray(variants) && variants.length > 0
+          const validVariants = hasVariants
+            ? variants.filter((v) => v.quantity && v.quantity > 0)
+            : []
+
+          return {
+            supplierItemId,
+            quantity,
+            notes: notes || undefined,
+            // Only include variants if there are valid (non-zero) variants
+            variants: validVariants.length > 0 ? validVariants : undefined,
+          }
+        }),
       })
     },
     onSuccess: (rfqIds) => {
@@ -200,7 +212,21 @@ export function CreateRFQPage() {
     const resolvedSupplierItemId = item.supplierItemId ?? item.id
 
     if (item.hasVariants) {
-      setSelectedItemForVariant({ id: resolvedSupplierItemId, name: item.resolvedName })
+      // Extract enquiry variants if creating from enquiry
+      let enquiryVariants: Array<{ id: string; quantity: number }> | undefined
+      if (selectedEnquiryId) {
+        const enquiryItem = enquiryItems.find((i) => i.supplierItemId === resolvedSupplierItemId)
+        enquiryVariants = enquiryItem?.variants ? enquiryItem.variants.map((v) => ({
+          id: v.supplierItemVariantId,
+          quantity: v.quantityRequested,
+        })) : undefined
+      }
+
+      setSelectedItemForVariant({
+        id: resolvedSupplierItemId,
+        name: item.resolvedName,
+        enquiryVariants,
+      })
       setVariantDialogOpen(true)
     } else {
       appendItem({
@@ -218,7 +244,22 @@ export function CreateRFQPage() {
   const handleEditVariants = (idx: number) => {
     const field = itemFields[idx]
     if (!field) return
-    setSelectedItemForVariant({ fieldIndex: idx, id: field.supplierItemId, name: field.itemName ?? '' })
+
+    // Extract enquiry variant IDs if editing an enquiry-linked item
+    let enquiryItemVariants: Array<{ id: string }> | undefined
+    if (selectedEnquiryId) {
+      const enquiryItem = enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)
+      enquiryItemVariants = enquiryItem?.variants ? enquiryItem.variants.map((v) => ({
+        id: v.supplierItemVariantId,
+      })) : undefined
+    }
+
+    setSelectedItemForVariant({
+      fieldIndex: idx,
+      id: field.supplierItemId,
+      name: field.itemName ?? '',
+      enquiryItemVariants,
+    })
     setVariantDialogOpen(true)
   }
 
@@ -696,6 +737,8 @@ export function CreateRFQPage() {
                 )?.availableQuantity
               : undefined
           }
+          enquiryVariants={selectedItemForVariant.enquiryVariants}
+          enquiryItemVariants={selectedItemForVariant.enquiryItemVariants}
           onConfirm={handleVariantConfirm}
         />
       )}

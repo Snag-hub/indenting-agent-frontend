@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, CheckCircle, Lock, ChevronRight, ChevronDown, FileText, CreditCard, Truck } from 'lucide-react'
+import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -296,6 +297,8 @@ export function PurchaseOrderDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AttachmentPanel entityType="PurchaseOrder" entityId={id} />
 
       <ConfirmDialog
         open={confirming}

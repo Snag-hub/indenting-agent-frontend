@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft, Send, X, CheckCircle, Ticket } from 'lucide-react'
+import { ArrowLeft, Send, X, CheckCircle, Ticket, CreditCard } from 'lucide-react'
+import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -115,6 +116,16 @@ export function DeliveryOrderDetailPage() {
               </Button>
             )}
 
+            {role === 'Customer' && (deliveryOrder.status === 'Dispatched' || deliveryOrder.status === 'Delivered') && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate({ to: '/payments/new', search: { doId: id } })}
+              >
+                <CreditCard className="mr-2 h-4 w-4" /> Record Payment
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
@@ -186,20 +197,46 @@ export function DeliveryOrderDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {deliveryOrder.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.supplierItemName}</TableCell>
-                    <TableCell className="text-right">{item.quantityDispatched}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {deliveryOrder.items.map((item) => {
+                  const hasVariants = item.variants && item.variants.length > 0
+                  if (hasVariants) {
+                    return (
+                      <>
+                        <TableRow key={item.id} className="bg-muted/30">
+                          <TableCell className="font-semibold text-sm" colSpan={2}>{item.supplierItemName}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
+                          </TableCell>
+                        </TableRow>
+                        {item.variants!.map((v) => (
+                          <TableRow key={v.id} className="border-b border-dashed">
+                            <TableCell className="pl-8 text-sm text-muted-foreground">
+                              {v.dimensionSummary || v.sku || v.supplierItemVariantId}
+                            </TableCell>
+                            <TableCell className="text-right text-sm">{v.quantity}</TableCell>
+                            <TableCell />
+                          </TableRow>
+                        ))}
+                      </>
+                    )
+                  }
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.supplierItemName}</TableCell>
+                      <TableCell className="text-right">{item.quantityDispatched}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      <AttachmentPanel entityType="DeliveryOrder" entityId={id} />
 
       <ConfirmDialog
         open={dispatching}

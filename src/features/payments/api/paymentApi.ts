@@ -38,7 +38,9 @@ export const paymentApi = {
       .then((r) => r.data),
 
   create: (data: {
-    purchaseOrderId: string;
+    purchaseOrderId?: string;
+    proformaInvoiceId?: string;
+    deliveryOrderId?: string;
     amount: number;
     currency: string;
     paymentMethod: string;

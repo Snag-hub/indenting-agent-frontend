@@ -9,6 +9,7 @@ export interface QuotationItemVariantDto {
   dimensionSummary?: string | null;
   sku?: string | null;
   notes?: string | null;
+  rfqQuantity?: number;
 }
 
 export interface QuotationItemDto {
@@ -21,6 +22,7 @@ export interface QuotationItemDto {
   notes?: string;
   variants: QuotationItemVariantDto[];
   variantPrices?: Record<string, number>;
+  rfqQuantity?: number;
 }
 
 export interface QuotationVersionDto {
@@ -29,6 +31,15 @@ export interface QuotationVersionDto {
   notes?: string;
   validUntil?: string;
   items: QuotationItemDto[];
+
+  // Monetary totals
+  subtotal: number;
+  discountAmount: number;
+  discountPercent?: number | null;
+  taxAmount: number;
+  shippingAmount: number;
+  totalAmount: number;
+  currency?: string | null;
 }
 
 export interface QuotationSummaryDto {
@@ -51,6 +62,15 @@ export interface QuotationDetailDto {
   versions: QuotationVersionDto[];
   createdAt: string;
   purchaseOrderId?: string | null;
+  rejectionReason?: string | null;
+  revisionRequestNote?: string | null;
+}
+
+export interface AddQuotationItemVariantInput {
+  supplierItemVariantId: string;
+  quantity: number;
+  unitPrice: number;
+  notes?: string;
 }
 
 export interface AddQuotationItemInput {
@@ -58,6 +78,7 @@ export interface AddQuotationItemInput {
   quantity: number;
   unitPrice: number;
   notes?: string;
+  variants?: AddQuotationItemVariantInput[];
 }
 
 export interface UpdateQuotationVariantInput {
@@ -123,9 +144,15 @@ export const quotationApi = {
   accept: (id: string) =>
     api.post(`/quotations/${id}/accept`).then((r) => r.data),
 
-  reject: (id: string) =>
-    api.post(`/quotations/${id}/reject`).then((r) => r.data),
+  reject: (id: string, reason?: string) =>
+    api.post(`/quotations/${id}/reject`, { reason: reason ?? null }).then((r) => r.data),
+
+  requestRevision: (id: string, note?: string) =>
+    api.post(`/quotations/${id}/request-revision`, { note: note ?? null }).then((r) => r.data),
 
   revise: (id: string, data: ReviseQuotationInput) =>
     api.post(`/quotations/${id}/revise`, data).then((r) => r.data),
+
+  deleteVersion: (id: string, versionId: string) =>
+    api.delete(`/quotations/${id}/versions/${versionId}`).then((r) => r.data),
 };

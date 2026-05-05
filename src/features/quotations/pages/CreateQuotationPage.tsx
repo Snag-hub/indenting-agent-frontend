@@ -127,10 +127,9 @@ export function CreateQuotationPage() {
       // 2. Fetch to get version + item IDs
       const quotation = await quotationApi.get(quotationId)
       const version = quotation.versions[0]
-      // 3. Update each item sequentially (avoids concurrent write conflicts on the same version)
-      for (let idx = 0; idx < version.items.length; idx++) {
-        const item = version.items[idx]
-        const formItem = data.items[idx]
+      // 3. Update each item sequentially — match by supplierItemId, not index, to avoid order mismatch
+      for (const item of version.items) {
+        const formItem = data.items.find(fi => fi.supplierItemId === item.supplierItemId)
         if (!formItem) continue
         await quotationApi.updateItem(quotationId, item.id, version.id, {
           quantity: formItem.quantityOffered,

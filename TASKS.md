@@ -121,3 +121,57 @@
 
 **/ (project root — .github/workflows/)**
 - [ ] Create `ci.yml` — on PR: `dotnet build`, `dotnet test`, `npm run build`
+
+---
+
+## Gap-2 — Notification Unread Count & Read-All (depends on backend Gap-2)
+
+> Plan: `docs/plans/gap-closure-users-notifications-lots.md`
+
+**src/features/notifications/api/**
+- [ ] `notificationsApi.ts` — add `getUnreadCount()` calling `GET /api/v1/notifications/unread-count`
+- [ ] `notificationsApi.ts` — add `markAllRead()` calling `POST /api/v1/notifications/read-all`
+
+**src/stores/**
+- [ ] `notificationStore.ts` — on app load / login, fetch unread count from `getUnreadCount()` to seed `unreadCount` in store
+
+**src/components/ or src/features/notifications/**
+- [ ] Notification bell / dropdown — wire up "Mark all as read" button to `markAllRead()` mutation + invalidate unread count query
+
+---
+
+## Gap-1 — User & Role Management (depends on backend Gap-1)
+
+> Plan: `docs/plans/gap-closure-users-notifications-lots.md`
+
+**src/features/users/api/**
+- [ ] Create `usersApi.ts` — typed functions for all 9 endpoints: `getUsers`, `getUserById`, `createUser`, `updateUser`, `deleteUser`, `activateUser`, `deactivateUser`, `assignRole`, `removeRole`
+
+**src/features/users/pages/**
+- [ ] Create `UsersPage.tsx` — paginated table (email, fullName, role badges, active status); "New User" button opens create dialog; per-row: Edit, Activate/Deactivate, Delete
+- [ ] Create `UserDetailPage.tsx` — user info card + role chips (add/remove roles)
+
+**src/lib/**
+- [ ] `queryKeys.ts` — add `users` query key section
+
+**src/routes/**
+- [ ] Create `_app.users.tsx` — users list route (Admin only)
+- [ ] Create `_app.users.$userId.tsx` — user detail route (Admin only)
+
+---
+
+## Gap-4 — Delivery Order Lot Tracking (depends on backend Gap-4)
+
+> Plan: `docs/plans/gap-closure-users-notifications-lots.md`
+
+**src/features/deliveryOrders/api/**
+- [ ] `deliveryOrderApi.ts` — add lot CRUD functions: `getItemLots`, `addLot`, `updateLot`, `deleteLot`
+- [ ] Update `DeliveryOrderItemDto` type to include `lots?: LotDto[]`
+
+**src/features/deliveryOrders/pages/**
+- [ ] `DeliveryOrderDetailPage.tsx` — extend each item row with a collapsible "Lots" section:
+  - Table: LotNumber, Qty, ManufactureDate, ExpiryDate, Notes, Edit/Delete actions
+  - "Add Lot" button (visible to Supplier when DO is not Cancelled/Delivered)
+
+**src/lib/**
+- [ ] `queryKeys.ts` — add `deliveryOrderLots` key section

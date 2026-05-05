@@ -42,6 +42,16 @@ export interface PurchaseOrderDetailDto {
   supplierName: string;
   status: string;
   items: PurchaseOrderItemDto[];
+
+  // Monetary totals
+  subtotal: number;
+  discountAmount: number;
+  discountPercent?: number | null;
+  taxAmount: number;
+  shippingAmount: number;
+  totalAmount: number;
+  currency?: string | null;
+
   createdAt: string;
 }
 
@@ -50,12 +60,23 @@ export interface CreatePurchaseOrderInput {
   notes?: string;
 }
 
+export interface VoucherVariantBalanceDto {
+  supplierItemVariantId: string;
+  dimensionSummary?: string | null;
+  sku?: string | null;
+  orderedQty: number;
+  invoicedQty: number;
+  remainingQty: number;
+  unitPrice: number;
+}
+
 export interface VoucherItemBalanceDto {
   supplierItemId: string;
   supplierItemName: string;
   orderedQty: number;
   dispatchedQty: number;
   remainingQty: number;
+  variants?: VoucherVariantBalanceDto[] | null;
 }
 
 export const purchaseOrderApi = {

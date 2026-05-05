@@ -148,15 +148,26 @@ export function CreateEnquiryPage() {
         supplierId: data.supplierId,
         title: data.title,
         notes: data.notes || undefined,
-        items: (data.items ?? []).map((item) => ({
-          supplierItemId: item.supplierItemId,
-          quantity: item.quantity,
-          notes: item.notes || undefined,
-          variants: item.variants?.map((v) => ({
-            supplierItemVariantId: v.supplierItemVariantId,
-            quantity: v.quantity,
-          })),
-        })),
+        items: (data.items ?? []).map((item) => {
+          // CRITICAL: Filter out variants with 0 quantity - only send variants that were explicitly selected
+          const hasVariants = item.variants && Array.isArray(item.variants) && item.variants.length > 0
+          const validVariants = hasVariants
+            ? item.variants.filter((v) => v.quantity && v.quantity > 0)
+            : []
+
+          return {
+            supplierItemId: item.supplierItemId,
+            quantity: item.quantity,
+            notes: item.notes || undefined,
+            // Only include variants if there are valid (non-zero) variants
+            variants: validVariants.length > 0
+              ? validVariants.map((v) => ({
+                  supplierItemVariantId: v.supplierItemVariantId,
+                  quantityRequested: v.quantity,
+                }))
+              : undefined,
+          }
+        }),
       })
     }
   }

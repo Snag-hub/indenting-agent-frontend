@@ -5,7 +5,7 @@ export type EnquiryType = "General" | "ItemSpecific";
 
 export interface EnquiryItemVariantInput {
   supplierItemVariantId: string;
-  quantity: number;
+  quantityRequested: number;
 }
 
 export interface EnquiryItemInput {
@@ -27,9 +27,9 @@ export interface EnquiryItemDto {
   variants: {
     id: string;
     supplierItemVariantId: string;
-    dimensionSummary: string;
-    sku?: string;
-    quantity: number;
+    dimensionSummary?: string;
+    sku?: string | null;
+    quantityRequested: number;
   }[];
 }
 

@@ -2,28 +2,27 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { quotationApi } from '@/features/quotations/api/quotationApi'
-import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
+import { quotationApi, type QuotationItemDto } from '@/features/quotations/api/quotationApi'
 import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
+import { QuotationItemEditor } from '@/features/quotations/components/QuotationItemEditor'
 import { useAuthStore } from '@/stores/authStore'
 import { queryKeys } from '@/lib/queryKeys'
 import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Send, Check, X, Plus, Trash2, ChevronRight, ChevronDown, ShoppingCart, Eye } from 'lucide-react'
+import { ArrowLeft, Send, Check, X, Plus, Trash2, ChevronRight, ChevronDown, ShoppingCart, Eye, Pencil, Lock, RotateCcw } from 'lucide-react'
+import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -38,16 +37,8 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
   Submitted: 'default',
   Accepted: 'secondary',
   Rejected: 'destructive',
+  RevisionRequested: 'outline',
 }
-
-const addItemSchema = z.object({
-  supplierItemId: z.string().min(1, 'Item is required'),
-  quantity: z.number().min(1, 'Quantity must be at least 1'),
-  unitPrice: z.number().min(0, 'Unit price must be non-negative'),
-  notes: z.string().optional(),
-})
-
-type AddItemForm = z.infer<typeof addItemSchema>
 
 const reviseSchema = z.object({
   notes: z.string().optional(),
@@ -63,31 +54,25 @@ export function QuotationDetailPage() {
   const role = user?.role
   const [submitting, setSubmitting] = useState(false)
   const [accepting, setAccepting] = useState(false)
-  const [rejecting, setRejecting] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [requestRevisionOpen, setRequestRevisionOpen] = useState(false)
+  const [revisionNote, setRevisionNote] = useState('')
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false)
-  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false)
-  const [itemSearch, setItemSearch] = useState('')
   const [removingItemId, setRemovingItemId] = useState<string | undefined>()
   const [activeVersionId, setActiveVersionId] = useState<string | undefined>()
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [deletingVersionId, setDeletingVersionId] = useState<string | undefined>()
+  const [editorState, setEditorState] = useState<{
+    open: boolean
+    mode: 'add' | 'edit'
+    item?: QuotationItemDto
+    versionId?: string
+  } | null>(null)
 
   const { data: quotation, isLoading } = useQuery({
     queryKey: queryKeys.quotations.detail(id),
     queryFn: () => quotationApi.get(id),
-  })
-
-  const { control: addItemControl, register: registerAddItem, handleSubmit: handleAddItem, reset: resetAddItem, formState: { errors: addItemErrors } } = useForm<AddItemForm>({
-    resolver: zodResolver(addItemSchema),
-    defaultValues: {
-      quantity: 1,
-      unitPrice: 0,
-    },
-  })
-
-  const { data: supplierItemsResult } = useQuery({
-    queryKey: ['supplier-items', 'browse', itemSearch],
-    queryFn: () => supplierItemApi.browse({ page: 1, pageSize: 100, search: itemSearch }),
-    enabled: addItemDialogOpen,
   })
 
   const { register: registerRevise, handleSubmit: handleRevise, reset: resetRevise } = useForm<ReviseForm>({
@@ -115,13 +100,25 @@ export function QuotationDetailPage() {
   })
 
   const rejectQuotation = useMutation({
-    mutationFn: () => quotationApi.reject(id),
+    mutationFn: () => quotationApi.reject(id, rejectionReason || undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
       toast.success('Quotation rejected')
-      setRejecting(false)
+      setRejectDialogOpen(false)
+      setRejectionReason('')
     },
     onError: () => toast.error('Failed to reject quotation'),
+  })
+
+  const requestRevisionMutation = useMutation({
+    mutationFn: () => quotationApi.requestRevision(id, revisionNote || undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Revision requested — supplier has been notified')
+      setRequestRevisionOpen(false)
+      setRevisionNote('')
+    },
+    onError: () => toast.error('Failed to request revision'),
   })
 
   const reviseQuotation = useMutation({
@@ -138,26 +135,6 @@ export function QuotationDetailPage() {
     onError: () => toast.error('Failed to request revision'),
   })
 
-  const addItemMutation = useMutation({
-    mutationFn: (data: AddItemForm) => {
-      const versionId = activeVersionId ?? quotation?.versions[0]?.id ?? ''
-      return quotationApi.addItem(id, versionId, {
-        supplierItemId: data.supplierItemId,
-        quantity: data.quantity,
-        unitPrice: data.unitPrice,
-        notes: data.notes,
-      })
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
-      toast.success('Item added')
-      setAddItemDialogOpen(false)
-      resetAddItem()
-      setItemSearch('')
-    },
-    onError: () => toast.error('Failed to add item'),
-  })
-
   const removeItem = useMutation({
     mutationFn: (itemId: string) =>
       quotationApi.removeItem(id, itemId, activeVersionId ?? quotation?.versions[0]?.id ?? ''),
@@ -167,6 +144,16 @@ export function QuotationDetailPage() {
       setRemovingItemId(undefined)
     },
     onError: () => toast.error('Failed to remove item'),
+  })
+
+  const deleteVersion = useMutation({
+    mutationFn: (versionId: string) => quotationApi.deleteVersion(id, versionId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })
+      toast.success('Version deleted')
+      setDeletingVersionId(undefined)
+    },
+    onError: () => toast.error('Failed to delete version'),
   })
 
   const createPO = useMutation({
@@ -213,13 +200,13 @@ export function QuotationDetailPage() {
               </Button>
             )}
 
-            {role === 'Supplier' && quotation.status === 'Submitted' && (
+            {role === 'Supplier' && (quotation.status === 'Submitted' || quotation.status === 'Draft' || quotation.status === 'RevisionRequested') && (
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setReviseDialogOpen(true)}
               >
-                <Plus className="mr-2 h-4 w-4" /> Revise
+                <Plus className="mr-2 h-4 w-4" /> New Version
               </Button>
             )}
 
@@ -234,7 +221,14 @@ export function QuotationDetailPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setRejecting(true)}
+                  onClick={() => setRequestRevisionOpen(true)}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" /> Request Revision
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRejectDialogOpen(true)}
                 >
                   <X className="mr-2 h-4 w-4" /> Reject
                 </Button>
@@ -266,22 +260,60 @@ export function QuotationDetailPage() {
         }
       />
 
+      {quotation.rejectionReason && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="py-3 px-4">
+            <p className="text-sm font-medium text-destructive mb-1">Rejection Reason</p>
+            <p className="text-sm">{quotation.rejectionReason}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {quotation.revisionRequestNote && (
+        <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="py-3 px-4">
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">Customer Revision Request</p>
+            <p className="text-sm">{quotation.revisionRequestNote}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {quotation.versions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Quotation Versions</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={quotation.versions[0].id} onValueChange={setActiveVersionId}>
+            <Tabs defaultValue={quotation.versions[quotation.versions.length - 1].id} onValueChange={setActiveVersionId}>
               <TabsList>
-                {quotation.versions.map((version) => (
-                  <TabsTrigger key={version.id} value={version.id}>
-                    Version {version.versionNumber}
-                  </TabsTrigger>
-                ))}
+                {quotation.versions.map((version, idx) => {
+                  const isLatest = idx === quotation.versions.length - 1
+                  const canDeleteVersion = role === 'Supplier' && quotation.status === 'Draft'
+                  return (
+                    <TabsTrigger key={version.id} value={version.id} className="gap-1">
+                      Version {version.versionNumber}
+                      {!isLatest && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      {canDeleteVersion && (
+                        <span
+                          role="button"
+                          className="ml-1 rounded p-0.5 hover:bg-destructive/20 hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeletingVersionId(version.id)
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  )
+                })}
               </TabsList>
 
-              {quotation.versions.map((version) => (
+              {quotation.versions.map((version, versionIdx) => {
+                const isLatestVersion = versionIdx === quotation.versions.length - 1
+                const canEdit = role === 'Supplier' && quotation.status === 'Draft' && isLatestVersion
+                return (
                 <TabsContent key={version.id} value={version.id} className="space-y-4">
                   {version.notes && (
                     <div className="bg-muted p-3 rounded-md">
@@ -306,13 +338,13 @@ export function QuotationDetailPage() {
                           <TableHead>Unit Price</TableHead>
                           <TableHead>Total</TableHead>
                           <TableHead>Notes</TableHead>
-                          {role === 'Supplier' && quotation.status === 'Draft' && <TableHead></TableHead>}
+                          {canEdit && <TableHead></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {version.items.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={quotation.status === 'Draft' ? 6 : 5} className="text-center text-muted-foreground text-sm py-6">
+                            <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground text-sm py-6">
                               No items in this version.
                             </TableCell>
                           </TableRow>
@@ -346,17 +378,20 @@ export function QuotationDetailPage() {
                                       </span>
                                     )}
                                     {item.supplierItemName}
+                                    {hasVariants && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {item.variants?.length} variant{item.variants?.length !== 1 ? 's' : ''}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-sm font-medium">
-                                  {hasVariants ? (
-                                    <Badge variant="outline">{item.variants?.length} variants</Badge>
-                                  ) : (
-                                    `${item.quantity} units`
-                                  )}
+                                  {`${item.quantity} units`}
                                 </TableCell>
                                 <TableCell className="text-sm">
-                                  {formatCurrency(item.unitPrice)}
+                                  {hasVariants
+                                    ? <span className="text-muted-foreground">—</span>
+                                    : formatCurrency(item.unitPrice)}
                                 </TableCell>
                                 <TableCell className="text-sm font-medium">
                                   {formatCurrency(item.totalPrice)}
@@ -364,18 +399,30 @@ export function QuotationDetailPage() {
                                 <TableCell className="text-sm">
                                   {item.notes || <span className="text-muted-foreground">—</span>}
                                 </TableCell>
-                                {role === 'Supplier' && quotation.status === 'Draft' && (
+                                {canEdit && (
                                   <TableCell className="text-sm text-right">
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setRemovingItemId(item.id)
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex items-center justify-end gap-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setEditorState({ open: true, mode: 'edit', item, versionId: version.id })
+                                        }}
+                                      >
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setRemovingItemId(item.id)
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 )}
                               </TableRow>,
@@ -400,7 +447,7 @@ export function QuotationDetailPage() {
                                     <TableCell className="text-xs py-2">
                                       {variant.notes || '—'}
                                     </TableCell>
-                                    {role === 'Supplier' && quotation.status === 'Draft' && <TableCell></TableCell>}
+                                    {canEdit && <TableCell></TableCell>}
                                   </TableRow>
                                 )
                               })
@@ -413,121 +460,29 @@ export function QuotationDetailPage() {
                     </Table>
                   </div>
 
-                  {role === 'Supplier' && quotation.status === 'Draft' && (
+                  {!isLatestVersion && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Lock className="h-4 w-4" />
+                      This version is locked — only the latest version can be edited.
+                    </div>
+                  )}
+
+                  {canEdit && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setAddItemDialogOpen(true)}
+                      onClick={() => setEditorState({ open: true, mode: 'add', versionId: version.id })}
                     >
                       <Plus className="mr-2 h-4 w-4" /> Add Item
                     </Button>
                   )}
                 </TabsContent>
-              ))}
+                )
+              })}
             </Tabs>
           </CardContent>
         </Card>
       )}
-
-      <Dialog open={addItemDialogOpen} onOpenChange={(open) => { setAddItemDialogOpen(open); if (!open) { resetAddItem(); setItemSearch('') } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Item</DialogTitle>
-          </DialogHeader>
-
-          <form
-            onSubmit={handleAddItem((data) => addItemMutation.mutate(data))}
-            className="space-y-4"
-          >
-            <div className="space-y-1">
-              <Label>Search Items</Label>
-              <Input
-                placeholder="Search by name…"
-                value={itemSearch}
-                onChange={(e) => setItemSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>Item</Label>
-              <Controller
-                control={addItemControl}
-                name="supplierItemId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value || '__none__'}
-                    onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__" disabled>Select item</SelectItem>
-                      {(supplierItemsResult?.data ?? []).map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name} — {item.supplierName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {addItemErrors.supplierItemId && (
-                <p className="text-xs text-destructive">{addItemErrors.supplierItemId.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="qty">Quantity</Label>
-              <Input
-                id="qty"
-                type="number"
-                min="1"
-                {...registerAddItem('quantity', { valueAsNumber: true })}
-              />
-              {addItemErrors.quantity && (
-                <p className="text-xs text-destructive">{addItemErrors.quantity.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="unit-price">Unit Price</Label>
-              <Input
-                id="unit-price"
-                type="number"
-                min="0"
-                step="0.01"
-                {...registerAddItem('unitPrice', { valueAsNumber: true })}
-              />
-              {addItemErrors.unitPrice && (
-                <p className="text-xs text-destructive">{addItemErrors.unitPrice.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="item-notes">Notes (optional)</Label>
-              <Textarea
-                id="item-notes"
-                {...registerAddItem('notes')}
-                className="min-h-20"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAddItemDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={addItemMutation.isPending}>
-                {addItemMutation.isPending ? 'Adding…' : 'Add Item'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={reviseDialogOpen} onOpenChange={setReviseDialogOpen}>
         <DialogContent className="max-w-md">
@@ -565,6 +520,8 @@ export function QuotationDetailPage() {
         </DialogContent>
       </Dialog>
 
+      <AttachmentPanel entityType="Quotation" entityId={id} />
+
       <ConfirmDialog
         open={submitting}
         onOpenChange={(open) => {
@@ -589,17 +546,64 @@ export function QuotationDetailPage() {
         isLoading={acceptQuotation.isPending}
       />
 
-      <ConfirmDialog
-        open={rejecting}
-        onOpenChange={(open) => {
-          if (!open) setRejecting(false)
-        }}
-        title="Reject Quotation"
-        description="Are you sure you want to reject this quotation?"
-        confirmLabel="Reject"
-        onConfirm={() => rejectQuotation.mutate()}
-        isLoading={rejectQuotation.isPending}
-      />
+      {/* Reject with reason dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={(open) => { setRejectDialogOpen(open); if (!open) setRejectionReason('') }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Quotation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to reject this quotation?
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="rejection-reason">Reason (optional)</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Explain why you are rejecting this quotation…"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-24"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)} disabled={rejectQuotation.isPending}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => rejectQuotation.mutate()} disabled={rejectQuotation.isPending}>
+              {rejectQuotation.isPending ? 'Rejecting…' : 'Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request revision dialog */}
+      <Dialog open={requestRevisionOpen} onOpenChange={(open) => { setRequestRevisionOpen(open); if (!open) setRevisionNote('') }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Revision</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label htmlFor="revision-note">Message to supplier (optional)</Label>
+            <Textarea
+              id="revision-note"
+              placeholder="Describe what changes you'd like the supplier to make…"
+              value={revisionNote}
+              onChange={(e) => setRevisionNote(e.target.value)}
+              className="min-h-24"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestRevisionOpen(false)} disabled={requestRevisionMutation.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={() => requestRevisionMutation.mutate()} disabled={requestRevisionMutation.isPending}>
+              {requestRevisionMutation.isPending ? 'Sending…' : 'Send Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!removingItemId}
@@ -612,6 +616,33 @@ export function QuotationDetailPage() {
         onConfirm={() => removingItemId && removeItem.mutate(removingItemId)}
         isLoading={removeItem.isPending}
       />
+
+      <ConfirmDialog
+        open={!!deletingVersionId}
+        onOpenChange={(open) => { if (!open) setDeletingVersionId(undefined) }}
+        title="Delete Version"
+        description="This will permanently remove this version and all its items. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => deletingVersionId && deleteVersion.mutate(deletingVersionId)}
+        isLoading={deleteVersion.isPending}
+      />
+
+      {editorState && (
+        <QuotationItemEditor
+          open={editorState.open}
+          onOpenChange={(open) => { if (!open) setEditorState(null) }}
+          mode={editorState.mode}
+          quotationId={id}
+          versionId={
+            editorState.versionId ??
+            activeVersionId ??
+            quotation.versions[quotation.versions.length - 1]?.id ??
+            ''
+          }
+          item={editorState.item}
+          onSuccess={() => qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })}
+        />
+      )}
     </div>
   )
 }

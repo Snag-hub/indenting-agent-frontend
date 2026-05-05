@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
 import { deliveryOrderApi } from '@/features/deliveryOrders/api/deliveryOrderApi'
 import { queryKeys } from '@/lib/queryKeys'
@@ -21,25 +22,39 @@ import { ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { Route } from '@/routes/_app.delivery-orders.new'
 
+const doVariantSchema = z.object({
+  supplierItemVariantId: z.string(),
+  dimensionSummary: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
+  orderedQty: z.number(),
+  dispatchedQty: z.number(),
+  remainingQty: z.number(),
+  quantityDispatched: z.number().min(0),
+})
+
+const doItemSchema = z.object({
+  supplierItemId: z.string(),
+  supplierItemName: z.string(),
+  orderedQty: z.number(),
+  dispatchedQty: z.number(),
+  remainingQty: z.number(),
+  quantityDispatched: z.number().min(0),
+  notes: z.string().optional(),
+  hasVariants: z.boolean(),
+  variants: z.array(doVariantSchema).optional(),
+})
+
 const createDOSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   notes: z.string().optional(),
-  items: z.array(z.object({
-    supplierItemId: z.string(),
-    supplierItemName: z.string(),
-    orderedQty: z.number(),
-    dispatchedQty: z.number(),
-    remainingQty: z.number(),
-    quantityDispatched: z.number().min(1, 'Must dispatch at least 1'),
-    notes: z.string().optional(),
-  })),
+  items: z.array(doItemSchema),
 })
 
 type CreateDOForm = z.infer<typeof createDOSchema>
 
 const STEPS = [
   { title: 'Basic Info', description: 'Enter title and optional notes for the Delivery Order.' },
-  { title: 'Set Quantities', description: 'Enter the quantity dispatched for each item.' },
+  { title: 'Set Quantities', description: 'Enter the quantity to dispatch for each item.' },
   { title: 'Review & Create', description: 'Confirm the delivery order details.' },
 ]
 
@@ -70,20 +85,31 @@ export function CreateDeliveryOrderPage() {
 
   useEffect(() => {
     if (!po || !balance) return
+    const availableItems = balance.filter(b => b.remainingQty > 0 || b.variants?.some(v => v.remainingQty > 0))
     reset({
       title: '',
       notes: '',
-      items: po.items.map(item => {
-        const bal = balance.find(b => b.supplierItemId === item.supplierItemId)
-        const remainingQty = bal?.remainingQty ?? item.quantity
+      items: availableItems.map(b => {
+        const hasVariants = !!(b.variants && b.variants.length > 0)
+        const availableVariants = hasVariants ? b.variants!.filter(v => v.remainingQty > 0) : []
         return {
-          supplierItemId: item.supplierItemId,
-          supplierItemName: item.supplierItemName,
-          orderedQty: bal?.orderedQty ?? item.quantity,
-          dispatchedQty: bal?.dispatchedQty ?? 0,
-          remainingQty,
-          quantityDispatched: remainingQty,
+          supplierItemId: b.supplierItemId,
+          supplierItemName: b.supplierItemName,
+          orderedQty: b.orderedQty,
+          dispatchedQty: b.dispatchedQty,
+          remainingQty: b.remainingQty,
+          quantityDispatched: hasVariants ? 0 : b.remainingQty,
           notes: '',
+          hasVariants,
+          variants: availableVariants.map(v => ({
+            supplierItemVariantId: v.supplierItemVariantId,
+            dimensionSummary: v.dimensionSummary,
+            sku: v.sku,
+            orderedQty: v.orderedQty,
+            dispatchedQty: v.invoicedQty,
+            remainingQty: v.remainingQty,
+            quantityDispatched: v.remainingQty,
+          })),
         }
       }),
     })
@@ -93,6 +119,11 @@ export function CreateDeliveryOrderPage() {
   const notes = watch('notes')
   const watchedItems = watch('items')
 
+  const isLoading = poLoading || balanceLoading
+  const allDispatched = balance != null && balance.every(b =>
+    b.remainingQty <= 0 && !(b.variants?.some(v => v.remainingQty > 0))
+  )
+
   const onSubmit = handleSubmit(async (data) => {
     setIsSubmitting(true)
     try {
@@ -101,25 +132,58 @@ export function CreateDeliveryOrderPage() {
         proformaInvoiceId: piId,
         title: data.title,
         notes: data.notes || undefined,
-        items: data.items.map(i => ({
-          supplierItemId: i.supplierItemId,
-          quantityDispatched: i.quantityDispatched,
-          notes: i.notes || undefined,
+        items: data.items.map(item => ({
+          supplierItemId: item.supplierItemId,
+          quantityDispatched: item.hasVariants
+            ? (item.variants?.reduce((s, v) => s + v.quantityDispatched, 0) ?? 0)
+            : item.quantityDispatched,
+          notes: item.notes || undefined,
+          variants: item.hasVariants && item.variants?.length
+            ? item.variants.map(v => ({
+                supplierItemVariantId: v.supplierItemVariantId,
+                quantityDispatched: v.quantityDispatched,
+              }))
+            : undefined,
         })),
       })
+      toast.success('Delivery order created successfully')
       navigate({ to: '/delivery-orders/$id', params: { id } })
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail ?? err?.message ?? 'Failed to create delivery order')
     } finally {
       setIsSubmitting(false)
     }
   })
-
-  const isLoading = poLoading || balanceLoading
 
   if (isLoading || !po || !balance) {
     return (
       <div className="space-y-4 max-w-3xl mx-auto">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (allDispatched) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <PageHeader
+          title="Create Delivery Order"
+          description={`For PO: ${po.title}`}
+          action={
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
+            </Button>
+          }
+        />
+        <Card>
+          <CardContent className="pt-6 text-center py-12">
+            <p className="text-muted-foreground text-sm">All items have been fully dispatched.</p>
+            <Button className="mt-4" variant="outline" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
+              Back to Purchase Order
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -147,8 +211,8 @@ export function CreateDeliveryOrderPage() {
               <Badge variant="default">{po.status}</Badge>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Items</p>
-              <p className="text-sm font-medium">{po.items.length}</p>
+              <p className="text-xs text-muted-foreground mb-1">Items with Remaining Qty</p>
+              <p className="text-sm font-medium">{fields.length}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Created</p>
@@ -196,55 +260,74 @@ export function CreateDeliveryOrderPage() {
               <TableHead className="text-right">Ordered</TableHead>
               <TableHead className="text-right">Dispatched</TableHead>
               <TableHead className="text-right">Remaining</TableHead>
-              <TableHead className="text-right w-32">Dispatching</TableHead>
+              <TableHead className="text-right">Dispatching Now</TableHead>
               <TableHead>Notes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {fields.map((field, idx) => {
               const item = watchedItems[idx]
+              if (field.hasVariants && field.variants?.length) {
+                const totalDispatching = item?.variants?.reduce((s, v) => s + (v.quantityDispatched || 0), 0) ?? 0
+                return (
+                  <>
+                    <TableRow key={field.id} className="bg-muted/30">
+                      <TableCell className="text-sm font-semibold" colSpan={3}>{field.supplierItemName}</TableCell>
+                      <TableCell className="text-right text-sm text-orange-600 font-medium">{field.remainingQty}</TableCell>
+                      <TableCell className="text-right text-sm font-semibold text-muted-foreground">
+                        {totalDispatching} units
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                    {field.variants.map((variant, vi) => {
+                      const vItem = item?.variants?.[vi]
+                      const label = variant.dimensionSummary || variant.sku || `Variant ${vi + 1}`
+                      return (
+                        <TableRow key={variant.supplierItemVariantId} className="border-b border-dashed">
+                          <TableCell className="text-sm pl-8 text-muted-foreground">{label}</TableCell>
+                          <TableCell className="text-right text-sm">{variant.orderedQty}</TableCell>
+                          <TableCell className="text-right text-sm text-green-600">{variant.dispatchedQty}</TableCell>
+                          <TableCell className="text-right text-sm text-orange-600 font-medium">{variant.remainingQty}</TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={variant.remainingQty}
+                              className="w-20 text-right h-8"
+                              {...register(`items.${idx}.variants.${vi}.quantityDispatched`, { valueAsNumber: true })}
+                            />
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                      )
+                    })}
+                  </>
+                )
+              }
               const maxQty = item?.remainingQty ?? 1
               return (
                 <TableRow key={field.id}>
-                  <TableCell className="text-sm font-medium">
-                    {item?.supplierItemName}
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">
-                    {item?.orderedQty}
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">
-                    {item?.dispatchedQty}
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-medium text-green-700">
-                    {item?.remainingQty}
-                  </TableCell>
+                  <TableCell className="text-sm font-medium">{field.supplierItemName}</TableCell>
+                  <TableCell className="text-right text-sm">{field.orderedQty}</TableCell>
+                  <TableCell className="text-right text-sm text-green-600">{field.dispatchedQty}</TableCell>
+                  <TableCell className="text-right text-sm text-orange-600 font-medium">{field.remainingQty}</TableCell>
                   <TableCell className="text-right">
                     <Input
                       type="number"
                       min={1}
                       max={maxQty}
-                      className="w-24 text-right ml-auto"
-                      {...register(`items.${idx}.quantityDispatched`, {
-                        valueAsNumber: true,
-                        onChange: (e) => {
-                          const val = parseInt(e.target.value) || 1
-                          if (val > maxQty) e.target.value = String(maxQty)
-                        },
-                      })}
-                      onClick={e => e.stopPropagation()}
+                      className="w-20 text-right h-8"
+                      {...register(`items.${idx}.quantityDispatched`, { valueAsNumber: true })}
                     />
                     {errors.items?.[idx]?.quantityDispatched && (
-                      <p className="text-xs text-destructive mt-1">
-                        {errors.items[idx]?.quantityDispatched?.message}
-                      </p>
+                      <p className="text-xs text-destructive mt-1">{errors.items[idx]?.quantityDispatched?.message}</p>
                     )}
                   </TableCell>
                   <TableCell>
                     <Input
-                      placeholder="Optional note"
-                      className="text-sm"
+                      placeholder="Optional"
+                      className="text-sm h-8"
                       {...register(`items.${idx}.notes`)}
-                      onClick={e => e.stopPropagation()}
                     />
                   </TableCell>
                 </TableRow>
@@ -291,15 +374,41 @@ export function CreateDeliveryOrderPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {watchedItems.map((item, idx) => (
-              <TableRow key={idx}>
-                <TableCell className="text-sm">{item.supplierItemName}</TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">{item.orderedQty}</TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground">{item.dispatchedQty}</TableCell>
-                <TableCell className="text-right text-sm font-medium">{item.quantityDispatched}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.notes || '—'}</TableCell>
-              </TableRow>
-            ))}
+            {watchedItems.map((item, idx) => {
+              if (item.hasVariants && item.variants?.length) {
+                return (
+                  <>
+                    <TableRow key={idx} className="bg-muted/30">
+                      <TableCell className="text-sm font-semibold" colSpan={3}>{item.supplierItemName}</TableCell>
+                      <TableCell className="text-right text-sm font-semibold">
+                        {item.variants.reduce((s, v) => s + v.quantityDispatched, 0)}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                    {item.variants.map((v, vi) => (
+                      <TableRow key={vi} className="border-b border-dashed">
+                        <TableCell className="text-sm pl-8 text-muted-foreground">
+                          {v.dimensionSummary || v.sku || `Variant ${vi + 1}`}
+                        </TableCell>
+                        <TableCell className="text-right text-sm">{v.orderedQty}</TableCell>
+                        <TableCell className="text-right text-sm text-green-600">{v.dispatchedQty}</TableCell>
+                        <TableCell className="text-right text-sm font-medium">{v.quantityDispatched}</TableCell>
+                        <TableCell />
+                      </TableRow>
+                    ))}
+                  </>
+                )
+              }
+              return (
+                <TableRow key={idx}>
+                  <TableCell className="text-sm">{item.supplierItemName}</TableCell>
+                  <TableCell className="text-right text-sm">{item.orderedQty}</TableCell>
+                  <TableCell className="text-right text-sm text-green-600">{item.dispatchedQty}</TableCell>
+                  <TableCell className="text-right text-sm font-medium">{item.quantityDispatched}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{item.notes || '—'}</TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

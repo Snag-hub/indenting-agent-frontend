@@ -1,6 +1,15 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types/api";
 
+export interface ProformaInvoiceItemVariantDto {
+  id: string;
+  supplierItemVariantId: string;
+  dimensionSummary?: string | null;
+  sku?: string | null;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface ProformaInvoiceItemDto {
   id: string;
   supplierItemId: string;
@@ -9,11 +18,13 @@ export interface ProformaInvoiceItemDto {
   unitPrice: number;
   totalPrice: number;
   notes?: string;
+  variants?: ProformaInvoiceItemVariantDto[] | null;
 }
 
 export interface ProformaInvoiceSummaryDto {
   id: string;
   purchaseOrderId: string;
+  documentNumber: string;
   title: string;
   supplierName: string;
   status: string;
@@ -26,6 +37,7 @@ export interface ProformaInvoiceDetailDto {
   purchaseOrderId: string;
   customerId: string;
   supplierId: string;
+  documentNumber: string;
   title: string;
   notes?: string;
   supplierName: string;
@@ -34,10 +46,16 @@ export interface ProformaInvoiceDetailDto {
   createdAt: string;
 }
 
+export interface CreateProformaInvoiceVariantInput {
+  supplierItemVariantId: string;
+  quantityInvoiced: number;
+}
+
 export interface CreateProformaInvoiceItemInput {
   supplierItemId: string;
   quantityInvoiced: number;
   notes?: string;
+  variants?: CreateProformaInvoiceVariantInput[];
 }
 
 export const proformaInvoiceApi = {

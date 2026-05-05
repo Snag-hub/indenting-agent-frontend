@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Send, Lock, Plus, Trash2, Edit2, Copy, ChevronRight, ChevronDown, Eye } from 'lucide-react'
+import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -692,6 +693,8 @@ export function RFQDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AttachmentPanel entityType="RFQ" entityId={id} />
 
       <ConfirmDialog
         open={sending}

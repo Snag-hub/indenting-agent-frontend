@@ -27,6 +27,8 @@ interface VariantQuantityDialogProps {
   supplierItemName: string
   initialQuantities?: Record<string, number>
   maxTotal?: number   // optional cap: sum of all variant quantities must not exceed this
+  enquiryVariants?: Array<{ id: string; quantity: number }>  // filter to only these variants when creating from enquiry
+  enquiryItemVariants?: Array<{ id: string }>  // filter to only these variants when editing enquiry-linked items
   onConfirm: (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => void
 }
 
@@ -37,6 +39,8 @@ export function VariantQuantityDialog({
   supplierItemName,
   initialQuantities,
   maxTotal,
+  enquiryVariants,
+  enquiryItemVariants,
   onConfirm,
 }: VariantQuantityDialogProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>(initialQuantities ?? {})
@@ -47,9 +51,18 @@ export function VariantQuantityDialog({
     enabled: open && !!supplierItemId,
   })
 
-  // Sync initial quantities each time the dialog opens
+
+  // Sync initial quantities & pre-fill from enquiry variants when dialog opens
   useEffect(() => {
-    if (open) setQuantities(initialQuantities ?? {})
+    if (open) {
+      if (initialQuantities) {
+        setQuantities(initialQuantities)
+      } else if (enquiryVariants) {
+        setQuantities(Object.fromEntries(enquiryVariants.map((v) => [v.id, v.quantity])))
+      } else {
+        setQuantities({})
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
@@ -65,19 +78,28 @@ export function VariantQuantityDialog({
 
   const handleConfirm = () => {
     const selected = variants
-      .filter((v) => (quantities[v.id] ?? 0) > 0)
+      .filter((v) => {
+        const qty = quantities[v.id]
+        // Only include variants where quantity is explicitly set to > 0
+        return typeof qty === 'number' && qty > 0
+      })
       .map((v) => ({
         variantId: v.id,
-        quantity: quantities[v.id] ?? 0,
+        quantity: quantities[v.id],
         dimensionSummary: v.dimensionSummary,
         sku: v.sku,
       }))
 
-    if (selected.length > 0) {
-      onConfirm(selected)
-      setQuantities({})
+    // CRITICAL: Only allow confirm if at least one variant has been selected with positive quantity
+    if (selected.length === 0) {
+      // Show error or just close - don't allow empty variants to be sent
       onOpenChange(false)
+      return
     }
+
+    onConfirm(selected)
+    setQuantities({})
+    onOpenChange(false)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -113,11 +135,20 @@ export function VariantQuantityDialog({
                     <TableRow>
                       <TableHead>Variant</TableHead>
                       <TableHead>SKU</TableHead>
-                      <TableHead className="w-24">Quantity</TableHead>
+                      <TableHead className="w-24">{enquiryVariants ? 'Enquiry Qty' : 'Quantity'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {variants.map((variant) => (
+                    {variants
+                      .filter((v) => {
+                        // Filter to enquiry variants if creating from enquiry
+                        if (enquiryVariants) return enquiryVariants.some((ev) => ev.id === v.id)
+                        // Filter to enquiry item variants if editing enquiry-linked item
+                        if (enquiryItemVariants) return enquiryItemVariants.some((ev) => ev.id === v.id)
+                        // Show all variants if no enquiry context
+                        return true
+                      })
+                      .map((variant) => (
                       <TableRow key={variant.id}>
                         <TableCell className="font-medium">
                           {variant.dimensionSummary || '—'}
@@ -171,6 +202,7 @@ export function VariantQuantityDialog({
           <Button
             onClick={handleConfirm}
             disabled={totalQuantity === 0 || isLoading}
+            title={totalQuantity === 0 ? 'Enter quantities for at least one variant' : ''}
           >
             Confirm
           </Button>

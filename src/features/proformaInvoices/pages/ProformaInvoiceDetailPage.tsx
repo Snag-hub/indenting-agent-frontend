@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket } from 'lucide-react'
+import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
+import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -81,7 +82,12 @@ export function ProformaInvoiceDetailPage() {
     return <div className="text-muted-foreground">Proforma Invoice not found.</div>
   }
 
-  const totalPrice = pi.items.reduce((sum, item) => sum + item.totalPrice, 0)
+  const totalPrice = pi.items.reduce((sum, item) => {
+    if (item.variants && item.variants.length > 0) {
+      return sum + item.variants.reduce((vs, v) => vs + v.quantity * v.unitPrice, 0)
+    }
+    return sum + item.totalPrice
+  }, 0)
 
   return (
     <div className="space-y-6">
@@ -133,6 +139,16 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
+            {role === 'Customer' && (pi.status === 'Sent' || pi.status === 'Acknowledged') && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate({ to: '/payments/new', search: { piId: id } })}
+              >
+                <CreditCard className="mr-2 h-4 w-4" /> Record Payment
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"
@@ -162,6 +178,10 @@ export function ProformaInvoiceDetailPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Document #</p>
+              <p className="text-sm font-mono font-medium">{pi.documentNumber || '—'}</p>
+            </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Status</p>
               <Badge variant={statusColors[pi.status]}>{pi.status}</Badge>
@@ -206,17 +226,46 @@ export function ProformaInvoiceDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pi.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.supplierItemName}</TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(item.totalPrice)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {pi.items.map((item) => {
+                  const hasVariants = item.variants && item.variants.length > 0
+                  if (hasVariants) {
+                    const variantTotal = item.variants!.reduce((s, v) => s + v.quantity * v.unitPrice, 0)
+                    return (
+                      <>
+                        <TableRow key={item.id} className="bg-muted/30">
+                          <TableCell className="font-semibold text-sm" colSpan={2}>{item.supplierItemName}</TableCell>
+                          <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+                          <TableCell className="text-right text-sm font-semibold">{formatCurrency(variantTotal)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
+                          </TableCell>
+                        </TableRow>
+                        {item.variants!.map((v) => (
+                          <TableRow key={v.id} className="border-b border-dashed">
+                            <TableCell className="pl-8 text-sm text-muted-foreground">
+                              {v.dimensionSummary || v.sku || v.supplierItemVariantId}
+                            </TableCell>
+                            <TableCell className="text-right text-sm">{v.quantity}</TableCell>
+                            <TableCell className="text-right text-sm">{formatCurrency(v.unitPrice)}</TableCell>
+                            <TableCell className="text-right text-sm">{formatCurrency(v.quantity * v.unitPrice)}</TableCell>
+                            <TableCell />
+                          </TableRow>
+                        ))}
+                      </>
+                    )
+                  }
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.supplierItemName}</TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(item.totalPrice)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
                 <TableRow className="bg-slate-50 font-semibold">
                   <TableCell colSpan={3} className="text-right pr-4">
                     Total:
@@ -229,6 +278,8 @@ export function ProformaInvoiceDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AttachmentPanel entityType="ProformaInvoice" entityId={id} />
 
       <ConfirmDialog
         open={sending}

@@ -1,12 +1,21 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types/api";
 
+export interface DeliveryOrderItemVariantDto {
+  id: string;
+  supplierItemVariantId: string;
+  dimensionSummary?: string | null;
+  sku?: string | null;
+  quantity: number;
+}
+
 export interface DeliveryOrderItemDto {
   id: string;
   supplierItemId: string;
   supplierItemName: string;
   quantityDispatched: number;
   notes?: string;
+  variants?: DeliveryOrderItemVariantDto[] | null;
 }
 
 export interface DeliveryOrderSummaryDto {
@@ -48,7 +57,12 @@ export const deliveryOrderApi = {
     proformaInvoiceId?: string;
     title: string;
     notes?: string;
-    items: { supplierItemId: string; quantityDispatched: number; notes?: string }[];
+    items: {
+      supplierItemId: string;
+      quantityDispatched: number;
+      notes?: string;
+      variants?: { supplierItemVariantId: string; quantityDispatched: number }[];
+    }[];
   }) => api.post<string>("/delivery-orders", data).then((r) => r.data),
 
   get: (id: string) =>

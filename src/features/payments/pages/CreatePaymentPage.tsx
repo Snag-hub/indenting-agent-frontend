@@ -4,7 +4,10 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
+import { proformaInvoiceApi } from '@/features/proformaInvoices/api/proformaInvoiceApi'
+import { deliveryOrderApi } from '@/features/deliveryOrders/api/deliveryOrderApi'
 import { paymentApi } from '@/features/payments/api/paymentApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { MultiStepForm } from '@/components/MultiStepForm'
@@ -44,16 +47,42 @@ const STEPS = [
 ]
 
 export function CreatePaymentPage() {
-  const { poId } = Route.useSearch()
+  const { poId, piId, doId } = Route.useSearch()
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { data: po, isLoading } = useQuery({
-    queryKey: queryKeys.pos.detail(poId),
-    queryFn: () => purchaseOrderApi.get(poId),
-    enabled: !!poId,
+  // Determine context: PI > DO > PO
+  const context = piId ? 'pi' : doId ? 'do' : 'po'
+
+  const { data: po, isLoading: poLoading } = useQuery({
+    queryKey: queryKeys.pos.detail(poId!),
+    queryFn: () => purchaseOrderApi.get(poId!),
+    enabled: context === 'po' && !!poId,
   })
+
+  const { data: pi, isLoading: piLoading } = useQuery({
+    queryKey: queryKeys.proformaInvoices.detail(piId!),
+    queryFn: () => proformaInvoiceApi.get(piId!),
+    enabled: context === 'pi' && !!piId,
+  })
+
+  const { data: doEntity, isLoading: doLoading } = useQuery({
+    queryKey: queryKeys.deliveryOrders.detail(doId!),
+    queryFn: () => deliveryOrderApi.get(doId!),
+    enabled: context === 'do' && !!doId,
+  })
+
+  const isLoading = poLoading || piLoading || doLoading
+
+  // Derive display values from whichever entity was loaded
+  const supplierName = po?.supplierName ?? pi?.supplierName ?? doEntity?.supplierName ?? '—'
+  const entityTitle = po?.title ?? pi?.title ?? doEntity?.title ?? '—'
+  const entityStatus = po?.status ?? pi?.status ?? doEntity?.status ?? '—'
+  const backTo =
+    context === 'pi' ? `/proforma-invoices/${piId}` :
+    context === 'do' ? `/delivery-orders/${doId}` :
+    `/purchase-orders/${poId}`
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CreatePaymentForm>({
     resolver: zodResolver(createPaymentSchema),
@@ -66,28 +95,33 @@ export function CreatePaymentPage() {
   const referenceNumber = watch('referenceNumber')
   const notes = watch('notes')
 
-  const grandTotal = po?.items.reduce((sum, item) => sum + item.totalPrice, 0) ?? 0
-
   const isStep1Valid = amount > 0 && currency.length > 0 && paymentMethod.length > 0 && referenceNumber.trim().length > 0
 
   const onSubmit = handleSubmit(async (data) => {
     setIsSubmitting(true)
     try {
       const id = await paymentApi.create({
-        purchaseOrderId: poId,
+        purchaseOrderId: context === 'po' ? poId : undefined,
+        proformaInvoiceId: context === 'pi' ? piId : undefined,
+        deliveryOrderId: context === 'do' ? doId : undefined,
         amount: data.amount,
         currency: data.currency,
         paymentMethod: data.paymentMethod,
         referenceNumber: data.referenceNumber,
         notes: data.notes || undefined,
       })
+      toast.success('Payment recorded successfully')
       navigate({ to: '/payments/$id', params: { id } })
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.detail ?? err?.message ?? 'Failed to record payment'
+      )
     } finally {
       setIsSubmitting(false)
     }
   })
 
-  if (isLoading || !po) {
+  if (isLoading) {
     return (
       <div className="space-y-4 max-w-3xl mx-auto">
         <Skeleton className="h-8 w-64" />
@@ -96,39 +130,43 @@ export function CreatePaymentPage() {
     )
   }
 
+  // Context reference card shown at the top of step 1
+  const contextLabel =
+    context === 'pi' ? 'Proforma Invoice Reference' :
+    context === 'do' ? 'Delivery Order Reference' :
+    'Purchase Order Reference'
+
+  const contextCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm text-muted-foreground font-normal">{contextLabel}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">
+              {context === 'pi' ? 'PI Title' : context === 'do' ? 'DO Title' : 'PO Title'}
+            </p>
+            <p className="text-sm font-medium">{entityTitle}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Supplier</p>
+            <p className="text-sm font-medium">{supplierName}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Status</p>
+            <Badge variant="default">{entityStatus}</Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
   // ── Step 1: Payment Details ───────────────────────────────────────────────
 
   const step1 = (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground font-normal">Purchase Order Reference</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">PO Title</p>
-              <p className="text-sm font-medium">{po.title}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-              <p className="text-sm font-medium">{po.supplierName}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <Badge variant="default">{po.status}</Badge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">PO Total Value</p>
-              <p className="text-sm font-medium">{formatCurrency(grandTotal)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Created</p>
-              <p className="text-sm">{format(new Date(po.createdAt), 'dd MMM yyyy')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {contextCard}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
@@ -215,16 +253,14 @@ export function CreatePaymentPage() {
             <p className="text-sm font-medium">{referenceNumber || '—'}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Purchase Order</p>
-            <p className="text-sm font-medium">{po.title}</p>
+            <p className="text-xs text-muted-foreground mb-1">
+              {context === 'pi' ? 'Proforma Invoice' : context === 'do' ? 'Delivery Order' : 'Purchase Order'}
+            </p>
+            <p className="text-sm font-medium">{entityTitle}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-            <p className="text-sm font-medium">{po.supplierName}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">PO Total Value</p>
-            <p className="text-sm">{formatCurrency(grandTotal)}</p>
+            <p className="text-sm font-medium">{supplierName}</p>
           </div>
           {notes && (
             <div className="col-span-2">
@@ -247,10 +283,10 @@ export function CreatePaymentPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader
         title="Record Payment"
-        description={`For PO: ${po.title}`}
+        description={`For: ${entityTitle}`}
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: backTo as any })}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
         }
       />
@@ -260,7 +296,7 @@ export function CreatePaymentPage() {
         currentStep={currentStep}
         onNext={() => setCurrentStep(s => s + 1)}
         onBack={() => currentStep === 0
-          ? navigate({ to: '/purchase-orders/$id', params: { id: poId } })
+          ? navigate({ to: backTo as any })
           : setCurrentStep(s => s - 1)}
         onSubmit={onSubmit}
         isSubmitting={isSubmitting}

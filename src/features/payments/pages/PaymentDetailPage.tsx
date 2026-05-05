@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Check, X } from 'lucide-react'
+import { ArrowLeft, Check, X, Ticket } from 'lucide-react'
 import { format } from 'date-fns'
+import { AttachmentPanel } from '@/components/AttachmentPanel'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -107,6 +108,14 @@ export function PaymentDetailPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => navigate({ to: '/tickets/new', search: { entityType: 'Payment', entityId: payment.id, entityNumber: payment.referenceNumber } })}
+            >
+              <Ticket className="mr-2 h-4 w-4" /> Create Ticket
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate({ to: '/payments' })}
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
@@ -165,6 +174,9 @@ export function PaymentDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Attachments panel - allows uploading any file type (PDF, Excel, images, etc.) */}
+      <AttachmentPanel entityType="Payment" entityId={payment.id} />
 
       <ConfirmDialog
         open={confirming}
