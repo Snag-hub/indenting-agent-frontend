@@ -104,4 +104,8 @@ export const queryKeys = {
   dashboard: {
     overview: () => ["dashboard", "overview"] as const,
   },
+  threads: {
+    messages: (threadId: string, page: number = 1) =>
+      ["threads", "messages", threadId, page] as const,
+  },
 };

@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Send, Lock, Plus, Trash2, Edit2, Copy, ChevronRight, ChevronDown, Eye } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -366,6 +367,7 @@ export function RFQDetailPage() {
             <TabsList className="mb-4">
               <TabsTrigger value="items">Line Items</TabsTrigger>
               <TabsTrigger value="quotations">Quotations</TabsTrigger>
+              <TabsTrigger value="discussion">Discussion</TabsTrigger>
             </TabsList>
 
             <TabsContent value="items" className="space-y-4">
@@ -512,6 +514,14 @@ export function RFQDetailPage() {
                   </TableBody>
                 </Table>
               </div>
+            </TabsContent>
+
+            <TabsContent value="discussion" className="h-[600px]">
+              <ThreadPanel
+                threadId={`RFQ-${id}`}
+                title={`RFQ ${rfq.documentNumber}`}
+                canPostInternal={user?.role === 'Admin'}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>

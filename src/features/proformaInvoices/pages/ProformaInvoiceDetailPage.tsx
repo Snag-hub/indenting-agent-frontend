@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -175,39 +176,42 @@ export function ProformaInvoiceDetailPage() {
         }
       />
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Document #</p>
-              <p className="text-sm font-mono font-medium">{pi.documentNumber || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <Badge variant={statusColors[pi.status]}>{pi.status}</Badge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-              <p className="text-sm font-medium">{pi.supplierName}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Created</p>
-              <p className="text-sm">{format(new Date(pi.createdAt), 'dd MMM yyyy')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Main content: 2 columns */}
+        <div className="col-span-2 space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Document #</p>
+                  <p className="text-sm font-mono font-medium">{pi.documentNumber || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <Badge variant={statusColors[pi.status]}>{pi.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Supplier</p>
+                  <p className="text-sm font-medium">{pi.supplierName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Created</p>
+                  <p className="text-sm">{format(new Date(pi.createdAt), 'dd MMM yyyy')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {pi.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{pi.notes}</p>
-          </CardContent>
-        </Card>
-      )}
+          {pi.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm">{pi.notes}</p>
+              </CardContent>
+            </Card>
+          )}
 
       <Card>
         <CardHeader>
@@ -226,36 +230,34 @@ export function ProformaInvoiceDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pi.items.map((item) => {
+                {pi.items.flatMap((item) => {
                   const hasVariants = item.variants && item.variants.length > 0
                   if (hasVariants) {
                     const variantTotal = item.variants!.reduce((s, v) => s + v.quantity * v.unitPrice, 0)
-                    return (
-                      <>
-                        <TableRow key={item.id} className="bg-muted/30">
-                          <TableCell className="font-semibold text-sm" colSpan={2}>{item.supplierItemName}</TableCell>
-                          <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
-                          <TableCell className="text-right text-sm font-semibold">{formatCurrency(variantTotal)}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
+                    return [
+                      <TableRow key={`item-${item.id}`} className="bg-muted/30">
+                        <TableCell className="font-semibold text-sm" colSpan={2}>{item.supplierItemName}</TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
+                        <TableCell className="text-right text-sm font-semibold">{formatCurrency(variantTotal)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
+                        </TableCell>
+                      </TableRow>,
+                      ...item.variants!.map((v) => (
+                        <TableRow key={`variant-${v.id}`} className="border-b border-dashed">
+                          <TableCell className="pl-8 text-sm text-muted-foreground">
+                            {v.dimensionSummary || v.sku || v.supplierItemVariantId}
                           </TableCell>
+                          <TableCell className="text-right text-sm">{v.quantity}</TableCell>
+                          <TableCell className="text-right text-sm">{formatCurrency(v.unitPrice)}</TableCell>
+                          <TableCell className="text-right text-sm">{formatCurrency(v.quantity * v.unitPrice)}</TableCell>
+                          <TableCell />
                         </TableRow>
-                        {item.variants!.map((v) => (
-                          <TableRow key={v.id} className="border-b border-dashed">
-                            <TableCell className="pl-8 text-sm text-muted-foreground">
-                              {v.dimensionSummary || v.sku || v.supplierItemVariantId}
-                            </TableCell>
-                            <TableCell className="text-right text-sm">{v.quantity}</TableCell>
-                            <TableCell className="text-right text-sm">{formatCurrency(v.unitPrice)}</TableCell>
-                            <TableCell className="text-right text-sm">{formatCurrency(v.quantity * v.unitPrice)}</TableCell>
-                            <TableCell />
-                          </TableRow>
-                        ))}
-                      </>
-                    )
+                      )),
+                    ]
                   }
                   return (
-                    <TableRow key={item.id}>
+                    <TableRow key={`item-${item.id}`}>
                       <TableCell className="font-medium">{item.supplierItemName}</TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
@@ -277,7 +279,18 @@ export function ProformaInvoiceDetailPage() {
             </Table>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+        </div>
+
+        {/* Right sidebar: 1 column */}
+        <aside>
+          <ThreadPanel
+            threadId={`ProformaInvoice-${id}`}
+            title={`PI ${pi.documentNumber}`}
+            canPostInternal={user?.role === 'Admin'}
+          />
+        </aside>
+      </div>
 
       <AttachmentPanel entityType="ProformaInvoice" entityId={id} />
 

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, Send, X, CheckCircle, Ticket, CreditCard } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -152,35 +153,38 @@ export function DeliveryOrderDetailPage() {
         }
       />
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <Badge variant={statusColors[deliveryOrder.status]}>{deliveryOrder.status}</Badge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-              <p className="text-sm font-medium">{deliveryOrder.supplierName}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Created</p>
-              <p className="text-sm">{format(new Date(deliveryOrder.createdAt), 'dd MMM yyyy')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Main content: 2 columns */}
+        <div className="col-span-2 space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <Badge variant={statusColors[deliveryOrder.status]}>{deliveryOrder.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Supplier</p>
+                  <p className="text-sm font-medium">{deliveryOrder.supplierName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Created</p>
+                  <p className="text-sm">{format(new Date(deliveryOrder.createdAt), 'dd MMM yyyy')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {deliveryOrder.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{deliveryOrder.notes}</p>
-          </CardContent>
-        </Card>
-      )}
+          {deliveryOrder.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm">{deliveryOrder.notes}</p>
+              </CardContent>
+            </Card>
+          )}
 
       <Card>
         <CardHeader>
@@ -234,7 +238,18 @@ export function DeliveryOrderDetailPage() {
             </Table>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+        </div>
+
+        {/* Right sidebar: 1 column */}
+        <aside>
+          <ThreadPanel
+            threadId={`DeliveryOrder-${id}`}
+            title={`DO ${deliveryOrder.title}`}
+            canPostInternal={user?.role === 'Admin'}
+          />
+        </aside>
+      </div>
 
       <AttachmentPanel entityType="DeliveryOrder" entityId={id} />
 

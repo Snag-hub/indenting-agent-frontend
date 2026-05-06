@@ -16,7 +16,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowLeft, Send, Lock, Edit2, Trash2 } from 'lucide-react'
+import { ArrowLeft, Lock, Edit2 } from 'lucide-react'
+import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
+import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -33,12 +35,6 @@ const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | '
   Critical: 'destructive',
 }
 
-const addCommentSchema = z.object({
-  content: z.string().min(1, 'Comment is required').min(3, 'Comment must be at least 3 characters'),
-})
-
-type AddCommentForm = z.infer<typeof addCommentSchema>
-
 const updateTicketSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
@@ -52,18 +48,13 @@ export function TicketDetailPage() {
   const { id } = useParams({ from: '/_app/tickets/$id' })
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [addCommentDialogOpen, setAddCommentDialogOpen] = useState(false)
+  const { user } = useAuthStore()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [removingCommentId, setRemovingCommentId] = useState<string | undefined>()
   const [closing, setClosing] = useState(false)
 
   const { data: ticket, isLoading } = useQuery({
     queryKey: queryKeys.tickets.detail(id),
     queryFn: () => ticketApi.get(id),
-  })
-
-  const { register: regComment, handleSubmit: handleAddComment, reset: resetComment, formState: { errors: commentErrors } } = useForm<AddCommentForm>({
-    resolver: zodResolver(addCommentSchema),
   })
 
   const { register: regUpdate, handleSubmit: handleUpdateSubmit, formState: { errors: updateErrors } } = useForm<UpdateTicketForm>({
@@ -73,16 +64,6 @@ export function TicketDetailPage() {
       description: ticket?.description ?? '',
       priority: ticket?.priority ?? 'Medium',
       status: ticket?.status ?? 'Open',
-    },
-  })
-
-  const addComment = useMutation({
-    mutationFn: (data: AddCommentForm) =>
-      ticketApi.addComment(id, { content: data.content }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.tickets.detail(id) })
-      setAddCommentDialogOpen(false)
-      resetComment()
     },
   })
 
@@ -98,15 +79,6 @@ export function TicketDetailPage() {
       qc.invalidateQueries({ queryKey: queryKeys.tickets.detail(id) })
       qc.invalidateQueries({ queryKey: queryKeys.tickets.list() })
       setEditDialogOpen(false)
-    },
-  })
-
-  const removeComment = useMutation({
-    mutationFn: (commentId: string) =>
-      ticketApi.removeComment(id, commentId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.tickets.detail(id) })
-      setRemovingCommentId(undefined)
     },
   })
 
@@ -176,119 +148,63 @@ export function TicketDetailPage() {
         }
       />
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <Badge variant={statusColors[ticket.status]}>{ticket.status}</Badge>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Priority</p>
-              <Badge variant={priorityColors[ticket.priority]}>{ticket.priority}</Badge>
-            </div>
-            {ticket.assignedToName && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Assigned To</p>
-                <p className="text-sm font-medium">{ticket.assignedToName}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Created By</p>
-              <p className="text-sm font-medium">{ticket.createdByName}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Created</p>
-              <p className="text-sm">{format(new Date(ticket.createdAt), 'dd MMM yyyy HH:mm')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Updated</p>
-              <p className="text-sm">{ticket.modifiedAt ? format(new Date(ticket.modifiedAt), 'dd MMM yyyy HH:mm') : '—'}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {ticket.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Comments ({ticket.comments.length})</CardTitle>
-          {ticket.status !== 'Closed' && (
-            <Button size="sm" variant="outline" onClick={() => setAddCommentDialogOpen(true)}>
-              <Send className="mr-2 h-4 w-4" /> Add Comment
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {ticket.comments.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6">No comments yet.</p>
-          ) : (
-            ticket.comments.map((comment) => (
-              <div key={comment.id} className="border-l-2 border-muted pl-4 py-2">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <p className="text-sm font-medium">{comment.authorName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(comment.createdAt), 'dd MMM yyyy HH:mm')}
-                    </p>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setRemovingCommentId(comment.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+      <div className="grid grid-cols-3 gap-6">
+        {/* Main content: 2 columns */}
+        <div className="col-span-2 space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <Badge variant={statusColors[ticket.status]}>{ticket.status}</Badge>
                 </div>
-                <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Priority</p>
+                  <Badge variant={priorityColors[ticket.priority]}>{ticket.priority}</Badge>
+                </div>
+                {ticket.assignedToName && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Assigned To</p>
+                    <p className="text-sm font-medium">{ticket.assignedToName}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Created By</p>
+                  <p className="text-sm font-medium">{ticket.createdByName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Created</p>
+                  <p className="text-sm">{format(new Date(ticket.createdAt), 'dd MMM yyyy HH:mm')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Updated</p>
+                  <p className="text-sm">{ticket.modifiedAt ? format(new Date(ticket.modifiedAt), 'dd MMM yyyy HH:mm') : '—'}</p>
+                </div>
               </div>
-            ))
+            </CardContent>
+          </Card>
+
+          {ticket.description && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Description</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Add Comment Dialog */}
-      <Dialog open={addCommentDialogOpen} onOpenChange={setAddCommentDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Comment</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleAddComment((data) => addComment.mutate(data))} className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="comment">Comment *</Label>
-              <Textarea
-                id="comment"
-                placeholder="Add your comment…"
-                className="min-h-20"
-                {...regComment('content')}
-              />
-              {commentErrors.content && (
-                <p className="text-xs text-destructive">{commentErrors.content.message}</p>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddCommentDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={addComment.isPending}>
-                {addComment.isPending ? 'Posting…' : 'Post Comment'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        {/* Right sidebar: 1 column */}
+        <aside>
+          <ThreadPanel
+            threadId={`Ticket-${id}`}
+            title={`#${ticket.ticketNumber}`}
+            canPostInternal={user?.role === 'Admin'}
+          />
+        </aside>
+      </div>
 
       {/* Edit Ticket Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -352,16 +268,6 @@ export function TicketDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Confirm Remove Comment */}
-      <ConfirmDialog
-        title="Delete Comment"
-        description="This comment will be permanently deleted. This action cannot be undone."
-        open={!!removingCommentId}
-        onConfirm={() => removingCommentId && removeComment.mutate(removingCommentId)}
-        onCancel={() => setRemovingCommentId(undefined)}
-        loading={removeComment.isPending}
-      />
 
       {/* Confirm Close Ticket */}
       <ConfirmDialog
