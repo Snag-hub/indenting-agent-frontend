@@ -53,6 +53,7 @@ export interface PurchaseOrderDetailDto {
   currency?: string | null;
 
   createdAt: string;
+  documentNumber?: string;
 }
 
 export interface CreatePurchaseOrderInput {

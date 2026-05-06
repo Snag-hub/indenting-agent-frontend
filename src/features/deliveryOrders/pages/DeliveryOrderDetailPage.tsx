@@ -245,7 +245,7 @@ export function DeliveryOrderDetailPage() {
         <aside>
           <ThreadPanel
             threadId={`DeliveryOrder-${id}`}
-            title={`DO ${deliveryOrder.title}`}
+            title={`DO ${deliveryOrder.documentNumber}`}
             canPostInternal={user?.role === 'Admin'}
           />
         </aside>

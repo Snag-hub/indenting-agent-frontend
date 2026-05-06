@@ -307,7 +307,7 @@ export function PurchaseOrderDetailPage() {
         <aside>
           <ThreadPanel
             threadId={`PurchaseOrder-${id}`}
-            title={`PO ${purchaseOrder.title}`}
+            title={`PO ${purchaseOrder.documentNumber}`}
             canPostInternal={user?.role === 'Admin'}
           />
         </aside>

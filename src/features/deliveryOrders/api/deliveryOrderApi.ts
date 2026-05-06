@@ -30,9 +30,13 @@ export interface DeliveryOrderSummaryDto {
 export interface DeliveryOrderDetailDto {
   id: string;
   purchaseOrderId: string;
+  purchaseOrderDocumentNumber?: string;
   proformaInvoiceId?: string;
+  proformaInvoiceDocumentNumber?: string;
   customerId: string;
+  customerName?: string;
   supplierId: string;
+  documentNumber: string;
   title: string;
   notes?: string;
   supplierName: string;
