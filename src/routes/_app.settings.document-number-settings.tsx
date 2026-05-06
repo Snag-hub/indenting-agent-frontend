@@ -1,10 +1,6 @@
-import { lazy } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { DocumentNumberSettingsPage } from '@/features/admin/pages/DocumentNumberSettingsPage'
 
 export const Route = createFileRoute('/_app/settings/document-number-settings')({
-  component: lazy(() =>
-    import('@/features/admin/pages/DocumentNumberSettingsPage').then(m => ({
-      default: m.DocumentNumberSettingsPage,
-    }))
-  ),
+  component: DocumentNumberSettingsPage,
 })

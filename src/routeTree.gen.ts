@@ -15,12 +15,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppTicketsRouteImport } from './routes/_app.tickets'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppRfqsRouteImport } from './routes/_app.rfqs'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppQuotationsRouteImport } from './routes/_app.quotations'
 import { Route as AppPurchaseOrdersRouteImport } from './routes/_app.purchase-orders'
 import { Route as AppProformaInvoicesRouteImport } from './routes/_app.proforma-invoices'
 import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
+import { Route as AppNotificationsRouteImport } from './routes/_app.notifications'
 import { Route as AppMyItemsRouteImport } from './routes/_app.my-items'
 import { Route as AppMyDimensionsRouteImport } from './routes/_app.my-dimensions'
 import { Route as AppItemMappingRouteImport } from './routes/_app.item-mapping'
@@ -31,6 +33,7 @@ import { Route as AppCustomersRouteImport } from './routes/_app.customers'
 import { Route as AppTicketsNewRouteImport } from './routes/_app.tickets.new'
 import { Route as AppTicketsIdRouteImport } from './routes/_app.tickets.$id'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app.suppliers.$id'
+import { Route as AppSettingsNotificationPreferencesRouteImport } from './routes/_app.settings.notification-preferences'
 import { Route as AppSettingsDocumentNumberSettingsRouteImport } from './routes/_app.settings.document-number-settings'
 import { Route as AppRfqsNewRouteImport } from './routes/_app.rfqs.new'
 import { Route as AppRfqsIdRouteImport } from './routes/_app.rfqs.$id'
@@ -84,6 +87,11 @@ const AppSuppliersRoute = AppSuppliersRouteImport.update({
   path: '/suppliers',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRfqsRoute = AppRfqsRouteImport.update({
   id: '/rfqs',
   path: '/rfqs',
@@ -112,6 +120,11 @@ const AppProformaInvoicesRoute = AppProformaInvoicesRouteImport.update({
 const AppPaymentsRoute = AppPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyItemsRoute = AppMyItemsRouteImport.update({
@@ -164,11 +177,17 @@ const AppSuppliersIdRoute = AppSuppliersIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppSuppliersRoute,
 } as any)
+const AppSettingsNotificationPreferencesRoute =
+  AppSettingsNotificationPreferencesRouteImport.update({
+    id: '/notification-preferences',
+    path: '/notification-preferences',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
 const AppSettingsDocumentNumberSettingsRoute =
   AppSettingsDocumentNumberSettingsRouteImport.update({
-    id: '/settings/document-number-settings',
-    path: '/settings/document-number-settings',
-    getParentRoute: () => AppRoute,
+    id: '/document-number-settings',
+    path: '/document-number-settings',
+    getParentRoute: () => AppSettingsRoute,
   } as any)
 const AppRfqsNewRoute = AppRfqsNewRouteImport.update({
   id: '/new',
@@ -299,12 +318,14 @@ export interface FileRoutesByFullPath {
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
+  '/notifications': typeof AppNotificationsRoute
   '/payments': typeof AppPaymentsRouteWithChildren
   '/proforma-invoices': typeof AppProformaInvoicesRouteWithChildren
   '/purchase-orders': typeof AppPurchaseOrdersRouteWithChildren
   '/quotations': typeof AppQuotationsRouteWithChildren
   '/reports': typeof AppReportsRoute
   '/rfqs': typeof AppRfqsRouteWithChildren
+  '/settings': typeof AppSettingsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/tickets': typeof AppTicketsRouteWithChildren
   '/login': typeof AuthLoginRoute
@@ -327,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
   '/rfqs/new': typeof AppRfqsNewRoute
   '/settings/document-number-settings': typeof AppSettingsDocumentNumberSettingsRoute
+  '/settings/notification-preferences': typeof AppSettingsNotificationPreferencesRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/tickets/$id': typeof AppTicketsIdRoute
   '/tickets/new': typeof AppTicketsNewRoute
@@ -345,12 +367,14 @@ export interface FileRoutesByTo {
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
+  '/notifications': typeof AppNotificationsRoute
   '/payments': typeof AppPaymentsRouteWithChildren
   '/proforma-invoices': typeof AppProformaInvoicesRouteWithChildren
   '/purchase-orders': typeof AppPurchaseOrdersRouteWithChildren
   '/quotations': typeof AppQuotationsRouteWithChildren
   '/reports': typeof AppReportsRoute
   '/rfqs': typeof AppRfqsRouteWithChildren
+  '/settings': typeof AppSettingsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/tickets': typeof AppTicketsRouteWithChildren
   '/login': typeof AuthLoginRoute
@@ -373,6 +397,7 @@ export interface FileRoutesByTo {
   '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
   '/rfqs/new': typeof AppRfqsNewRoute
   '/settings/document-number-settings': typeof AppSettingsDocumentNumberSettingsRoute
+  '/settings/notification-preferences': typeof AppSettingsNotificationPreferencesRoute
   '/suppliers/$id': typeof AppSuppliersIdRoute
   '/tickets/$id': typeof AppTicketsIdRoute
   '/tickets/new': typeof AppTicketsNewRoute
@@ -394,12 +419,14 @@ export interface FileRoutesById {
   '/_app/item-mapping': typeof AppItemMappingRoute
   '/_app/my-dimensions': typeof AppMyDimensionsRoute
   '/_app/my-items': typeof AppMyItemsRouteWithChildren
+  '/_app/notifications': typeof AppNotificationsRoute
   '/_app/payments': typeof AppPaymentsRouteWithChildren
   '/_app/proforma-invoices': typeof AppProformaInvoicesRouteWithChildren
   '/_app/purchase-orders': typeof AppPurchaseOrdersRouteWithChildren
   '/_app/quotations': typeof AppQuotationsRouteWithChildren
   '/_app/reports': typeof AppReportsRoute
   '/_app/rfqs': typeof AppRfqsRouteWithChildren
+  '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_app/tickets': typeof AppTicketsRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
@@ -422,6 +449,7 @@ export interface FileRoutesById {
   '/_app/rfqs/$id': typeof AppRfqsIdRouteWithChildren
   '/_app/rfqs/new': typeof AppRfqsNewRoute
   '/_app/settings/document-number-settings': typeof AppSettingsDocumentNumberSettingsRoute
+  '/_app/settings/notification-preferences': typeof AppSettingsNotificationPreferencesRoute
   '/_app/suppliers/$id': typeof AppSuppliersIdRoute
   '/_app/tickets/$id': typeof AppTicketsIdRoute
   '/_app/tickets/new': typeof AppTicketsNewRoute
@@ -442,12 +470,14 @@ export interface FileRouteTypes {
     | '/item-mapping'
     | '/my-dimensions'
     | '/my-items'
+    | '/notifications'
     | '/payments'
     | '/proforma-invoices'
     | '/purchase-orders'
     | '/quotations'
     | '/reports'
     | '/rfqs'
+    | '/settings'
     | '/suppliers'
     | '/tickets'
     | '/login'
@@ -470,6 +500,7 @@ export interface FileRouteTypes {
     | '/rfqs/$id'
     | '/rfqs/new'
     | '/settings/document-number-settings'
+    | '/settings/notification-preferences'
     | '/suppliers/$id'
     | '/tickets/$id'
     | '/tickets/new'
@@ -488,12 +519,14 @@ export interface FileRouteTypes {
     | '/item-mapping'
     | '/my-dimensions'
     | '/my-items'
+    | '/notifications'
     | '/payments'
     | '/proforma-invoices'
     | '/purchase-orders'
     | '/quotations'
     | '/reports'
     | '/rfqs'
+    | '/settings'
     | '/suppliers'
     | '/tickets'
     | '/login'
@@ -516,6 +549,7 @@ export interface FileRouteTypes {
     | '/rfqs/$id'
     | '/rfqs/new'
     | '/settings/document-number-settings'
+    | '/settings/notification-preferences'
     | '/suppliers/$id'
     | '/tickets/$id'
     | '/tickets/new'
@@ -536,12 +570,14 @@ export interface FileRouteTypes {
     | '/_app/item-mapping'
     | '/_app/my-dimensions'
     | '/_app/my-items'
+    | '/_app/notifications'
     | '/_app/payments'
     | '/_app/proforma-invoices'
     | '/_app/purchase-orders'
     | '/_app/quotations'
     | '/_app/reports'
     | '/_app/rfqs'
+    | '/_app/settings'
     | '/_app/suppliers'
     | '/_app/tickets'
     | '/_auth/login'
@@ -564,6 +600,7 @@ export interface FileRouteTypes {
     | '/_app/rfqs/$id'
     | '/_app/rfqs/new'
     | '/_app/settings/document-number-settings'
+    | '/_app/settings/notification-preferences'
     | '/_app/suppliers/$id'
     | '/_app/tickets/$id'
     | '/_app/tickets/new'
@@ -624,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuppliersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/rfqs': {
       id: '/_app/rfqs'
       path: '/rfqs'
@@ -664,6 +708,13 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/payments'
       preLoaderRoute: typeof AppPaymentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-items': {
@@ -736,12 +787,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuppliersIdRouteImport
       parentRoute: typeof AppSuppliersRoute
     }
+    '/_app/settings/notification-preferences': {
+      id: '/_app/settings/notification-preferences'
+      path: '/notification-preferences'
+      fullPath: '/settings/notification-preferences'
+      preLoaderRoute: typeof AppSettingsNotificationPreferencesRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/document-number-settings': {
       id: '/_app/settings/document-number-settings'
-      path: '/settings/document-number-settings'
+      path: '/document-number-settings'
       fullPath: '/settings/document-number-settings'
       preLoaderRoute: typeof AppSettingsDocumentNumberSettingsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppSettingsRoute
     }
     '/_app/rfqs/new': {
       id: '/_app/rfqs/new'
@@ -1070,6 +1128,22 @@ const AppRfqsRouteChildren: AppRfqsRouteChildren = {
 const AppRfqsRouteWithChildren =
   AppRfqsRoute._addFileChildren(AppRfqsRouteChildren)
 
+interface AppSettingsRouteChildren {
+  AppSettingsDocumentNumberSettingsRoute: typeof AppSettingsDocumentNumberSettingsRoute
+  AppSettingsNotificationPreferencesRoute: typeof AppSettingsNotificationPreferencesRoute
+}
+
+const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsDocumentNumberSettingsRoute:
+    AppSettingsDocumentNumberSettingsRoute,
+  AppSettingsNotificationPreferencesRoute:
+    AppSettingsNotificationPreferencesRoute,
+}
+
+const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
+  AppSettingsRouteChildren,
+)
+
 interface AppSuppliersRouteChildren {
   AppSuppliersIdRoute: typeof AppSuppliersIdRoute
 }
@@ -1116,18 +1190,19 @@ interface AppRouteChildren {
   AppItemMappingRoute: typeof AppItemMappingRoute
   AppMyDimensionsRoute: typeof AppMyDimensionsRoute
   AppMyItemsRoute: typeof AppMyItemsRouteWithChildren
+  AppNotificationsRoute: typeof AppNotificationsRoute
   AppPaymentsRoute: typeof AppPaymentsRouteWithChildren
   AppProformaInvoicesRoute: typeof AppProformaInvoicesRouteWithChildren
   AppPurchaseOrdersRoute: typeof AppPurchaseOrdersRouteWithChildren
   AppQuotationsRoute: typeof AppQuotationsRouteWithChildren
   AppReportsRoute: typeof AppReportsRoute
   AppRfqsRoute: typeof AppRfqsRouteWithChildren
+  AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
   AppTicketsRoute: typeof AppTicketsRouteWithChildren
   AppAdminDocumentNumberSettingsRoute: typeof AppAdminDocumentNumberSettingsRoute
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
   AppCatalogItemsRoute: typeof AppCatalogItemsRouteWithChildren
-  AppSettingsDocumentNumberSettingsRoute: typeof AppSettingsDocumentNumberSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1138,19 +1213,19 @@ const AppRouteChildren: AppRouteChildren = {
   AppItemMappingRoute: AppItemMappingRoute,
   AppMyDimensionsRoute: AppMyDimensionsRoute,
   AppMyItemsRoute: AppMyItemsRouteWithChildren,
+  AppNotificationsRoute: AppNotificationsRoute,
   AppPaymentsRoute: AppPaymentsRouteWithChildren,
   AppProformaInvoicesRoute: AppProformaInvoicesRouteWithChildren,
   AppPurchaseOrdersRoute: AppPurchaseOrdersRouteWithChildren,
   AppQuotationsRoute: AppQuotationsRouteWithChildren,
   AppReportsRoute: AppReportsRoute,
   AppRfqsRoute: AppRfqsRouteWithChildren,
+  AppSettingsRoute: AppSettingsRouteWithChildren,
   AppSuppliersRoute: AppSuppliersRouteWithChildren,
   AppTicketsRoute: AppTicketsRouteWithChildren,
   AppAdminDocumentNumberSettingsRoute: AppAdminDocumentNumberSettingsRoute,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,
   AppCatalogItemsRoute: AppCatalogItemsRouteWithChildren,
-  AppSettingsDocumentNumberSettingsRoute:
-    AppSettingsDocumentNumberSettingsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

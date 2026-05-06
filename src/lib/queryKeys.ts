@@ -76,6 +76,7 @@ export const queryKeys = {
   notifications: {
     list: (params?: Record<string, unknown>) =>
       ["notifications", "list", params ?? {}] as const,
+    preferences: () => ["notifications", "preferences"] as const,
   },
   proformaInvoices: {
     list: (params?: Record<string, unknown>) =>
