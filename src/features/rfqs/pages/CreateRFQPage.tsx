@@ -115,6 +115,13 @@ export function CreateRFQPage() {
     enabled: !!selectedEnquiryId,
   })
 
+  // Fetch full enquiry detail with variant information for displaying enquiry quantities
+  const { data: enquiryDetail } = useQuery({
+    queryKey: queryKeys.enquiries.detail(selectedEnquiryId ?? ''),
+    queryFn: () => enquiryApi.get(selectedEnquiryId!),
+    enabled: !!selectedEnquiryId,
+  })
+
   // Create RFQ mutation
   const createRFQ = useMutation({
     mutationFn: (data: CreateRFQForm) => {
@@ -214,8 +221,8 @@ export function CreateRFQPage() {
     if (item.hasVariants) {
       // Extract enquiry variants if creating from enquiry
       let enquiryVariants: Array<{ id: string; quantity: number }> | undefined
-      if (selectedEnquiryId) {
-        const enquiryItem = enquiryItems.find((i) => i.supplierItemId === resolvedSupplierItemId)
+      if (selectedEnquiryId && enquiryDetail) {
+        const enquiryItem = enquiryDetail.items.find((i) => i.supplierItemId === resolvedSupplierItemId)
         enquiryVariants = enquiryItem?.variants ? enquiryItem.variants.map((v) => ({
           id: v.supplierItemVariantId,
           quantity: v.quantityRequested,
@@ -247,8 +254,8 @@ export function CreateRFQPage() {
 
     // Extract enquiry variant IDs if editing an enquiry-linked item
     let enquiryItemVariants: Array<{ id: string }> | undefined
-    if (selectedEnquiryId) {
-      const enquiryItem = enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)
+    if (selectedEnquiryId && enquiryDetail) {
+      const enquiryItem = enquiryDetail.items.find((i) => i.supplierItemId === field.supplierItemId)
       enquiryItemVariants = enquiryItem?.variants ? enquiryItem.variants.map((v) => ({
         id: v.supplierItemVariantId,
       })) : undefined
