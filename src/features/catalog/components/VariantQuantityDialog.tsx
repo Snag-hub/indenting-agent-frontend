@@ -135,7 +135,9 @@ export function VariantQuantityDialog({
                     <TableRow>
                       <TableHead>Variant</TableHead>
                       <TableHead>SKU</TableHead>
-                      <TableHead className="w-24">{enquiryVariants ? 'Enquiry Qty' : 'Quantity'}</TableHead>
+                      {enquiryVariants && <TableHead className="text-right">Enquiry Qty</TableHead>}
+                      {enquiryVariants && <TableHead className="text-right">Remaining</TableHead>}
+                      <TableHead className="text-right">{enquiryVariants ? 'RFQ Qty' : 'Quantity'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -148,37 +150,63 @@ export function VariantQuantityDialog({
                         // Show all variants if no enquiry context
                         return true
                       })
-                      .map((variant) => (
-                      <TableRow key={variant.id}>
-                        <TableCell className="font-medium">
-                          {variant.dimensionSummary || '—'}
-                        </TableCell>
-                        <TableCell className="text-slate-600">
-                          {variant.sku || '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="0"
-                            max={
-                              maxTotal !== undefined
-                                ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
-                                : undefined
-                            }
-                            value={quantities[variant.id] ?? 0}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10) || 0
-                              const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
-                              const capped = maxTotal !== undefined
-                                ? Math.min(val, Math.max(0, maxTotal - otherTotal))
-                                : val
-                              handleQuantityChange(variant.id, capped)
-                            }}
-                            className="w-20"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                      .map((variant) => {
+                        const enquiryQty = enquiryVariants?.find((ev) => ev.id === variant.id)?.quantity ?? 0
+                        const currentRFQQty = quantities[variant.id] ?? 0
+                        const remaining = enquiryQty - currentRFQQty
+
+                        return (
+                        <TableRow key={variant.id}>
+                          <TableCell className="font-medium">
+                            {variant.dimensionSummary || '—'}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {variant.sku || '—'}
+                          </TableCell>
+                          {enquiryVariants && (
+                            <TableCell className="text-right font-medium">
+                              {enquiryQty}
+                            </TableCell>
+                          )}
+                          {enquiryVariants && (
+                            <TableCell className="text-right">
+                              <span className={remaining < 0 ? 'text-red-600 font-semibold' : ''}>
+                                {remaining}
+                              </span>
+                            </TableCell>
+                          )}
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              max={
+                                enquiryVariants
+                                  ? Math.max(0, enquiryQty - (quantities[variant.id] ?? 0)) + (quantities[variant.id] ?? 0)
+                                  : maxTotal !== undefined
+                                    ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
+                                    : undefined
+                              }
+                              value={quantities[variant.id] ?? 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10) || 0
+                                // If from enquiry, cap at enquiry qty
+                                if (enquiryVariants) {
+                                  const capped = Math.min(val, enquiryQty)
+                                  handleQuantityChange(variant.id, capped)
+                                } else {
+                                  const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
+                                  const capped = maxTotal !== undefined
+                                    ? Math.min(val, Math.max(0, maxTotal - otherTotal))
+                                    : val
+                                  handleQuantityChange(variant.id, capped)
+                                }
+                              }}
+                              className="w-20"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      )}
                   </TableBody>
                 </Table>
 

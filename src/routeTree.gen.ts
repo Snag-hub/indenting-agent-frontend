@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
 import { Route as AppTicketsRouteImport } from './routes/_app.tickets'
+import { Route as AppThreadsRouteImport } from './routes/_app.threads'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppRfqsRouteImport } from './routes/_app.rfqs'
@@ -80,6 +81,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AppTicketsRoute = AppTicketsRouteImport.update({
   id: '/tickets',
   path: '/tickets',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppThreadsRoute = AppThreadsRouteImport.update({
+  id: '/threads',
+  path: '/threads',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
@@ -327,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/rfqs': typeof AppRfqsRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
+  '/threads': typeof AppThreadsRoute
   '/tickets': typeof AppTicketsRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
@@ -376,6 +383,7 @@ export interface FileRoutesByTo {
   '/rfqs': typeof AppRfqsRouteWithChildren
   '/settings': typeof AppSettingsRouteWithChildren
   '/suppliers': typeof AppSuppliersRouteWithChildren
+  '/threads': typeof AppThreadsRoute
   '/tickets': typeof AppTicketsRouteWithChildren
   '/login': typeof AuthLoginRoute
   '/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/_app/rfqs': typeof AppRfqsRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
+  '/_app/threads': typeof AppThreadsRoute
   '/_app/tickets': typeof AppTicketsRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
   '/_app/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
@@ -479,6 +488,7 @@ export interface FileRouteTypes {
     | '/rfqs'
     | '/settings'
     | '/suppliers'
+    | '/threads'
     | '/tickets'
     | '/login'
     | '/admin/document-number-settings'
@@ -528,6 +538,7 @@ export interface FileRouteTypes {
     | '/rfqs'
     | '/settings'
     | '/suppliers'
+    | '/threads'
     | '/tickets'
     | '/login'
     | '/admin/document-number-settings'
@@ -579,6 +590,7 @@ export interface FileRouteTypes {
     | '/_app/rfqs'
     | '/_app/settings'
     | '/_app/suppliers'
+    | '/_app/threads'
     | '/_app/tickets'
     | '/_auth/login'
     | '/_app/admin/document-number-settings'
@@ -652,6 +664,13 @@ declare module '@tanstack/react-router' {
       path: '/tickets'
       fullPath: '/tickets'
       preLoaderRoute: typeof AppTicketsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/threads': {
+      id: '/_app/threads'
+      path: '/threads'
+      fullPath: '/threads'
+      preLoaderRoute: typeof AppThreadsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/suppliers': {
@@ -1199,6 +1218,7 @@ interface AppRouteChildren {
   AppRfqsRoute: typeof AppRfqsRouteWithChildren
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppSuppliersRoute: typeof AppSuppliersRouteWithChildren
+  AppThreadsRoute: typeof AppThreadsRoute
   AppTicketsRoute: typeof AppTicketsRouteWithChildren
   AppAdminDocumentNumberSettingsRoute: typeof AppAdminDocumentNumberSettingsRoute
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
@@ -1222,6 +1242,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRfqsRoute: AppRfqsRouteWithChildren,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppSuppliersRoute: AppSuppliersRouteWithChildren,
+  AppThreadsRoute: AppThreadsRoute,
   AppTicketsRoute: AppTicketsRouteWithChildren,
   AppAdminDocumentNumberSettingsRoute: AppAdminDocumentNumberSettingsRoute,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,

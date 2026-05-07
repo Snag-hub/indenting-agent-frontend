@@ -1,5 +1,28 @@
 import { api } from '@/lib/api'
 
+export interface ThreadSummaryDto {
+  id: string
+  threadId: string
+  entityType: string
+  entityId: string
+  entityDocumentNumber?: string
+  entityTitle?: string
+  entityPartyName?: string
+  subject: string
+  lastMessageAt?: string
+  lastMessagePreview?: string
+  unreadCount: number
+  messageCount: number
+  createdAt: string
+}
+
+export interface ThreadsPagedResult {
+  data: ThreadSummaryDto[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
 export interface ThreadMessageDto {
   id: string
   threadId: string
@@ -34,6 +57,28 @@ export interface UpdateThreadMessageRequest {
 }
 
 export const threadApi = {
+  /**
+   * Browse all accessible threads with pagination, search, filtering, and sorting
+   */
+  list: (params: {
+    page?: number
+    pageSize?: number
+    entityType?: string
+    search?: string
+    sortBy?: 'lastActivity' | 'created'
+  } = {}): Promise<ThreadsPagedResult> => {
+    const searchParams = new URLSearchParams()
+    if (params.page) searchParams.append('page', params.page.toString())
+    if (params.pageSize) searchParams.append('pageSize', params.pageSize.toString())
+    if (params.entityType) searchParams.append('entityType', params.entityType)
+    if (params.search) searchParams.append('search', params.search)
+    if (params.sortBy) searchParams.append('sortBy', params.sortBy)
+
+    return api
+      .get<ThreadsPagedResult>(`/threads?${searchParams.toString()}`)
+      .then((r) => r.data)
+  },
+
   /**
    * Fetch paginated list of messages for a thread
    * Non-admin users won't see internal messages
@@ -79,5 +124,14 @@ export const threadApi = {
   deleteMessage: (threadId: string, messageId: string): Promise<void> =>
     api
       .delete(`/threads/${threadId}/messages/${messageId}`)
+      .then(() => undefined),
+
+  /**
+   * Mark a thread as read for the current user
+   * Updates the user's last read timestamp for this thread
+   */
+  markAsRead: (threadId: string): Promise<void> =>
+    api
+      .post(`/threads/${threadId}/mark-as-read`)
       .then(() => undefined),
 }

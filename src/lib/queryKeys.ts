@@ -105,6 +105,8 @@ export const queryKeys = {
     overview: () => ["dashboard", "overview"] as const,
   },
   threads: {
+    list: (params?: Record<string, unknown>) =>
+      ["threads", "list", params ?? {}] as const,
     messages: (threadId: string, page: number = 1) =>
       ["threads", "messages", threadId, page] as const,
   },

@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Users, Building2, Package, Tags,
   ShoppingCart, FileText, ClipboardList, Truck,
   CreditCard, Ticket, Bell, Settings, ChevronLeft,
-  ChevronRight, LogOut, Menu, AlertCircle, Hash
+  ChevronRight, LogOut, Menu, AlertCircle, Hash,
+  MessageSquare
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -20,6 +21,7 @@ type NavItem = { label: string; to: string; icon: React.ReactNode }
 
 const adminNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Conversations', to: '/threads', icon: <MessageSquare size={18} /> },
   { label: 'Customers', to: '/customers', icon: <Users size={18} /> },
   { label: 'Suppliers', to: '/suppliers', icon: <Building2 size={18} /> },
   { label: 'Item Mapping', to: '/item-mapping', icon: <Package size={18} /> },
@@ -34,6 +36,7 @@ const adminNav: NavItem[] = [
 
 const customerNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Conversations', to: '/threads', icon: <MessageSquare size={18} /> },
   { label: 'Pending Actions', to: '/reports', icon: <AlertCircle size={18} /> },
   { label: 'My Items', to: '/my-items', icon: <Package size={18} /> },
   { label: 'Enquiries', to: '/enquiries', icon: <FileText size={18} /> },
@@ -51,6 +54,7 @@ const customerNav: NavItem[] = [
 
 const supplierNav: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Conversations', to: '/threads', icon: <MessageSquare size={18} /> },
   { label: 'Pending Actions', to: '/reports', icon: <AlertCircle size={18} /> },
   { label: 'Enquiries', to: '/enquiries', icon: <FileText size={18} /> },
   { label: 'RFQs', to: '/rfqs', icon: <ClipboardList size={18} /> },

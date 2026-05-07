@@ -10,12 +10,10 @@ import { queryKeys } from '@/lib/queryKeys'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Send, Edit2, Trash2, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { cn } from '@/lib/utils'
 
 interface ThreadPanelProps {
   threadId: string
@@ -24,8 +22,8 @@ interface ThreadPanelProps {
 }
 
 const messageSchema = z.object({
-  message: z.string().min(1, 'Message is required').min(1, 'Message cannot be empty').max(5000, 'Message is too long'),
-  isInternal: z.boolean().default(false),
+  message: z.string().min(1, 'Message is required').max(5000, 'Message is too long'),
+  isInternal: z.boolean(),
 })
 
 type MessageForm = z.infer<typeof messageSchema>
@@ -48,7 +46,7 @@ export function ThreadPanel({ threadId, title, canPostInternal = false }: Thread
   })
 
   // Real-time hub connection
-  const { isConnected, sendMessage: hubSendMessage, updateMessage: hubUpdateMessage, deleteMessage: hubDeleteMessage } = useThreadHub(threadId)
+  const { isConnected } = useThreadHub(threadId)
 
   // Form management
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<MessageForm>({
