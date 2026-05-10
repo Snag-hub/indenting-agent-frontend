@@ -18,11 +18,13 @@ import { Edit2, Check } from 'lucide-react'
 const QUERY_KEY = ['settings', 'document-number-formats']
 
 const ENTITY_LABELS: Record<string, string> = {
+  ENQ: 'Enquiry',
   RFQ: 'Request for Quotation',
   QT: 'Quotation',
   PO: 'Purchase Order',
   PI: 'Proforma Invoice',
   DO: 'Delivery Order',
+  SKU: 'Supplier Item SKU',
 }
 
 const formatSchema = z.object({

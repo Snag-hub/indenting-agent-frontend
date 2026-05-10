@@ -20,73 +20,97 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-interface VariantQuantityDialogProps {
+export interface VariantSelectorResult {
+  variantId: string
+  sku: string | null
+  dimensionSummary: string
+  quantity: number
+  price?: number
+  enquiryQuantity?: number
+  remainingQuantity?: number
+}
+
+interface VariantSelectorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   supplierItemId: string
   supplierItemName: string
+
+  // Configuration: What mode/columns to display
+  mode?: 'enquiry' | 'rfq' | 'quotation' | 'simple' | 'proforma' | 'delivery-order'
+
+  // Context-based filtering (mutually exclusive)
+  enquiryId?: string // Filter to enquiry's variants + show balance
+  rfqId?: string     // Filter to RFQ's variants + show balance
+  // If neither provided → fetch ALL variants
+
+  maxTotal?: number
   initialQuantities?: Record<string, number>
-  maxTotal?: number   // optional cap: sum of all variant quantities must not exceed this
-  enquiryVariants?: Array<{ id: string; quantity: number }>  // filter to only these variants when creating from enquiry
-  enquiryItemVariants?: Array<{ id: string }>  // filter to only these variants when editing enquiry-linked items
-  enquiryId?: string  // enquiry ID for fetching enquiry-filtered variants with balance
-  onConfirm: (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => void
+  initialPrices?: Record<string, number>
+
+  onConfirm: (variants: VariantSelectorResult[]) => void
 }
 
-export function VariantQuantityDialog({
+export function VariantSelector({
   open,
   onOpenChange,
   supplierItemId,
   supplierItemName,
-  initialQuantities,
-  maxTotal,
-  enquiryVariants,
-  enquiryItemVariants,
+  mode = 'simple',
   enquiryId,
+  rfqId,
+  maxTotal,
+  initialQuantities,
+  initialPrices,
   onConfirm,
-}: VariantQuantityDialogProps) {
+}: VariantSelectorProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>(initialQuantities ?? {})
+  const [prices, setPrices] = useState<Record<string, number>>(initialPrices ?? {})
 
-  // When creating from enquiry, fetch enquiry-filtered variants with balance calculations
-  // Otherwise fetch all variants for the supplier item
+  // Determine which API to call based on context
   const { data: variantsData = [], isLoading } = useQuery({
-    queryKey: enquiryId
-      ? ['supplier-item-variants', 'by-enquiry', supplierItemId, enquiryId]
-      : ['supplier-item-variants', supplierItemId],
-    queryFn: () => enquiryId
-      ? supplierItemApi.getEnquiryVariants(supplierItemId, enquiryId)
-      : supplierItemApi.getVariants(supplierItemId),
+    queryKey:
+      enquiryId
+        ? ['variant-selector', 'by-enquiry', supplierItemId, enquiryId]
+        : rfqId
+        ? ['variant-selector', 'by-rfq', supplierItemId, rfqId]
+        : ['variant-selector', supplierItemId],
+    queryFn: () =>
+      enquiryId
+        ? supplierItemApi.getEnquiryVariants(supplierItemId, enquiryId)
+        : supplierItemApi.getVariants(supplierItemId),
     enabled: open && !!supplierItemId,
   })
 
-  // Map variants to common structure, handling both types of variant DTOs
-  const variants = variantsData.map((v: any) => ({
+  // Map variants to common structure
+  const variants = variantsData.map((v: { id: string; sku: string | null; dimensionSummary?: string; values?: Array<{ dimensionName: string; value: string }>; enquiryQuantity?: number; remainingQuantity?: number; allocatedQuantity?: number }) => ({
     id: v.id,
     sku: v.sku,
-    dimensionSummary: v.dimensionSummary,
+    dimensionSummary: v.dimensionSummary || v.values?.map((val) => `${val.dimensionName}: ${val.value}`).join(' | ') || '—',
     enquiryQuantity: v.enquiryQuantity ?? 0,
     remainingQuantity: v.remainingQuantity ?? 0,
+    allocatedQuantity: v.allocatedQuantity ?? 0,
   }))
 
-
-  // Sync initial quantities & pre-fill from enquiry variants when dialog opens
+  // Sync initial quantities when dialog opens
   useEffect(() => {
-    if (open) {
-      if (initialQuantities) {
-        setQuantities(initialQuantities)
-      } else if (enquiryVariants) {
-        setQuantities(Object.fromEntries(enquiryVariants.map((v) => [v.id, v.quantity])))
-      } else {
-        setQuantities({})
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+    if (!open) return
+
+    setQuantities(initialQuantities ?? {})
+    setPrices(initialPrices ?? {})
+  }, [open, initialQuantities, initialPrices])
 
   const handleQuantityChange = (variantId: string, qty: number) => {
     setQuantities((prev) => ({
       ...prev,
       [variantId]: Math.max(0, qty),
+    }))
+  }
+
+  const handlePriceChange = (variantId: string, price: number) => {
+    setPrices((prev) => ({
+      ...prev,
+      [variantId]: Math.max(0, price),
     }))
   }
 
@@ -97,38 +121,44 @@ export function VariantQuantityDialog({
     const selected = variants
       .filter((v) => {
         const qty = quantities[v.id]
-        // Only include variants where quantity is explicitly set to > 0
         return typeof qty === 'number' && qty > 0
       })
       .map((v) => ({
         variantId: v.id,
-        quantity: quantities[v.id],
-        dimensionSummary: v.dimensionSummary,
         sku: v.sku,
+        dimensionSummary: v.dimensionSummary,
+        quantity: quantities[v.id],
+        price: prices[v.id],
+        enquiryQuantity: v.enquiryQuantity,
+        remainingQuantity: v.remainingQuantity,
       }))
 
-    // CRITICAL: Only allow confirm if at least one variant has been selected with positive quantity
     if (selected.length === 0) {
-      // Show error or just close - don't allow empty variants to be sent
       onOpenChange(false)
       return
     }
 
     onConfirm(selected)
     setQuantities({})
+    setPrices({})
     onOpenChange(false)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setQuantities({})
+      setPrices({})
     }
     onOpenChange(newOpen)
   }
 
+  // Determine which columns to show based on mode
+  const showEnquiryBalance = mode === 'enquiry' && enquiryId
+  const showPricing = mode === 'quotation'
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Select Variants — {supplierItemName}
@@ -152,25 +182,27 @@ export function VariantQuantityDialog({
                     <TableRow>
                       <TableHead>Variant</TableHead>
                       <TableHead>SKU</TableHead>
-                      {enquiryVariants && <TableHead className="text-right">Enquiry Qty</TableHead>}
-                      {enquiryVariants && <TableHead className="text-right">Remaining</TableHead>}
-                      <TableHead className="text-right">{enquiryVariants ? 'RFQ Qty' : 'Quantity'}</TableHead>
+                      {showEnquiryBalance && (
+                        <>
+                          <TableHead className="text-right">Enquiry Qty</TableHead>
+                          <TableHead className="text-right">Remaining</TableHead>
+                        </>
+                      )}
+                      <TableHead className="text-right">
+                        {showEnquiryBalance ? 'RFQ Qty' : showPricing ? 'Quantity' : 'Quantity'}
+                      </TableHead>
+                      {showPricing && (
+                        <TableHead className="text-right">Unit Price</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {variants
-                      .filter((v) => {
-                        // Filter to enquiry item variants if editing enquiry-linked item
-                        if (enquiryItemVariants) return enquiryItemVariants.some((ev) => ev.id === v.id)
-                        // Show all variants if no enquiry context (enquiry-filtered variants already filtered at backend)
-                        return true
-                      })
-                      .map((variant) => {
-                        const enquiryQty = variant.enquiryQuantity ?? 0
-                        const remaining = variant.remainingQuantity ?? (enquiryQty - (quantities[variant.id] ?? 0))
-                        const currentRFQQty = quantities[variant.id] ?? 0
+                    {variants.map((variant) => {
+                      const enquiryQty = variant.enquiryQuantity ?? 0
+                      const displayRemaining = variant.remainingQuantity ?? (enquiryQty - (quantities[variant.id] ?? 0))
+                      const currentQty = quantities[variant.id] ?? 0
 
-                        return (
+                      return (
                         <TableRow key={variant.id}>
                           <TableCell className="font-medium">
                             {variant.dimensionSummary || '—'}
@@ -178,15 +210,15 @@ export function VariantQuantityDialog({
                           <TableCell className="text-slate-600">
                             {variant.sku || '—'}
                           </TableCell>
-                          {enquiryId && (
+                          {showEnquiryBalance && (
                             <TableCell className="text-right font-medium">
                               {enquiryQty}
                             </TableCell>
                           )}
-                          {enquiryId && (
+                          {showEnquiryBalance && (
                             <TableCell className="text-right">
-                              <span className={(remaining - currentRFQQty) < 0 ? 'text-red-600 font-semibold' : ''}>
-                                {remaining - currentRFQQty}
+                              <span className={(displayRemaining - currentQty) < 0 ? 'text-red-600 font-semibold' : ''}>
+                                {displayRemaining - currentQty}
                               </span>
                             </TableCell>
                           )}
@@ -195,7 +227,7 @@ export function VariantQuantityDialog({
                               type="number"
                               min="0"
                               max={
-                                enquiryId && variant.remainingQuantity !== undefined
+                                showEnquiryBalance && variant.remainingQuantity !== undefined
                                   ? Math.max(0, variant.remainingQuantity)
                                   : maxTotal !== undefined
                                     ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
@@ -204,8 +236,7 @@ export function VariantQuantityDialog({
                               value={quantities[variant.id] ?? 0}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value, 10) || 0
-                                // If from enquiry, cap at remaining quantity
-                                if (enquiryId && variant.remainingQuantity !== undefined) {
+                                if (showEnquiryBalance && variant.remainingQuantity !== undefined) {
                                   const capped = Math.min(val, variant.remainingQuantity)
                                   handleQuantityChange(variant.id, capped)
                                 } else {
@@ -219,9 +250,25 @@ export function VariantQuantityDialog({
                               className="w-20"
                             />
                           </TableCell>
+                          {showPricing && (
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={prices[variant.id] ?? ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0
+                                  handlePriceChange(variant.id, val)
+                                }}
+                                placeholder="0.00"
+                                className="w-28 text-right"
+                              />
+                            </TableCell>
+                          )}
                         </TableRow>
-                      )}
-                      )}
+                      )
+                    })}
                   </TableBody>
                 </Table>
 

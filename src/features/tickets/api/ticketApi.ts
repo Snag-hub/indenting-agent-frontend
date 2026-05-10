@@ -39,6 +39,7 @@ export interface TicketSummaryDto {
 export interface TicketDetailDto {
   id: string;
   documentNumber?: string;
+  ticketNumber?: string;
   title: string;
   description?: string;
   status: "Open" | "In Progress" | "Resolved" | "Closed";
@@ -55,18 +56,27 @@ export interface TicketDetailDto {
   modifiedAt?: string;
 }
 
+/** Available document for ticket creation (PI, DO, or Payment) */
+export interface AvailableDocumentDto {
+  id: string;
+  number: string;
+  status: string;
+  createdDate: string;
+  amount: number;
+  description: string;
+}
+
 /**
  * Payload for POST /tickets.
- * `linkedEntityType` and `linkedEntityId` are populated when navigating
- * from a DO or PI detail page via the "Create Ticket" button.
+ * `linkedEntityType` and `linkedEntityId` are REQUIRED.
  */
 export interface CreateTicketInput {
   title: string;
   description?: string;
   priority: "Low" | "Medium" | "High" | "Critical";
   assignedToId?: string;
-  linkedEntityType?: string;
-  linkedEntityId?: string;
+  linkedEntityType: "PI" | "DO" | "Payment";
+  linkedEntityId: string;
 }
 
 /** Payload for PUT /tickets/:id — all fields optional (partial update). */
@@ -85,6 +95,12 @@ export interface AddCommentInput {
 }
 
 export const ticketApi = {
+  /** GET /tickets/available-documents — fetch documents user can link to tickets. */
+  getAvailableDocuments: (entityType: "PI" | "DO" | "Payment") =>
+    api
+      .get<AvailableDocumentDto[]>("/tickets/available-documents", { params: { entityType } })
+      .then((r) => r.data),
+
   /** GET /tickets — paginated list with optional filters. */
   list: (params?: {
     search?: string;

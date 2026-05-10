@@ -28,6 +28,11 @@ export function SupplierEnquiriesPage() {
 
   const columns: ColumnDef<EnquirySummaryDto>[] = [
     {
+      accessorKey: 'documentNumber',
+      header: 'Doc #',
+      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
+    },
+    {
       accessorKey: 'title',
       header: 'Title',
       cell: ({ getValue }) => (

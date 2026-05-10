@@ -280,7 +280,6 @@ export function CreateDeliveryOrderPage() {
                       <TableCell />
                     </TableRow>
                     {field.variants.map((variant, vi) => {
-                      const vItem = item?.variants?.[vi]
                       const label = variant.dimensionSummary || variant.sku || `Variant ${vi + 1}`
                       return (
                         <TableRow key={variant.supplierItemVariantId} className="border-b border-dashed">

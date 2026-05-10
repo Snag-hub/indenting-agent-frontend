@@ -35,6 +35,7 @@ export interface EnquiryItemDto {
 
 export interface EnquirySummaryDto {
   id: string;
+  documentNumber: string;
   title: string;
   status: string; // 'Draft' | 'Open' | 'Closed'
   itemCount: number;
@@ -44,6 +45,9 @@ export interface EnquirySummaryDto {
 
 export interface EnquiryDetailDto {
   id: string;
+  documentNumber?: string;
+  enquiryType?: EnquiryType;
+  priority?: string;
   title: string;
   notes?: string;
   status: string;

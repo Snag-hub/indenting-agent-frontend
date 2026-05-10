@@ -20,11 +20,21 @@ export interface SupplierItemVariantSummaryDto {
   dimensionSummary: string
 }
 
+export interface EnquirySupplierItemVariantDto {
+  id: string
+  sku: string | null
+  dimensionSummary: string
+  enquiryQuantity: number
+  allocatedQuantity: number
+  remainingQuantity: number
+}
+
 export interface SupplierItemSummaryDto {
   id: string
   supplierId: string
   supplierName: string
   name: string
+  documentNumber: string
   minOrderQty: number
   batchSize: number
   leadTimeDays: number
@@ -40,6 +50,7 @@ export interface SupplierItemDetailDto {
   supplierId: string
   supplierName: string
   name: string
+  documentNumber: string
   description: string | null
   minOrderQty: number
   batchSize: number
@@ -108,4 +119,7 @@ export const supplierItemApi = {
 
   getVariants: (id: string) =>
     api.get<SupplierItemVariantSummaryDto[]>(`/supplier-items/${id}/variants`).then((r) => r.data),
+
+  getEnquiryVariants: (supplierItemId: string, enquiryId: string) =>
+    api.get<EnquirySupplierItemVariantDto[]>(`/supplier-items/${supplierItemId}/variants/by-enquiry/${enquiryId}`).then((r) => r.data),
 }

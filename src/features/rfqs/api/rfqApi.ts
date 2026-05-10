@@ -37,6 +37,7 @@ export interface RFQSummaryDto {
 /** Full RFQ detail — single supplier per RFQ. */
 export interface RFQDetailDto {
   id: string;
+  documentNumber?: string;
   enquiryId?: string;
   supplierId: string;
   supplierName: string;

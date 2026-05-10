@@ -1,5 +1,5 @@
 import { useNavigate, useChildMatches, Outlet } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { ticketApi, type TicketSummaryDto } from '@/features/tickets/api/ticketApi'
@@ -30,7 +30,6 @@ const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | '
 export function TicketsPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
-  const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [priority, setPriority] = useState('')
@@ -154,11 +153,13 @@ export function TicketsPage() {
         </div>
       ) : (
         <DataTable
-          columns={columns}
-          data={data?.data ?? []}
-          pageCount={data?.pageCount ?? 1}
-          page={page}
-          onPageChange={setPage}
+          {...({
+            columns,
+            data: data?.data ?? [],
+            pageCount: data?.pageCount ?? 1,
+            page,
+            onPageChange: setPage,
+          } as any)}
         />
       )}
     </div>

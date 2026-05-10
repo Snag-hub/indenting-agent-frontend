@@ -134,4 +134,12 @@ export const threadApi = {
     api
       .post(`/threads/${threadId}/mark-as-read`)
       .then(() => undefined),
+
+  /**
+   * Get unread message count for a specific entity's thread
+   */
+  getUnreadCount: (entityType: string, entityId: string): Promise<number> =>
+    api
+      .get<{ count: number }>(`/threads/${entityType}/${entityId}/unread-count`)
+      .then((r) => r.data.count),
 }

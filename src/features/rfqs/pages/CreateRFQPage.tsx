@@ -10,7 +10,7 @@ import { rfqApi } from '@/features/rfqs/api/rfqApi'
 import { enquiryApi, type AvailableEnquiryItemDto } from '@/features/enquiries/api/enquiryApi'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { queryKeys } from '@/lib/queryKeys'
-import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
+import { VariantSelector } from '@/components/forms/VariantSelector'
 import { ItemPicker } from '@/components/ItemPicker'
 import { MultiStepForm } from '@/components/MultiStepForm'
 import { PageHeader } from '@/components/PageHeader'
@@ -69,11 +69,9 @@ export function CreateRFQPage() {
     fieldIndex?: number   // set when editing an existing item
     id: string            // supplierItemId for the variant dialog
     name: string
-    enquiryVariants?: Array<{ id: string; quantity: number }>  // variants from enquiry, if creating from enquiry
-    enquiryItemVariants?: Array<{ id: string }>  // variant IDs for filtering when editing enquiry-linked items
   } | undefined>()
 
-  const { control, register, watch, setValue, formState: { errors } } = useForm<CreateRFQForm>({
+  const form = useForm<CreateRFQForm>({
     resolver: zodResolver(createRFQSchema),
     defaultValues: {
       title: '',
@@ -84,6 +82,7 @@ export function CreateRFQPage() {
       items: [],
     },
   })
+  const { control, register, watch, setValue, getValues, formState: { errors } } = form
 
   const { fields: itemFields, append: appendItem, remove: removeItem, update: updateItem } = useFieldArray({
     control,
@@ -104,6 +103,9 @@ export function CreateRFQPage() {
   })
 
   const watchedSupplierIds = watch('supplierIds')
+  // Live form items — used so re-renders pick up checkbox toggles (useFieldArray's
+  // `fields` snapshot keeps the original `checked: true` and never updates).
+  const watchedItems = watch('items') ?? []
   // Use the first selected supplier only for the manual ItemPicker filter
   const primarySupplierId = watchedSupplierIds[0]
 
@@ -116,7 +118,7 @@ export function CreateRFQPage() {
   })
 
   // Fetch full enquiry detail with variant information for displaying enquiry quantities
-  const { data: enquiryDetail } = useQuery({
+  useQuery({
     queryKey: queryKeys.enquiries.detail(selectedEnquiryId ?? ''),
     queryFn: () => enquiryApi.get(selectedEnquiryId!),
     enabled: !!selectedEnquiryId,
@@ -202,37 +204,13 @@ export function CreateRFQPage() {
     }
   }
 
-  /**
-   * Toggle a supplier in/out of the selected set.
-   * Items are NOT cleared when toggling suppliers — in a multi-supplier RFQ the
-   * same item list is sent to all suppliers. Each supplier quotes on the same items.
-   */
-  const handleSupplierToggle = (supplierId: string) => {
-    const current = watchedSupplierIds
-    const next = current.includes(supplierId)
-      ? current.filter((id) => id !== supplierId)
-      : [...current, supplierId]
-    setValue('supplierIds', next)
-  }
-
   const handleAddAvailableItem = (item: AvailableEnquiryItemDto) => {
     const resolvedSupplierItemId = item.supplierItemId ?? item.id
 
     if (item.hasVariants) {
-      // Extract enquiry variants if creating from enquiry
-      let enquiryVariants: Array<{ id: string; quantity: number }> | undefined
-      if (selectedEnquiryId && enquiryDetail) {
-        const enquiryItem = enquiryDetail.items.find((i) => i.supplierItemId === resolvedSupplierItemId)
-        enquiryVariants = enquiryItem?.variants ? enquiryItem.variants.map((v) => ({
-          id: v.supplierItemVariantId,
-          quantity: v.quantityRequested,
-        })) : undefined
-      }
-
       setSelectedItemForVariant({
         id: resolvedSupplierItemId,
         name: item.resolvedName,
-        enquiryVariants,
       })
       setVariantDialogOpen(true)
     } else {
@@ -252,25 +230,15 @@ export function CreateRFQPage() {
     const field = itemFields[idx]
     if (!field) return
 
-    // Extract enquiry variant IDs if editing an enquiry-linked item
-    let enquiryItemVariants: Array<{ id: string }> | undefined
-    if (selectedEnquiryId && enquiryDetail) {
-      const enquiryItem = enquiryDetail.items.find((i) => i.supplierItemId === field.supplierItemId)
-      enquiryItemVariants = enquiryItem?.variants ? enquiryItem.variants.map((v) => ({
-        id: v.supplierItemVariantId,
-      })) : undefined
-    }
-
     setSelectedItemForVariant({
       fieldIndex: idx,
       id: field.supplierItemId,
       name: field.itemName ?? '',
-      enquiryItemVariants,
     })
     setVariantDialogOpen(true)
   }
 
-  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => {
+  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null; price?: number; enquiryQuantity?: number; remainingQuantity?: number }>) => {
     if (!selectedItemForVariant) return
     const totalQty = variants.reduce((sum, v) => sum + v.quantity, 0)
     const mappedVariants = variants.map((v) => ({
@@ -305,6 +273,20 @@ export function CreateRFQPage() {
     setVariantDialogOpen(false)
     setSelectedItemForVariant(undefined)
   }
+
+  /**
+   * Toggle a supplier in/out of the selected set.
+   * Items are NOT cleared when toggling suppliers — in a multi-supplier RFQ the
+   * same item list is sent to all suppliers. Each supplier quotes on the same items.
+   */
+  const handleSupplierToggle = (supplierId: string) => {
+    const current = watchedSupplierIds
+    const next = current.includes(supplierId)
+      ? current.filter((id) => id !== supplierId)
+      : [...current, supplierId]
+    setValue('supplierIds', next)
+  }
+
 
   // Step 1: RFQ Details
   const Step1 = (
@@ -547,7 +529,7 @@ export function CreateRFQPage() {
 
           {itemFields.length > 0 && (
             <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
-              {itemFields.filter((f) => f.checked).length} of {itemFields.length} items selected
+              {watchedItems.filter((f) => f.checked).length} of {itemFields.length} items selected
             </div>
           )}
         </div>
@@ -593,13 +575,13 @@ export function CreateRFQPage() {
           <div className="flex justify-between pt-2 border-t">
             <span className="text-muted-foreground">Line Items:</span>
             <span className="font-semibold text-lg">
-              {itemFields.filter((f) => f.checked).length}
+              {watchedItems.filter((f) => f.checked).length}
             </span>
           </div>
         </CardContent>
       </Card>
 
-      {itemFields.filter((f) => f.checked).length > 0 && (
+      {watchedItems.filter((f) => f.checked).length > 0 && (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -610,17 +592,17 @@ export function CreateRFQPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {itemFields
-                .filter((f) => f.checked)
-                .flatMap((field) => {
+              {watchedItems
+                .map((field, idx) => ({ field, fieldId: itemFields[idx]?.id ?? `${idx}` }))
+                .filter(({ field }) => field.checked)
+                .flatMap(({ field, fieldId }) => {
                   const itemName =
                     enquiryItems.find((i) => i.supplierItemId === field.supplierItemId)?.itemName ||
-                    field.itemName ||
                     field.itemName ||
                     field.supplierItemId
 
                   const rows: React.ReactNode[] = [
-                    <TableRow key={field.id}>
+                    <TableRow key={fieldId}>
                       <TableCell className="text-sm font-medium">{itemName}</TableCell>
                       <TableCell className="text-sm font-medium">
                         {field.quantity}
@@ -640,7 +622,7 @@ export function CreateRFQPage() {
                   if (field.hasVariants && field.variants && field.variants.length > 0) {
                     field.variants.forEach((variant) => {
                       rows.push(
-                        <TableRow key={`${field.id}-variant-${variant.supplierItemVariantId}`} className="bg-slate-50">
+                        <TableRow key={`${fieldId}-variant-${variant.supplierItemVariantId}`} className="bg-slate-50">
                           <TableCell className="text-xs pl-8 text-slate-600">
                             {variant.dimensionSummary || variant.sku || variant.supplierItemVariantId.slice(0, 8) + '…'}
                           </TableCell>
@@ -679,13 +661,11 @@ export function CreateRFQPage() {
   }
 
   const handleCreateRFQ = () => {
-    const data = watch()
+    const data = getValues()
     createRFQ.mutate(data as CreateRFQForm)
   }
 
   const canProceedStep1 = !!watch('title') && !errors.title
-  // itemFields from useFieldArray is a snapshot — use watch('items') for live checked state
-  const watchedItems = watch('items') ?? []
   const canProceedStep2 = watchedSupplierIds.length > 0 && watchedItems.some((f) => f.checked)
 
   return (
@@ -721,13 +701,15 @@ export function CreateRFQPage() {
         {currentStep === 2 && Step3}
       </MultiStepForm>
 
-      {/* Variant Selection / Edit Dialog */}
+      {/* Variant Selection / Edit Dialog with clearer column headers */}
       {selectedItemForVariant && (
-        <VariantQuantityDialog
+        <VariantSelector
           open={variantDialogOpen}
           onOpenChange={setVariantDialogOpen}
           supplierItemId={selectedItemForVariant.id}
           supplierItemName={selectedItemForVariant.name}
+          mode={selectedEnquiryId ? 'enquiry' : 'simple'}
+          enquiryId={selectedEnquiryId}
           initialQuantities={
             selectedItemForVariant.fieldIndex !== undefined
               ? Object.fromEntries(
@@ -744,8 +726,6 @@ export function CreateRFQPage() {
                 )?.availableQuantity
               : undefined
           }
-          enquiryVariants={selectedItemForVariant.enquiryVariants}
-          enquiryItemVariants={selectedItemForVariant.enquiryItemVariants}
           onConfirm={handleVariantConfirm}
         />
       )}

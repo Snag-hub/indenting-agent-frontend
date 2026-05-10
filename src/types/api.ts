@@ -3,6 +3,7 @@ export interface PagedResult<T> {
   totalCount: number
   page: number
   pageSize: number
+  pageCount?: number
 }
 
 export interface ProblemDetails {

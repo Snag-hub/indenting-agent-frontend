@@ -21,7 +21,6 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft } from 'lucide-react'
-import { format } from 'date-fns'
 import { Route } from '@/routes/_app.payments.new'
 
 function formatCurrency(value: number, currency = 'USD'): string {

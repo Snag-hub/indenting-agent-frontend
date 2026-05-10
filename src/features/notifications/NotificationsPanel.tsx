@@ -49,12 +49,14 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
     // Navigate based on entityType
     if (notification.entityType && notification.entityId) {
       const routes: Record<string, string> = {
-        'Quotation': '/quotations/$id',
+        'Enquiry': '/enquiries/$id',
         'RFQ': '/rfqs/$id',
+        'Quotation': '/quotations/$id',
         'PurchaseOrder': '/purchase-orders/$id',
         'ProformaInvoice': '/proforma-invoices/$id',
         'DeliveryOrder': '/delivery-orders/$id',
         'Payment': '/payments/$id',
+        'Ticket': '/tickets/$id',
       }
 
       const route = routes[notification.entityType]

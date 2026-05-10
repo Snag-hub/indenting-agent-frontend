@@ -36,10 +36,15 @@ export interface PurchaseOrderDetailDto {
   id: string;
   quotationId: string;
   customerId: string;
+  companyName?: string;
+  companyAddress?: string;
   supplierId: string;
   title: string;
   notes?: string;
   supplierName: string;
+  supplierAddress?: string;
+  deliveryDate?: string;
+  paymentTerms?: string;
   status: string;
   items: PurchaseOrderItemDto[];
 

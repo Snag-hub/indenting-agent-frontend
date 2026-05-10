@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { notificationApi, type NotificationDto } from '@/features/notifications/api/notificationApi'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,19 @@ import { cn } from '@/lib/utils'
 
 const QUERY_KEY = ['notifications', 'list']
 
+const ENTITY_ROUTES: Record<string, string> = {
+  'Enquiry': '/enquiries/$id',
+  'RFQ': '/rfqs/$id',
+  'Quotation': '/quotations/$id',
+  'PurchaseOrder': '/purchase-orders/$id',
+  'ProformaInvoice': '/proforma-invoices/$id',
+  'DeliveryOrder': '/delivery-orders/$id',
+  'Payment': '/payments/$id',
+  'Ticket': '/tickets/$id',
+}
+
 export function NotificationsListPage() {
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const [unreadOnly, setUnreadOnly] = useState(false)
@@ -70,6 +83,16 @@ export function NotificationsListPage() {
   const handleDeleteSelected = async () => {
     for (const id of selectedIds) {
       await deleteMutation.mutateAsync(id)
+    }
+  }
+
+  const handleNotificationClick = (notification: NotificationDto) => {
+    if (!notification.isRead) {
+      markAsReadMutation.mutate(notification.id)
+    }
+    const route = notification.entityType ? ENTITY_ROUTES[notification.entityType] : undefined
+    if (route && notification.entityId) {
+      navigate({ to: route, params: { id: notification.entityId } })
     }
   }
 
@@ -164,14 +187,19 @@ export function NotificationsListPage() {
             <Card
               key={notification.id}
               className={cn(
-                'cursor-pointer transition-colors',
-                !notification.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50'
+                'transition-colors',
+                !notification.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50',
+                notification.entityType && ENTITY_ROUTES[notification.entityType] && notification.entityId
+                  ? 'cursor-pointer'
+                  : 'cursor-default'
               )}
+              onClick={() => handleNotificationClick(notification)}
             >
               <CardContent className="flex items-start gap-3 p-4">
                 <Checkbox
                   checked={selectedIds.has(notification.id)}
                   onCheckedChange={() => handleToggleSelect(notification.id)}
+                  onClick={(e) => e.stopPropagation()}
                 />
 
                 <div className="flex-1 min-w-0">
@@ -197,7 +225,7 @@ export function NotificationsListPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   {!notification.isRead && (
                     <Button
                       variant="ghost"

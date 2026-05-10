@@ -100,6 +100,8 @@ export const queryKeys = {
     list: (params?: Record<string, unknown>) =>
       ["tickets", "list", params ?? {}] as const,
     detail: (id: string) => ["tickets", "detail", id] as const,
+    availableDocuments: (entityType: string) =>
+      ["tickets", "availableDocuments", entityType] as const,
   },
   dashboard: {
     overview: () => ["dashboard", "overview"] as const,

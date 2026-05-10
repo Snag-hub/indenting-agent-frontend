@@ -14,6 +14,7 @@ export interface ProformaInvoiceItemDto {
   id: string;
   supplierItemId: string;
   supplierItemName: string;
+  customerItemName?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -36,11 +37,16 @@ export interface ProformaInvoiceDetailDto {
   id: string;
   purchaseOrderId: string;
   customerId: string;
+  customerName?: string;
+  customerAddress?: string;
   supplierId: string;
   documentNumber: string;
   title: string;
   notes?: string;
   supplierName: string;
+  supplierAddress?: string;
+  dueDate?: string;
+  validUntil?: string;
   status: string;
   items: ProformaInvoiceItemDto[];
   createdAt: string;

@@ -274,9 +274,9 @@ export function TicketDetailPage() {
         title="Close Ticket"
         description="Are you sure you want to close this ticket? It can be reopened later."
         open={closing}
+        onOpenChange={setClosing}
         onConfirm={() => closeTicket.mutate()}
-        onCancel={() => setClosing(false)}
-        loading={closeTicket.isPending}
+        isLoading={closeTicket.isPending}
       />
     </div>
   )

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Send, Lock } from 'lucide-react'
+import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -53,7 +54,19 @@ export function EnquiriesPage() {
   if (childMatches.length > 0) return <Outlet />
 
   const columns: ColumnDef<EnquirySummaryDto>[] = [
-    { accessorKey: 'title', header: 'Title' },
+    {
+      accessorKey: 'documentNumber',
+      header: 'Doc #',
+      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
+    },
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ getValue }) => {
+        const title = getValue() as string | null
+        return title ? <span>{title}</span> : <span className="text-muted-foreground">—</span>
+      },
+    },
     {
       accessorKey: 'status',
       header: 'Status',
@@ -74,6 +87,8 @@ export function EnquiriesPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
+          <ThreadDrawerButton entityType="Enquiry" entityId={row.original.id} size="sm" />
+
           <Button
             size="icon"
             variant="ghost"

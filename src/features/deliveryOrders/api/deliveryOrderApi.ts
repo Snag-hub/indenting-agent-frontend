@@ -13,6 +13,8 @@ export interface DeliveryOrderItemDto {
   id: string;
   supplierItemId: string;
   supplierItemName: string;
+  quantity?: number;
+  sku?: string;
   quantityDispatched: number;
   notes?: string;
   variants?: DeliveryOrderItemVariantDto[] | null;
@@ -40,6 +42,10 @@ export interface DeliveryOrderDetailDto {
   title: string;
   notes?: string;
   supplierName: string;
+  supplierAddress?: string;
+  deliveryAddress?: string;
+  deliveryDate?: string;
+  poReference?: string;
   status: string;
   items: DeliveryOrderItemDto[];
   createdAt: string;

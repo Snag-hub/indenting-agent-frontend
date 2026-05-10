@@ -106,6 +106,7 @@ export function MyItemsPage() {
 
   const columns: ColumnDef<SupplierItemSummaryDto>[] = [
     { accessorKey: 'name', header: 'Name' },
+    { accessorKey: 'documentNumber', header: 'SKU' },
     { accessorKey: 'categoryName', header: 'Category', cell: ({ row }) => row.original.categoryName ?? '—' },
     { accessorKey: 'minOrderQty', header: 'MOQ' },
     { accessorKey: 'batchSize', header: 'Batch Size' },

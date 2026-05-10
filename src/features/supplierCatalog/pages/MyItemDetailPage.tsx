@@ -128,7 +128,7 @@ export function MyItemDetailPage() {
         </Button>
       </div>
 
-      <PageHeader title={data.name} description={data.description ?? undefined} />
+      <PageHeader title={`${data.name} (${data.documentNumber})`} description={data.description ?? undefined} />
 
       <Tabs defaultValue="details">
         <TabsList>
