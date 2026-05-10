@@ -112,4 +112,16 @@ export const queryKeys = {
     messages: (threadId: string, page: number = 1) =>
       ["threads", "messages", threadId, page] as const,
   },
+  configuration: {
+    entityTypes: () => ["config", "entity-types"] as const,
+    priorities: () => ["config", "priorities"] as const,
+    roles: () => ["config", "roles"] as const,
+    enquiryTypes: () => ["config", "enquiry-types"] as const,
+    statuses: (documentType: string) => ["config", "statuses", documentType] as const,
+    groups: (entityTypeName: string) => ["config", "groups", entityTypeName] as const,
+    parameters: (entityTypeName: string, entityGroupName: string) =>
+      ["config", "parameters", entityTypeName, entityGroupName] as const,
+    parameter: (entityTypeName: string, parameterName: string) =>
+      ["config", "parameter", entityTypeName, parameterName] as const,
+  },
 };
