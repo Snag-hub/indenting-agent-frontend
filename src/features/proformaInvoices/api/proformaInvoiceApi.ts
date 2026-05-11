@@ -26,7 +26,6 @@ export interface ProformaInvoiceSummaryDto {
   id: string;
   purchaseOrderId: string;
   documentNumber: string;
-  title: string;
   supplierName: string;
   status: string;
   itemCount: number;
@@ -41,7 +40,6 @@ export interface ProformaInvoiceDetailDto {
   customerAddress?: string;
   supplierId: string;
   documentNumber: string;
-  title: string;
   notes?: string;
   supplierName: string;
   supplierAddress?: string;
@@ -77,7 +75,7 @@ export const proformaInvoiceApi = {
       })
       .then((r) => r.data),
 
-  create: (data: { purchaseOrderId: string; title: string; notes?: string; items: CreateProformaInvoiceItemInput[] }) =>
+  create: (data: { purchaseOrderId: string; notes?: string; items: CreateProformaInvoiceItemInput[] }) =>
     api.post<string>("/proforma-invoices", data).then((r) => r.data),
 
   get: (id: string) =>

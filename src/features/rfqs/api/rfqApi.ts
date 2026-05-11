@@ -24,29 +24,28 @@ export interface RFQItemDto {
 /** Summary row in the RFQ list — one RFQ = one Supplier. */
 export interface RFQSummaryDto {
   id: string;
-  documentNumber?: string;
-  title: string;
   supplierName: string;
   customerName?: string;
-  status: string; // 'Draft' | 'Sent' | 'Closed'
+  status: string; // 'Draft' | 'Submitted' | 'Closed'
   itemCount: number;
   dueDate?: string;
   createdAt: string;
+  documentNumber: string;
 }
 
 /** Full RFQ detail — single supplier per RFQ. */
 export interface RFQDetailDto {
   id: string;
-  documentNumber?: string;
   enquiryId?: string;
+  enquiryDocumentNumber?: string;
   supplierId: string;
   supplierName: string;
-  title: string;
   notes?: string;
   status: string;
   dueDate?: string;
   items: RFQItemDto[];
   createdAt: string;
+  documentNumber: string;
 }
 
 export interface CreateRFQItemVariantInput {
@@ -70,7 +69,6 @@ export interface CreateRFQInput {
 }
 
 export interface UpdateRFQInput {
-  title?: string;
   notes?: string;
   dueDate?: string;
 }

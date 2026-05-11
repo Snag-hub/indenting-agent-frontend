@@ -47,7 +47,6 @@ const piItemSchema = z.object({
 })
 
 const createPISchema = z.object({
-  title: z.string().min(1, 'Title is required'),
   notes: z.string().optional(),
   items: z.array(piItemSchema),
 })
@@ -55,7 +54,7 @@ const createPISchema = z.object({
 type CreatePIForm = z.infer<typeof createPISchema>
 
 const STEPS = [
-  { title: 'Basic Info', description: 'Enter title and optional notes for the Proforma Invoice.' },
+  { title: 'Basic Info', description: 'Enter optional notes for the Proforma Invoice.' },
   { title: 'Invoice Items', description: 'Set the quantity to invoice for each item.' },
   { title: 'Review & Create', description: 'Confirm and create the Proforma Invoice.' },
 ]
@@ -80,7 +79,7 @@ export function CreateProformaInvoicePage() {
 
   const { register, handleSubmit, watch, control, reset, formState: { errors } } = useForm<CreatePIForm>({
     resolver: zodResolver(createPISchema),
-    defaultValues: { title: '', notes: '', items: [] },
+    defaultValues: { notes: '', items: [] },
   })
 
   const { fields } = useFieldArray({ control, name: 'items' })
@@ -89,7 +88,6 @@ export function CreateProformaInvoicePage() {
     if (po && balance) {
       const availableItems = balance.filter(b => b.remainingQty > 0 || (b.variants?.some(v => v.remainingQty > 0)))
       reset({
-        title: '',
         notes: '',
         items: availableItems.map(b => {
           const poItem = po.items.find(i => i.supplierItemId === b.supplierItemId)
@@ -122,7 +120,6 @@ export function CreateProformaInvoicePage() {
   }, [po, balance, reset])
 
   const watchItems = watch('items')
-  const watchTitle = watch('title')
   const watchNotes = watch('notes')
 
   const grandTotal = watchItems.reduce((sum, item) => {
@@ -142,7 +139,6 @@ export function CreateProformaInvoicePage() {
     try {
       const piId = await proformaInvoiceApi.create({
         purchaseOrderId: poId,
-        title: data.title,
         notes: data.notes || undefined,
         items: data.items.map(item => ({
           supplierItemId: item.supplierItemId,
@@ -186,7 +182,7 @@ export function CreateProformaInvoicePage() {
       <div className="space-y-6 max-w-3xl mx-auto">
         <PageHeader
           title="Create Proforma Invoice"
-          description={`For PO: ${po.title}`}
+          description={`For PO: ${po.documentNumber}`}
           action={
             <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
@@ -220,8 +216,8 @@ export function CreateProformaInvoicePage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">PO Title</p>
-              <p className="text-sm font-medium">{po.title}</p>
+              <p className="text-xs text-muted-foreground mb-1">PO Document #</p>
+              <p className="text-sm font-medium">{po.documentNumber}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Supplier</p>
@@ -244,15 +240,6 @@ export function CreateProformaInvoicePage() {
       </Card>
 
       <div className="space-y-4">
-        <div className="space-y-1">
-          <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
-          <Input
-            id="title"
-            placeholder="e.g. Proforma Invoice — Office Chairs"
-            {...register('title')}
-          />
-          {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
-        </div>
         <div className="space-y-1">
           <Label htmlFor="notes">Notes (optional)</Label>
           <Textarea

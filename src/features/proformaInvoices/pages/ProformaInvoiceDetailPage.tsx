@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
+import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -25,7 +25,7 @@ function formatCurrency(value: number): string {
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
-  Sent: 'default',
+  Submitted: 'default',
   Acknowledged: 'secondary',
   Cancelled: 'destructive',
 }
@@ -83,17 +83,10 @@ export function ProformaInvoiceDetailPage() {
     return <div className="text-muted-foreground">Proforma Invoice not found.</div>
   }
 
-  const totalPrice = pi.items.reduce((sum, item) => {
-    if (item.variants && item.variants.length > 0) {
-      return sum + item.variants.reduce((vs, v) => vs + v.quantity * v.unitPrice, 0)
-    }
-    return sum + item.totalPrice
-  }, 0)
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title={pi.title}
+        title={pi.documentNumber}
         description={`Supplier: ${pi.supplierName}`}
         action={
           <div className="flex items-center gap-2">
@@ -111,7 +104,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Supplier' && (pi.status === 'Draft' || pi.status === 'Sent') && (
+            {role === 'Supplier' && (pi.status === 'Draft' || pi.status === 'Submitted') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -131,7 +124,7 @@ export function ProformaInvoiceDetailPage() {
             )}
 
             {/* Customer actions */}
-            {role === 'Customer' && pi.status === 'Sent' && (
+            {role === 'Customer' && pi.status === 'Submitted' && (
               <Button
                 size="sm"
                 onClick={() => setAcknowledging(true)}
@@ -140,7 +133,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Customer' && (pi.status === 'Sent' || pi.status === 'Acknowledged') && (
+            {role === 'Customer' && (pi.status === 'Submitted' || pi.status === 'Acknowledged') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -218,66 +211,25 @@ export function ProformaInvoiceDetailPage() {
           <CardTitle className="text-base">Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-xs">Item Name</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit Price</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pi.items.flatMap((item) => {
-                  const hasVariants = item.variants && item.variants.length > 0
-                  if (hasVariants) {
-                    const variantTotal = item.variants!.reduce((s, v) => s + v.quantity * v.unitPrice, 0)
-                    return [
-                      <TableRow key={`item-${item.id}`} className="bg-muted/30">
-                        <TableCell className="font-semibold text-sm" colSpan={2}>{item.supplierItemName}</TableCell>
-                        <TableCell className="text-right text-sm text-muted-foreground">—</TableCell>
-                        <TableCell className="text-right text-sm font-semibold">{formatCurrency(variantTotal)}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
-                        </TableCell>
-                      </TableRow>,
-                      ...item.variants!.map((v) => (
-                        <TableRow key={`variant-${v.id}`} className="border-b border-dashed">
-                          <TableCell className="pl-8 text-sm text-muted-foreground">
-                            {v.dimensionSummary || v.sku || v.supplierItemVariantId}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">{v.quantity}</TableCell>
-                          <TableCell className="text-right text-sm">{formatCurrency(v.unitPrice)}</TableCell>
-                          <TableCell className="text-right text-sm">{formatCurrency(v.quantity * v.unitPrice)}</TableCell>
-                          <TableCell />
-                        </TableRow>
-                      )),
-                    ]
-                  }
-                  return (
-                    <TableRow key={`item-${item.id}`}>
-                      <TableCell className="font-medium">{item.supplierItemName}</TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(item.totalPrice)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-                <TableRow className="bg-slate-50 font-semibold">
-                  <TableCell colSpan={3} className="text-right pr-4">
-                    Total:
-                  </TableCell>
-                  <TableCell className="text-right">{formatCurrency(totalPrice)}</TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <DocumentItemsTable
+            mode="proforma-invoice"
+            items={pi.items.map((item) => ({
+              id: item.id,
+              name: item.supplierItemName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              notes: item.notes,
+              variants: item.variants?.map((v) => ({
+                id: v.id,
+                dimensionSummary: v.dimensionSummary,
+                sku: v.sku,
+                quantity: v.quantity,
+                unitPrice: v.unitPrice,
+              })),
+            }))}
+            emptyMessage="No items in this proforma invoice."
+          />
         </CardContent>
         </Card>
         </div>

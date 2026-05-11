@@ -23,9 +23,8 @@ export interface PurchaseOrderItemDto {
 
 export interface PurchaseOrderSummaryDto {
   id: string;
-  documentNumber?: string;
+  documentNumber: string;
   quotationId: string;
-  title: string;
   supplierName: string;
   status: string;
   itemCount: number;
@@ -39,7 +38,6 @@ export interface PurchaseOrderDetailDto {
   companyName?: string;
   companyAddress?: string;
   supplierId: string;
-  title: string;
   notes?: string;
   supplierName: string;
   supplierAddress?: string;
@@ -58,7 +56,7 @@ export interface PurchaseOrderDetailDto {
   currency?: string | null;
 
   createdAt: string;
-  documentNumber?: string;
+  documentNumber: string;
 }
 
 export interface CreatePurchaseOrderInput {

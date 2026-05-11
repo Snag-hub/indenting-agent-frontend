@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft, CheckCircle, Lock, ChevronRight, ChevronDown, FileText, CreditCard, Truck } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Lock, FileText, CreditCard, Truck } from 'lucide-react'
+import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -37,7 +37,6 @@ export function PurchaseOrderDetailPage() {
   const role = user?.role
   const [confirming, setConfirming] = useState(false)
   const [closing, setClosing] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
   const { data: purchaseOrder, isLoading } = useQuery({
     queryKey: queryKeys.pos.detail(id),
@@ -91,7 +90,7 @@ export function PurchaseOrderDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={purchaseOrder.title}
+        title={purchaseOrder.documentNumber}
         description={`Supplier: ${purchaseOrder.supplierName}`}
         action={
           <div className="flex items-center gap-2">
@@ -200,105 +199,25 @@ export function PurchaseOrderDetailPage() {
           <CardTitle className="text-base">Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Unit Price</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {purchaseOrder.items.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground text-sm py-6">
-                      No items in this purchase order.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  purchaseOrder.items.flatMap((item) => {
-                    const hasVariants = item.variants && item.variants.length > 0
-                    const isExpanded = expandedItems.has(item.id)
-                    const toggleExpand = () => {
-                      const newExpanded = new Set(expandedItems)
-                      if (isExpanded) {
-                        newExpanded.delete(item.id)
-                      } else {
-                        newExpanded.add(item.id)
-                      }
-                      setExpandedItems(newExpanded)
-                    }
-
-                    const rows: React.ReactNode[] = [
-                      <TableRow
-                        key={item.id}
-                        onClick={hasVariants ? toggleExpand : undefined}
-                        className={hasVariants ? 'cursor-pointer select-none hover:bg-muted/50' : ''}
-                      >
-                        <TableCell className="text-sm font-medium">
-                          <div className="flex items-center gap-2">
-                            {hasVariants && (
-                              <span className="w-4">
-                                {isExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </span>
-                            )}
-                            {item.supplierItemName}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm font-medium">
-                          {hasVariants ? (
-                            <Badge variant="outline">{item.variants?.length} variants</Badge>
-                          ) : (
-                            `${item.quantity} units`
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {formatCurrency(item.unitPrice)}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium">
-                          {formatCurrency(item.totalPrice)}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {item.notes || <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                      </TableRow>,
-                    ]
-
-                    // Add variant sub-rows if variants exist and expanded
-                    if (isExpanded && item.variants && item.variants.length > 0) {
-                      item.variants.forEach((variant) => {
-                        rows.push(
-                          <TableRow key={`${item.id}-variant-${variant.id}`} className="text-muted-foreground">
-                            <TableCell className="text-xs pl-8 py-2">
-                              {variant.dimensionSummary || variant.sku || variant.supplierItemVariantId.slice(0, 8) + '…'}
-                              {variant.sku && variant.dimensionSummary && ` · ${variant.sku}`}
-                            </TableCell>
-                            <TableCell className="text-xs py-2">{variant.quantity} units</TableCell>
-                            <TableCell className="text-xs py-2">
-                              {formatCurrency(variant.unitPrice)}
-                            </TableCell>
-                            <TableCell className="text-xs py-2">
-                              {formatCurrency(Number(variant.quantity) * variant.unitPrice)}
-                            </TableCell>
-                            <TableCell className="text-xs py-2">—</TableCell>
-                          </TableRow>
-                        )
-                      })
-                    }
-
-                    return rows
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <DocumentItemsTable
+            mode="purchase-order"
+            items={purchaseOrder.items.map((item) => ({
+              id: item.id,
+              name: item.supplierItemName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              notes: item.notes,
+              variants: item.variants?.map((v) => ({
+                id: v.id,
+                dimensionSummary: v.dimensionSummary,
+                sku: v.sku,
+                quantity: v.quantity,
+                unitPrice: v.unitPrice,
+              })),
+            }))}
+            emptyMessage="No items in this purchase order."
+          />
         </CardContent>
         </Card>
         </div>

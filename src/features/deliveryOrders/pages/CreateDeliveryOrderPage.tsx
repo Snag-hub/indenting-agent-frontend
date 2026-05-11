@@ -45,7 +45,6 @@ const doItemSchema = z.object({
 })
 
 const createDOSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
   notes: z.string().optional(),
   items: z.array(doItemSchema),
 })
@@ -53,7 +52,7 @@ const createDOSchema = z.object({
 type CreateDOForm = z.infer<typeof createDOSchema>
 
 const STEPS = [
-  { title: 'Basic Info', description: 'Enter title and optional notes for the Delivery Order.' },
+  { title: 'Basic Info', description: 'Enter optional notes for the Delivery Order.' },
   { title: 'Set Quantities', description: 'Enter the quantity to dispatch for each item.' },
   { title: 'Review & Create', description: 'Confirm the delivery order details.' },
 ]
@@ -78,7 +77,7 @@ export function CreateDeliveryOrderPage() {
 
   const { register, handleSubmit, watch, reset, control, formState: { errors } } = useForm<CreateDOForm>({
     resolver: zodResolver(createDOSchema),
-    defaultValues: { title: '', notes: '', items: [] },
+    defaultValues: { notes: '', items: [] },
   })
 
   const { fields } = useFieldArray({ control, name: 'items' })
@@ -87,7 +86,6 @@ export function CreateDeliveryOrderPage() {
     if (!po || !balance) return
     const availableItems = balance.filter(b => b.remainingQty > 0 || b.variants?.some(v => v.remainingQty > 0))
     reset({
-      title: '',
       notes: '',
       items: availableItems.map(b => {
         const hasVariants = !!(b.variants && b.variants.length > 0)
@@ -115,12 +113,16 @@ export function CreateDeliveryOrderPage() {
     })
   }, [po, balance, reset])
 
-  const title = watch('title')
   const notes = watch('notes')
   const watchedItems = watch('items')
 
   const isLoading = poLoading || balanceLoading
-  const allDispatched = balance != null && balance.every(b =>
+
+  // No PI has been raised yet — all items have orderedQty (= PI invoiced qty) of 0
+  const noPIExists = balance != null && balance.length > 0 && balance.every(b => b.orderedQty === 0)
+
+  // All PI-authorised quantities have already been dispatched
+  const allDispatched = balance != null && !noPIExists && balance.every(b =>
     b.remainingQty <= 0 && !(b.variants?.some(v => v.remainingQty > 0))
   )
 
@@ -130,7 +132,6 @@ export function CreateDeliveryOrderPage() {
       const id = await deliveryOrderApi.create({
         purchaseOrderId: poId,
         proformaInvoiceId: piId,
-        title: data.title,
         notes: data.notes || undefined,
         items: data.items.map(item => ({
           supplierItemId: item.supplierItemId,
@@ -164,12 +165,15 @@ export function CreateDeliveryOrderPage() {
     )
   }
 
-  if (allDispatched) {
+  if (noPIExists || allDispatched) {
+    const message = noPIExists
+      ? 'No Proforma Invoice has been raised for this Purchase Order yet. Create a Proforma Invoice first — only invoiced quantities can be dispatched.'
+      : 'All invoiced quantities have been fully dispatched.'
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
         <PageHeader
           title="Create Delivery Order"
-          description={`For PO: ${po.title}`}
+          description={`For PO: ${po.documentNumber}`}
           action={
             <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
@@ -178,7 +182,7 @@ export function CreateDeliveryOrderPage() {
         />
         <Card>
           <CardContent className="pt-6 text-center py-12">
-            <p className="text-muted-foreground text-sm">All items have been fully dispatched.</p>
+            <p className="text-muted-foreground text-sm">{message}</p>
             <Button className="mt-4" variant="outline" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
               Back to Purchase Order
             </Button>
@@ -199,8 +203,8 @@ export function CreateDeliveryOrderPage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">PO Title</p>
-              <p className="text-sm font-medium">{po.title}</p>
+              <p className="text-xs text-muted-foreground mb-1">PO Document #</p>
+              <p className="text-sm font-medium">{po.documentNumber}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Supplier</p>
@@ -224,15 +228,6 @@ export function CreateDeliveryOrderPage() {
 
       <div className="space-y-4">
         <div className="space-y-1">
-          <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
-          <Input
-            id="title"
-            placeholder="e.g. Delivery Order — Office Chairs Batch 1"
-            {...register('title')}
-          />
-          {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
-        </div>
-        <div className="space-y-1">
           <Label htmlFor="notes">Notes (optional)</Label>
           <Textarea
             id="notes"
@@ -250,14 +245,14 @@ export function CreateDeliveryOrderPage() {
   const step2 = (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Enter the quantity to dispatch. Maximum is the remaining balance for each item.
+        Enter the quantity to dispatch. The maximum is the remaining PI-invoiced balance for each item (PI invoiced qty − already dispatched).
       </p>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Item</TableHead>
-              <TableHead className="text-right">Ordered</TableHead>
+              <TableHead className="text-right">PI Invoiced</TableHead>
               <TableHead className="text-right">Dispatched</TableHead>
               <TableHead className="text-right">Remaining</TableHead>
               <TableHead className="text-right">Dispatching Now</TableHead>
@@ -366,7 +361,7 @@ export function CreateDeliveryOrderPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Item</TableHead>
-              <TableHead className="text-right">Ordered</TableHead>
+              <TableHead className="text-right">PI Invoiced</TableHead>
               <TableHead className="text-right">Already Dispatched</TableHead>
               <TableHead className="text-right">Dispatching Now</TableHead>
               <TableHead>Notes</TableHead>

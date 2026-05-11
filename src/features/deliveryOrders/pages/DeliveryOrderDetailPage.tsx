@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ArrowLeft, Send, X, CheckCircle, Ticket, CreditCard } from 'lucide-react'
+import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -79,7 +79,7 @@ export function DeliveryOrderDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={deliveryOrder.title}
+        title={deliveryOrder.documentNumber}
         description={`Supplier: ${deliveryOrder.supplierName}`}
         action={
           <div className="flex items-center gap-2">
@@ -191,52 +191,22 @@ export function DeliveryOrderDetailPage() {
           <CardTitle className="text-base">Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-xs">Item Name</TableHead>
-                  <TableHead className="text-right">Qty Dispatched</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deliveryOrder.items.map((item) => {
-                  const hasVariants = item.variants && item.variants.length > 0
-                  if (hasVariants) {
-                    return (
-                      <>
-                        <TableRow key={item.id} className="bg-muted/30">
-                          <TableCell className="font-semibold text-sm" colSpan={2}>{item.supplierItemName}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
-                          </TableCell>
-                        </TableRow>
-                        {item.variants!.map((v) => (
-                          <TableRow key={v.id} className="border-b border-dashed">
-                            <TableCell className="pl-8 text-sm text-muted-foreground">
-                              {v.dimensionSummary || v.sku || v.supplierItemVariantId}
-                            </TableCell>
-                            <TableCell className="text-right text-sm">{v.quantity}</TableCell>
-                            <TableCell />
-                          </TableRow>
-                        ))}
-                      </>
-                    )
-                  }
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.supplierItemName}</TableCell>
-                      <TableCell className="text-right">{item.quantityDispatched}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.notes ? <span className="line-clamp-1">{item.notes}</span> : '—'}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <DocumentItemsTable
+            mode="delivery-order"
+            items={deliveryOrder.items.map((item) => ({
+              id: item.id,
+              name: item.supplierItemName,
+              quantity: item.quantityDispatched,
+              notes: item.notes,
+              variants: item.variants?.map((v) => ({
+                id: v.id,
+                dimensionSummary: v.dimensionSummary,
+                sku: v.sku,
+                quantity: v.quantity,
+              })),
+            }))}
+            emptyMessage="No items in this delivery order."
+          />
         </CardContent>
         </Card>
         </div>
