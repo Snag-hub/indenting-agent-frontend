@@ -86,8 +86,8 @@ export function ReportsPage() {
 
   // Shared queries
   const { data: sentRfqsData, isLoading: isLoadingSentRfqs } = useQuery({
-    queryKey: queryKeys.rfqs.list({ status: 'Sent', pageSize: 50 }),
-    queryFn: () => rfqApi.list({ status: 'Sent', pageSize: 50 }),
+    queryKey: queryKeys.rfqs.list({ status: 'Submitted', pageSize: 50 }),
+    queryFn: () => rfqApi.list({ status: 'Submitted', pageSize: 50 }),
   })
 
   const { data: draftRfqsData, isLoading: isLoadingDraftRfqs } = useQuery({
@@ -293,7 +293,7 @@ export function ReportsPage() {
                 className="flex items-center justify-between p-3 border rounded hover:bg-muted/50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-medium">{rfq.title}</p>
+                  <p className="text-sm font-medium">{rfq.documentNumber}</p>
                   <p className="text-xs text-muted-foreground">{rfq.itemCount} items</p>
                 </div>
                 <Button
@@ -322,7 +322,7 @@ export function ReportsPage() {
                 className="flex items-center justify-between p-3 border rounded hover:bg-muted/50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-medium">{rfq.title}</p>
+                  <p className="text-sm font-medium">{rfq.documentNumber}</p>
                   <p className="text-xs text-muted-foreground">{rfq.customerName || 'Customer'}</p>
                 </div>
                 <Button

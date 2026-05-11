@@ -5,8 +5,7 @@ import { toast } from 'sonner'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { ColumnDef } from '@tanstack/react-table'
-import { rfqApi, type RFQItemDto } from '@/features/rfqs/api/rfqApi'
+import { rfqApi } from '@/features/rfqs/api/rfqApi'
 import { quotationApi } from '@/features/quotations/api/quotationApi'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
@@ -24,7 +23,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Send, Lock, Plus, Trash2, Edit2, Copy, ChevronRight, ChevronDown, Eye } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Plus, Trash2, Edit2, Copy, Eye } from 'lucide-react'
+import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -32,12 +32,11 @@ import { useAuthStore } from '@/stores/authStore'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
-  Sent: 'default',
+  Submitted: 'default',
   Closed: 'secondary',
 }
 
 const editRFQSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
 })
@@ -64,7 +63,6 @@ export function RFQDetailPage() {
   const [replicateDialogOpen, setReplicateDialogOpen] = useState(false)
   const [selectedReplicateSupplier, setSelectedReplicateSupplier] = useState<string>('')
   const [removingItemId, setRemovingItemId] = useState<string | undefined>()
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
   const { user } = useAuthStore()
   const role = user?.role
@@ -104,7 +102,6 @@ export function RFQDetailPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<EditRFQForm>({
     resolver: zodResolver(editRFQSchema),
     defaultValues: {
-      title: rfq?.title ?? '',
       notes: rfq?.notes ?? '',
       dueDate: rfq?.dueDate ?? '',
     },
@@ -134,7 +131,6 @@ export function RFQDetailPage() {
   const updateRFQ = useMutation({
     mutationFn: (data: EditRFQForm) =>
       rfqApi.update(id, {
-        title: data.title,
         notes: data.notes || undefined,
         dueDate: data.dueDate || undefined,
       }),
@@ -186,48 +182,14 @@ export function RFQDetailPage() {
     return <div className="text-muted-foreground">RFQ not found.</div>
   }
 
-  const itemColumns: ColumnDef<RFQItemDto>[] = [
-    {
-      accessorKey: 'supplierItemName',
-      header: 'Item',
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium text-sm">{row.original.supplierItemName}</div>
-          <div className="text-xs text-muted-foreground">{row.original.supplierName}</div>
-        </div>
-      ),
-    },
-    { accessorKey: 'quantity', header: 'Qty' },
-    {
-      accessorKey: 'notes',
-      header: 'Notes',
-      cell: ({ getValue }) => getValue() ? <span className="text-sm">{getValue() as string}</span> : <span className="text-muted-foreground text-sm">—</span>,
-    },
-    ...(role === 'Customer' && rfq.status === 'Draft'
-      ? [{
-        id: 'actions',
-        header: '',
-        cell: ({ row }: { row: { original: RFQItemDto } }) => (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setRemovingItemId(row.original.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        ),
-      }]
-      : []),
-  ]
-
   // Suppliers available for replication (exclude the supplier already on this RFQ)
   const replicateSupplierOptions = suppliers.filter(s => s.id !== rfq.supplierId)
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={rfq.title}
-        description={rfq.dueDate ? `Due: ${format(new Date(rfq.dueDate), 'dd MMM yyyy')}` : ''}
+        title={`RFQ ${rfq.documentNumber || '(unsaved)'}`}
+        description={`Supplier: ${rfq.supplierName}${rfq.dueDate ? ` — Due: ${format(new Date(rfq.dueDate), 'dd MMM yyyy')}` : ''}`}
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[rfq.status]}>
@@ -253,7 +215,7 @@ export function RFQDetailPage() {
               </>
             )}
 
-            {role === 'Customer' && rfq.status === 'Sent' && (
+            {role === 'Customer' && rfq.status === 'Submitted' && (
               <Button
                 size="sm"
                 variant="outline"
@@ -274,7 +236,7 @@ export function RFQDetailPage() {
             )}
 
             {/* Customer: Compare quotations (when ≥ 2 exist) */}
-            {role === 'Customer' && rfq.status === 'Sent' && (quotationsData?.data?.length ?? 0) >= 2 && (
+            {role === 'Customer' && rfq.status === 'Submitted' && (quotationsData?.data?.length ?? 0) >= 2 && (
               <Button
                 size="sm"
                 variant="outline"
@@ -285,7 +247,7 @@ export function RFQDetailPage() {
             )}
 
             {/* Supplier-only actions */}
-            {role === 'Supplier' && rfq.status === 'Sent' && (
+            {role === 'Supplier' && rfq.status === 'Submitted' && (
               alreadyQuoted ? (
                 <Badge variant="secondary">Quotation Submitted</Badge>
               ) : (
@@ -328,10 +290,14 @@ export function RFQDetailPage() {
                 <p className="text-sm">{format(new Date(rfq.dueDate), 'dd MMM yyyy')}</p>
               </div>
             )}
-            {rfq.enquiryId && (
+            {rfq.enquiryDocumentNumber && (
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Linked Enquiry</p>
-                <p className="text-xs font-mono">{rfq.enquiryId}</p>
+                <p className="text-sm font-semibold text-blue-600">
+                  <a href={`/enquiries/${rfq.enquiryId}`} className="hover:underline">
+                    {rfq.enquiryDocumentNumber}
+                  </a>
+                </p>
               </div>
             )}
             <div>
@@ -371,106 +337,26 @@ export function RFQDetailPage() {
             </TabsList>
 
             <TabsContent value="items" className="space-y-4">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {itemColumns.map((col, idx) => (
-                        <TableHead key={idx}>
-                          {typeof col.header === 'string' ? col.header : ''}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rfq.items.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={itemColumns.length} className="text-center text-muted-foreground text-sm py-6">
-                          No items added yet.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      rfq.items.flatMap((item) => {
-                        const hasVariants = item.variants && item.variants.length > 0
-                        const isExpanded = expandedItems.has(item.id)
-                        const toggleExpand = () =>
-                          setExpandedItems((prev) => {
-                            const next = new Set(prev)
-                            next.has(item.id) ? next.delete(item.id) : next.add(item.id)
-                            return next
-                          })
-
-                        const rows: React.ReactNode[] = [
-                          <TableRow
-                            key={item.id}
-                            className={hasVariants ? 'cursor-pointer select-none' : ''}
-                            onClick={hasVariants ? toggleExpand : undefined}
-                          >
-                            <TableCell className="text-sm">
-                              <div className="flex items-center gap-1">
-                                {hasVariants && (
-                                  isExpanded
-                                    ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                    : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                )}
-                                <div>
-                                  <div className="font-medium">{item.supplierItemName}</div>
-                                  <div className="text-xs text-muted-foreground">{item.supplierName}</div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm font-medium">
-                              {item.quantity}
-                              {hasVariants && (
-                                <Badge variant="secondary" className="ml-2 text-xs">
-                                  {item.variants!.length} variant{item.variants!.length !== 1 ? 's' : ''}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {item.notes ? item.notes : <span className="text-muted-foreground">—</span>}
-                            </TableCell>
-                            {role === 'Customer' && rfq.status === 'Draft' && (
-                              <TableCell className="text-sm text-right" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => setRemovingItemId(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            )}
-                          </TableRow>,
-                        ]
-
-                        // Add variant sub-rows if expanded
-                        if (hasVariants && isExpanded) {
-                          item.variants!.forEach((variant) => {
-                            rows.push(
-                              <TableRow key={`${item.id}-variant-${variant.id}`}>
-                                <TableCell className="text-xs pl-10 py-2">
-                                  <span className="text-muted-foreground">
-                                    {variant.dimensionSummary || variant.supplierItemVariantId.slice(0, 8) + '…'}
-                                    {variant.sku && (
-                                      <span className="ml-2 font-mono text-[11px]">· {variant.sku}</span>
-                                    )}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-xs text-muted-foreground py-2">{variant.quantityOffered}</TableCell>
-                                <TableCell className="py-2"></TableCell>
-                                {role === 'Customer' && rfq.status === 'Draft' && <TableCell className="py-2"></TableCell>}
-                              </TableRow>
-                            )
-                          })
-                        }
-
-                        return rows
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              <DocumentItemsTable
+                mode="rfq"
+                items={rfq.items.map((item) => ({
+                  id: item.id,
+                  name: item.supplierItemName,
+                  supplierName: item.supplierName,
+                  quantity: item.quantity,
+                  notes: item.notes,
+                  variants: item.variants?.map((v) => ({
+                    id: v.id,
+                    dimensionSummary: v.dimensionSummary,
+                    sku: v.sku,
+                    quantity: v.quantityOffered,
+                  })),
+                }))}
+                actions={role === 'Customer' && rfq.status === 'Draft'
+                  ? { onDelete: (item) => setRemovingItemId(item.id) }
+                  : undefined}
+                emptyMessage="No items added yet."
+              />
             </TabsContent>
 
             <TabsContent value="quotations" className="space-y-4">
@@ -538,14 +424,6 @@ export function RFQDetailPage() {
             onSubmit={handleSubmit((data) => updateRFQ.mutate(data))}
             className="space-y-4"
           >
-            <div className="space-y-1">
-              <Label htmlFor="edit-title">Title</Label>
-              <Input id="edit-title" {...register('title')} />
-              {errors.title && (
-                <p className="text-xs text-destructive">{errors.title.message}</p>
-              )}
-            </div>
-
             <div className="space-y-1">
               <Label htmlFor="edit-notes">Notes</Label>
               <Textarea id="edit-notes" {...register('notes')} className="min-h-20" />

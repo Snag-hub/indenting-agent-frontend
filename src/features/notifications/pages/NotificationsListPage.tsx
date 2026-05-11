@@ -32,9 +32,12 @@ export function NotificationsListPage() {
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
+  // includeCleared=true → full 30-day history (Unread + Read + Cleared).
+  // Soft-deleted rows are still hidden; they're physically removed by the daily cleanup job
+  // (CleanupOldNotificationsJob, runs 03:15 UTC, retention 30 days).
   const { data: notifications, isLoading, isFetching } = useQuery({
-    queryKey: [...QUERY_KEY, page, unreadOnly],
-    queryFn: () => notificationApi.list(page, 20, unreadOnly),
+    queryKey: [...QUERY_KEY, page, unreadOnly, 'includeCleared'],
+    queryFn: () => notificationApi.list(page, 20, unreadOnly, /* includeCleared */ true),
   })
 
   // Mark as read mutation
@@ -116,7 +119,7 @@ export function NotificationsListPage() {
     <div className="space-y-6">
       <PageHeader
         title="Notifications"
-        description="View and manage your notifications"
+        description="Complete history of your notifications, including cleared ones. Items are automatically removed after 30 days."
       />
 
       {/* Toolbar */}
@@ -183,12 +186,18 @@ export function NotificationsListPage() {
           </div>
 
           {/* Notification items */}
-          {notifications.data.map((notification) => (
+          {notifications.data.map((notification) => {
+            const isCleared = notification.status === 'Cleared'
+            return (
             <Card
               key={notification.id}
               className={cn(
                 'transition-colors',
-                !notification.isRead ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50',
+                isCleared
+                  ? 'bg-slate-50 border-slate-200 opacity-70 hover:opacity-100'
+                  : !notification.isRead
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'hover:bg-slate-50',
                 notification.entityType && ENTITY_ROUTES[notification.entityType] && notification.entityId
                   ? 'cursor-pointer'
                   : 'cursor-default'
@@ -207,7 +216,11 @@ export function NotificationsListPage() {
                     <div className="flex-1">
                       <p className={cn(
                         'text-sm',
-                        !notification.isRead ? 'font-semibold text-slate-900' : 'text-slate-700'
+                        isCleared
+                          ? 'text-slate-500 line-through decoration-slate-400/60'
+                          : !notification.isRead
+                            ? 'font-semibold text-slate-900'
+                            : 'text-slate-700'
                       )}>
                         {notification.message}
                       </p>
@@ -215,6 +228,16 @@ export function NotificationsListPage() {
                         {notification.entityType && (
                           <Badge variant="outline" className="text-xs">
                             {notification.entityType}
+                          </Badge>
+                        )}
+                        {isCleared && (
+                          <Badge variant="secondary" className="text-xs">
+                            Cleared
+                          </Badge>
+                        )}
+                        {!notification.isRead && !isCleared && (
+                          <Badge variant="default" className="text-xs bg-blue-600">
+                            New
                           </Badge>
                         )}
                         <span className="text-xs text-slate-500">
@@ -226,7 +249,7 @@ export function NotificationsListPage() {
                 </div>
 
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  {!notification.isRead && (
+                  {!notification.isRead && !isCleared && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -249,7 +272,7 @@ export function NotificationsListPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       ) : (
         <Card>

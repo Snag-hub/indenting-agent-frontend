@@ -44,8 +44,8 @@ export interface QuotationVersionDto {
 
 export interface QuotationSummaryDto {
   id: string;
-  documentNumber?: string;
   rfqId: string;
+  documentNumber: string;
   rfqTitle: string;
   supplierName: string;
   status: string; // 'Draft' | 'Submitted' | 'Accepted' | 'Rejected'
@@ -56,6 +56,7 @@ export interface QuotationSummaryDto {
 export interface QuotationDetailDto {
   id: string;
   rfqId: string;
+  documentNumber: string;
   rfqTitle: string;
   supplierName: string;
   status: string;

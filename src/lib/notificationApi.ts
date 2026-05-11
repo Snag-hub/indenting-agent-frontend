@@ -21,5 +21,9 @@ export const notificationApi = {
 
   markAllRead: () => api.post(`/notifications/read-all`),
 
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+
+  deleteAll: () => api.delete(`/notifications`),
+
   getUnreadCount: () => api.get<number>("/notifications/unread-count").then((r) => r.data),
 };

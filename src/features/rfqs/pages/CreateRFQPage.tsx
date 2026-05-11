@@ -46,7 +46,6 @@ const rfqItemSchema = z.object({
 })
 
 const createRFQSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
   enquiryId: z.string().optional(),
@@ -74,7 +73,6 @@ export function CreateRFQPage() {
   const form = useForm<CreateRFQForm>({
     resolver: zodResolver(createRFQSchema),
     defaultValues: {
-      title: '',
       notes: '',
       dueDate: '',
       enquiryId: undefined,
@@ -89,18 +87,20 @@ export function CreateRFQPage() {
     name: 'items',
   })
 
-  // Fetch open enquiries
-  const { data: enquiries = [] } = useQuery({
-    queryKey: ['enquiries', 'list', { status: 'Open' }],
+  // Fetch all enquiries (not just Open, to support linking to enquiries in any status)
+  const { data: enquiriesResult } = useQuery({
+    queryKey: ['enquiries', 'list'],
     queryFn: () =>
-      enquiryApi.list({ status: 'Open', page: 1, pageSize: 100 }).then((r) => r.data ?? []),
+      enquiryApi.list({ page: 1, pageSize: 100 }),
   })
+  const enquiries = enquiriesResult?.data ?? []
 
   // Fetch all suppliers
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliersResult } = useQuery({
     queryKey: queryKeys.suppliers.list(),
-    queryFn: () => supplierApi.list({ page: 1, pageSize: 1000 }).then((r) => r.data ?? []),
+    queryFn: () => supplierApi.list({ page: 1, pageSize: 1000 }),
   })
+  const suppliers = suppliersResult?.data ?? []
 
   const watchedSupplierIds = watch('supplierIds')
   // Live form items — used so re-renders pick up checkbox toggles (useFieldArray's
@@ -129,7 +129,6 @@ export function CreateRFQPage() {
     mutationFn: (data: CreateRFQForm) => {
       const checkedItems = data.items.filter((i) => i.checked)
       return rfqApi.create({
-        title: data.title,
         notes: data.notes || undefined,
         dueDate: data.dueDate || undefined,
         enquiryId: data.enquiryId || undefined,
@@ -292,18 +291,6 @@ export function CreateRFQPage() {
   const Step1 = (
     <div className="space-y-4">
       <div className="space-y-1">
-        <Label htmlFor="title">RFQ Title *</Label>
-        <Input
-          id="title"
-          placeholder="e.g., Q1 2024 supplies"
-          {...register('title')}
-        />
-        {errors.title && (
-          <p className="text-xs text-destructive">{errors.title.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-1">
         <Label htmlFor="enquiryId">Link to Enquiry (optional)</Label>
         <Controller
           control={control}
@@ -323,7 +310,7 @@ export function CreateRFQPage() {
                 <SelectItem value="__none__">No enquiry</SelectItem>
                 {enquiries.map((e) => (
                   <SelectItem key={e.id} value={e.id}>
-                    {e.title}
+                    {e.title || e.documentNumber || 'Untitled'}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -543,10 +530,6 @@ export function CreateRFQPage() {
       <Card>
         <CardContent className="pt-6 space-y-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">RFQ Title:</span>
-            <span className="font-medium">{watch('title') || '—'}</span>
-          </div>
-          <div className="flex justify-between">
             <span className="text-muted-foreground">Supplier(s):</span>
             <span className="font-medium text-right">
               {watchedSupplierIds.length > 0
@@ -557,7 +540,7 @@ export function CreateRFQPage() {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Linked Enquiry:</span>
             <span className="font-medium">
-              {selectedEnquiryId ? enquiries.find((e) => e.id === selectedEnquiryId)?.title : 'None'}
+              {selectedEnquiryId ? (enquiries.find((e) => e.id === selectedEnquiryId)?.title || enquiries.find((e) => e.id === selectedEnquiryId)?.documentNumber) : 'None'}
             </span>
           </div>
           {watch('dueDate') && (
@@ -649,10 +632,6 @@ export function CreateRFQPage() {
   ]
 
   const handleNext = () => {
-    const title = watch('title')
-    if (currentStep === 0 && (!title || errors.title)) {
-      return
-    }
     setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1))
   }
 
@@ -665,7 +644,7 @@ export function CreateRFQPage() {
     createRFQ.mutate(data as CreateRFQForm)
   }
 
-  const canProceedStep1 = !!watch('title') && !errors.title
+  const canProceedStep1 = true // Step 1 always allows proceeding to supplier selection
   const canProceedStep2 = watchedSupplierIds.length > 0 && watchedItems.some((f) => f.checked)
 
   return (

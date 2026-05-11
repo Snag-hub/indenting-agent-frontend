@@ -11,9 +11,9 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useSignalR } from '@/hooks/useSignalR'
-import { notificationApi } from '@/lib/notificationApi'
+import { notificationApi } from '@/features/notifications/api/notificationApi'
 import { NotificationsPanel } from '@/features/notifications/NotificationsPanel'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -189,7 +189,7 @@ export function AppShell() {
             <Menu size={20} />
           </button>
           <div className="flex-1" />
-          <Dialog open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
             <Button
               variant="ghost"
               size="icon"
@@ -203,13 +203,18 @@ export function AppShell() {
                 </span>
               )}
             </Button>
-            <DialogContent className="max-w-md p-0">
-              <NotificationsPanel
-                isOpen={notificationsOpen}
-                onClose={() => setNotificationsOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+            <SheetContent side="right" className="w-96 p-0 flex flex-col">
+              <SheetHeader className="border-b p-4 shrink-0">
+                <SheetTitle>Notifications</SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-hidden">
+                <NotificationsPanel
+                  isOpen={notificationsOpen}
+                  onClose={() => setNotificationsOpen(false)}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
           <div className="w-8 h-8 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-medium">
             {user?.fullName?.[0] ?? '?'}
           </div>

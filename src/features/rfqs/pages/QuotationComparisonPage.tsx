@@ -119,7 +119,7 @@ export function QuotationComparisonPage() {
     <div className="space-y-6">
       <PageHeader
         title="Quotation Comparison"
-        description={`${rfq.title} — ${quotations.length} quotations`}
+        description={`RFQ ${rfq.documentNumber} — ${quotations.length} quotations`}
         action={
           <Button
             variant="outline"
@@ -269,7 +269,7 @@ export function QuotationComparisonPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
               <p className="text-xs text-muted-foreground mb-1">RFQ</p>
-              <p className="text-sm font-medium">{rfq.title}</p>
+              <p className="text-sm font-medium">{rfq.documentNumber}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Items</p>

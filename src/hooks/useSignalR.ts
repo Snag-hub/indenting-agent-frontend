@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import type { NotificationDto } from "@/lib/notificationApi";
+import type { NotificationDto } from "@/features/notifications/api/notificationApi";
 
 export function useSignalR() {
   const connectionRef = useRef<any>(null);

@@ -21,8 +21,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Send, Check, X, Plus, Trash2, ChevronRight, ChevronDown, ShoppingCart, Eye, Pencil, Lock, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Send, Check, X, Plus, Trash2, ShoppingCart, Eye, Pencil, Lock, RotateCcw } from 'lucide-react'
+import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -61,7 +63,6 @@ export function QuotationDetailPage() {
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false)
   const [removingItemId, setRemovingItemId] = useState<string | undefined>()
   const [activeVersionId, setActiveVersionId] = useState<string | undefined>()
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [deletingVersionId, setDeletingVersionId] = useState<string | undefined>()
   const [editorState, setEditorState] = useState<{
     open: boolean
@@ -183,8 +184,8 @@ export function QuotationDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={quotation.rfqTitle}
-        description={`From: ${quotation.supplierName}`}
+        title={quotation.documentNumber}
+        description={`From: ${quotation.supplierName} · RFQ: ${quotation.rfqTitle}`}
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[quotation.status]}>
@@ -260,229 +261,166 @@ export function QuotationDetailPage() {
         }
       />
 
-      {quotation.rejectionReason && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="py-3 px-4">
-            <p className="text-sm font-medium text-destructive mb-1">Rejection Reason</p>
-            <p className="text-sm">{quotation.rejectionReason}</p>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Main content: 2 columns */}
+        <div className="col-span-2 space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Document #</p>
+                  <p className="text-sm font-mono font-medium">{quotation.documentNumber || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <Badge variant={statusColors[quotation.status]}>{quotation.status}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Supplier</p>
+                  <p className="text-sm font-medium">{quotation.supplierName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">RFQ</p>
+                  <p className="text-sm font-mono">{quotation.rfqTitle}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Created</p>
+                  <p className="text-sm">{format(new Date(quotation.createdAt), 'dd MMM yyyy')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {quotation.revisionRequestNote && (
-        <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardContent className="py-3 px-4">
-            <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">Customer Revision Request</p>
-            <p className="text-sm">{quotation.revisionRequestNote}</p>
-          </CardContent>
-        </Card>
-      )}
+          {quotation.rejectionReason && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="py-3 px-4">
+                <p className="text-sm font-medium text-destructive mb-1">Rejection Reason</p>
+                <p className="text-sm">{quotation.rejectionReason}</p>
+              </CardContent>
+            </Card>
+          )}
 
-      {quotation.versions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Quotation Versions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue={quotation.versions[quotation.versions.length - 1].id} onValueChange={setActiveVersionId}>
-              <TabsList>
-                {quotation.versions.map((version, idx) => {
-                  const isLatest = idx === quotation.versions.length - 1
-                  const canDeleteVersion = role === 'Supplier' && quotation.status === 'Draft'
-                  return (
-                    <TabsTrigger key={version.id} value={version.id} className="gap-1">
-                      Version {version.versionNumber}
-                      {!isLatest && <Lock className="h-3 w-3 text-muted-foreground" />}
-                      {canDeleteVersion && (
-                        <span
-                          role="button"
-                          className="ml-1 rounded p-0.5 hover:bg-destructive/20 hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeletingVersionId(version.id)
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </span>
-                      )}
-                    </TabsTrigger>
-                  )
-                })}
-              </TabsList>
+          {quotation.revisionRequestNote && (
+            <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+              <CardContent className="py-3 px-4">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">Customer Revision Request</p>
+                <p className="text-sm">{quotation.revisionRequestNote}</p>
+              </CardContent>
+            </Card>
+          )}
 
-              {quotation.versions.map((version, versionIdx) => {
-                const isLatestVersion = versionIdx === quotation.versions.length - 1
-                const canEdit = role === 'Supplier' && quotation.status === 'Draft' && isLatestVersion
-                return (
-                <TabsContent key={version.id} value={version.id} className="space-y-4">
-                  {version.notes && (
-                    <div className="bg-muted p-3 rounded-md">
-                      <p className="text-sm font-medium mb-1">Notes:</p>
-                      <p className="text-sm whitespace-pre-wrap">{version.notes}</p>
-                    </div>
-                  )}
+          {quotation.versions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Quotation Versions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue={quotation.versions[quotation.versions.length - 1].id} onValueChange={setActiveVersionId}>
+                  <TabsList>
+                    {quotation.versions.map((version, idx) => {
+                      const isLatest = idx === quotation.versions.length - 1
+                      const canDeleteVersion = role === 'Supplier' && quotation.status === 'Draft'
+                      return (
+                        <TabsTrigger key={version.id} value={version.id} className="gap-1">
+                          Version {version.versionNumber}
+                          {!isLatest && <Lock className="h-3 w-3 text-muted-foreground" />}
+                          {canDeleteVersion && (
+                            <span
+                              role="button"
+                              className="ml-1 rounded p-0.5 hover:bg-destructive/20 hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeletingVersionId(version.id)
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </span>
+                          )}
+                        </TabsTrigger>
+                      )
+                    })}
+                  </TabsList>
 
-                  {version.validUntil && (
-                    <div className="text-sm">
-                      <span className="font-medium">Valid Until:</span>{' '}
-                      {format(new Date(version.validUntil), 'dd MMM yyyy')}
-                    </div>
-                  )}
-
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>Unit Price</TableHead>
-                          <TableHead>Total</TableHead>
-                          <TableHead>Notes</TableHead>
-                          {canEdit && <TableHead></TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {version.items.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={canEdit ? 6 : 5} className="text-center text-muted-foreground text-sm py-6">
-                              No items in this version.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          version.items.flatMap((item) => {
-                            const hasVariants = item.variants && item.variants.length > 0
-                            const isExpanded = expandedItems.has(item.id)
-                            const toggleExpand = () => {
-                              const newExpanded = new Set(expandedItems)
-                              if (isExpanded) {
-                                newExpanded.delete(item.id)
-                              } else {
-                                newExpanded.add(item.id)
-                              }
-                              setExpandedItems(newExpanded)
-                            }
-
-                            const rows: React.ReactNode[] = [
-                              <TableRow key={item.id}
-                                onClick={hasVariants ? toggleExpand : undefined}
-                                className={hasVariants ? 'cursor-pointer select-none hover:bg-muted/50' : ''}>
-                                <TableCell className="text-sm font-medium">
-                                  <div className="flex items-center gap-2">
-                                    {hasVariants && (
-                                      <span className="w-4">
-                                        {isExpanded ? (
-                                          <ChevronDown className="h-4 w-4" />
-                                        ) : (
-                                          <ChevronRight className="h-4 w-4" />
-                                        )}
-                                      </span>
-                                    )}
-                                    {item.supplierItemName}
-                                    {hasVariants && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {item.variants?.length} variant{item.variants?.length !== 1 ? 's' : ''}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-sm font-medium">
-                                  {`${item.quantity} units`}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {hasVariants
-                                    ? <span className="text-muted-foreground">—</span>
-                                    : formatCurrency(item.unitPrice)}
-                                </TableCell>
-                                <TableCell className="text-sm font-medium">
-                                  {formatCurrency(item.totalPrice)}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {item.notes || <span className="text-muted-foreground">—</span>}
-                                </TableCell>
-                                {canEdit && (
-                                  <TableCell className="text-sm text-right">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          setEditorState({ open: true, mode: 'edit', item, versionId: version.id })
-                                        }}
-                                      >
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          setRemovingItemId(item.id)
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                )}
-                              </TableRow>,
-                            ]
-
-                            // Add variant sub-rows if variants exist and expanded
-                            if (isExpanded && item.variants && item.variants.length > 0) {
-                              item.variants.forEach((variant) => {
-                                rows.push(
-                                  <TableRow key={`${item.id}-variant-${variant.id}`} className="text-muted-foreground">
-                                    <TableCell className="text-xs pl-8 py-2">
-                                      {variant.dimensionSummary || variant.sku || variant.supplierItemVariantId.slice(0, 8) + '…'}
-                                      {variant.sku && variant.dimensionSummary && ` · ${variant.sku}`}
-                                    </TableCell>
-                                    <TableCell className="text-xs py-2">{variant.quantity} units</TableCell>
-                                    <TableCell className="text-xs py-2">
-                                      {variant.unitPrice ? formatCurrency(variant.unitPrice) : '—'}
-                                    </TableCell>
-                                    <TableCell className="text-xs py-2">
-                                      {variant.unitPrice ? formatCurrency(Number(variant.quantity) * variant.unitPrice) : '—'}
-                                    </TableCell>
-                                    <TableCell className="text-xs py-2">
-                                      {variant.notes || '—'}
-                                    </TableCell>
-                                    {canEdit && <TableCell></TableCell>}
-                                  </TableRow>
-                                )
-                              })
-                            }
-
-                            return rows
-                          })
+                  {quotation.versions.map((version, versionIdx) => {
+                    const isLatestVersion = versionIdx === quotation.versions.length - 1
+                    const canEdit = role === 'Supplier' && quotation.status === 'Draft' && isLatestVersion
+                    return (
+                      <TabsContent key={version.id} value={version.id} className="space-y-4">
+                        {version.notes && (
+                          <div className="bg-muted p-3 rounded-md">
+                            <p className="text-sm font-medium mb-1">Notes:</p>
+                            <p className="text-sm whitespace-pre-wrap">{version.notes}</p>
+                          </div>
                         )}
-                      </TableBody>
-                    </Table>
-                  </div>
 
-                  {!isLatestVersion && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                      This version is locked — only the latest version can be edited.
-                    </div>
-                  )}
+                        {version.validUntil && (
+                          <div className="text-sm">
+                            <span className="font-medium">Valid Until:</span>{' '}
+                            {format(new Date(version.validUntil), 'dd MMM yyyy')}
+                          </div>
+                        )}
 
-                  {canEdit && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditorState({ open: true, mode: 'add', versionId: version.id })}
-                    >
-                      <Plus className="mr-2 h-4 w-4" /> Add Item
-                    </Button>
-                  )}
-                </TabsContent>
-                )
-              })}
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
+                        <DocumentItemsTable
+                          mode="quotation"
+                          items={version.items.map((item) => ({
+                            id: item.id,
+                            name: item.supplierItemName,
+                            quantity: item.quantity,
+                            unitPrice: item.unitPrice,
+                            totalPrice: item.totalPrice,
+                            notes: item.notes,
+                            variants: item.variants?.map((v) => ({
+                              id: v.id,
+                              dimensionSummary: v.dimensionSummary,
+                              sku: v.sku,
+                              quantity: v.quantity,
+                              unitPrice: v.unitPrice,
+                            })),
+                          }))}
+                          actions={canEdit ? {
+                            onEdit: (item) => {
+                              const original = version.items.find((i) => i.id === item.id)
+                              if (original) setEditorState({ open: true, mode: 'edit', item: original, versionId: version.id })
+                            },
+                            onDelete: (item) => setRemovingItemId(item.id),
+                          } : undefined}
+                          emptyMessage="No items in this version."
+                        />
+
+                        {!isLatestVersion && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Lock className="h-4 w-4" />
+                            This version is locked — only the latest version can be edited.
+                          </div>
+                        )}
+
+                        {canEdit && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditorState({ open: true, mode: 'add', versionId: version.id })}
+                          >
+                            <Plus className="mr-2 h-4 w-4" /> Add Item
+                          </Button>
+                        )}
+                      </TabsContent>
+                    )
+                  })}
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Right sidebar: 1 column */}
+        <aside>
+          <ThreadPanel
+            threadId={`Quotation-${id}`}
+            title={`Q ${quotation.documentNumber}`}
+            canPostInternal={user?.role === 'Admin'}
+          />
+        </aside>
+      </div>
 
       <Dialog open={reviseDialogOpen} onOpenChange={setReviseDialogOpen}>
         <DialogContent className="max-w-md">

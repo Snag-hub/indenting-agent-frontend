@@ -170,8 +170,8 @@ export function CreateQuotationPage() {
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Title</p>
-              <p className="text-sm font-medium">{rfq.title}</p>
+              <p className="text-xs text-muted-foreground mb-1">RFQ Number</p>
+              <p className="text-sm font-medium">{rfq.documentNumber}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Supplier</p>
@@ -465,7 +465,7 @@ export function CreateQuotationPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader
         title="Create Quotation"
-        description={`For RFQ: ${rfq.title}`}
+        description={`For RFQ: ${rfq.documentNumber}`}
         action={
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/rfqs/$id', params: { id: rfqId } })}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to RFQ

@@ -118,7 +118,7 @@ export function RFQsPage() {
             </Button>
           )}
 
-          {role === 'Customer' && row.original.status === 'Sent' && (
+          {role === 'Customer' && row.original.status === 'Submitted' && (
             <Button
               size="icon"
               variant="ghost"

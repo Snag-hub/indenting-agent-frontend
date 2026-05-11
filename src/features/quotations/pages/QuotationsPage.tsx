@@ -37,7 +37,7 @@ export function QuotationsPage() {
     {
       accessorKey: 'documentNumber',
       header: 'Doc #',
-      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
+      cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) || '—'}</span>,
     },
     { accessorKey: 'rfqTitle', header: 'RFQ Title' },
     { accessorKey: 'supplierName', header: 'Supplier' },

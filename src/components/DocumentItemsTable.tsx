@@ -48,11 +48,11 @@ interface ModeConfig {
 
 const MODE_CONFIG: Record<DocumentItemsMode, ModeConfig> = {
   enquiry:            { showSupplierName: true,  showPricing: false, showTotalRow: false, alwaysExpanded: false, qtyLabel: 'Qty' },
-  rfq:                { showSupplierName: false, showPricing: false, showTotalRow: false, alwaysExpanded: false, qtyLabel: 'Qty' },
+  rfq:                { showSupplierName: true,  showPricing: false, showTotalRow: false, alwaysExpanded: false, qtyLabel: 'Qty' },
   quotation:          { showSupplierName: false, showPricing: true,  showTotalRow: true,  alwaysExpanded: false, qtyLabel: 'Qty' },
   'purchase-order':   { showSupplierName: false, showPricing: true,  showTotalRow: false, alwaysExpanded: false, qtyLabel: 'Qty' },
-  'proforma-invoice': { showSupplierName: false, showPricing: true,  showTotalRow: true,  alwaysExpanded: true,  qtyLabel: 'Qty' },
-  'delivery-order':   { showSupplierName: false, showPricing: false, showTotalRow: false, alwaysExpanded: true,  qtyLabel: 'Qty Dispatched' },
+  'proforma-invoice': { showSupplierName: false, showPricing: true,  showTotalRow: true,  alwaysExpanded: false, qtyLabel: 'Qty' },
+  'delivery-order':   { showSupplierName: false, showPricing: false, showTotalRow: false, alwaysExpanded: false, qtyLabel: 'Qty Dispatched' },
 }
 
 function formatCurrency(value: number): string {
