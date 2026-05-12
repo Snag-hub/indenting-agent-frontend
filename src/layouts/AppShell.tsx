@@ -24,6 +24,7 @@ const adminNav: NavItem[] = [
   { label: 'Conversations', to: '/threads', icon: <MessageSquare size={18} /> },
   { label: 'Customers', to: '/customers', icon: <Users size={18} /> },
   { label: 'Suppliers', to: '/suppliers', icon: <Building2 size={18} /> },
+  { label: 'Users', to: '/admin/users', icon: <Users size={18} /> },
   { label: 'Item Mapping', to: '/item-mapping', icon: <Package size={18} /> },
   { label: 'Categories', to: '/catalog/categories', icon: <Tags size={18} /> },
   { label: 'Master Items', to: '/catalog/items', icon: <Package size={18} /> },
@@ -71,10 +72,15 @@ const supplierNav: NavItem[] = [
   { label: 'Settings', to: '/settings', icon: <Settings size={18} /> },
 ]
 
-function getNav(role: string) {
+const employeesNavItem: NavItem = {
+  label: 'Employees', to: '/my-employees', icon: <Users size={18} />,
+}
+
+function getNav(role: string, isOrgAdmin: boolean) {
   if (role === 'Admin') return adminNav
-  if (role === 'Customer') return customerNav
-  return supplierNav
+  const base = role === 'Customer' ? customerNav : supplierNav
+  // OrgAdmins of a Customer/Supplier get an "Employees" entry to manage their team.
+  return isOrgAdmin ? [...base, employeesNavItem] : base
 }
 
 function PageLoadingFallback() {
@@ -113,7 +119,7 @@ export function AppShell() {
     loadUnreadCount()
   }, [setUnreadCount])
 
-  const nav = getNav(user?.role ?? 'Admin')
+  const nav = getNav(user?.role ?? 'Admin', user?.isOrgAdmin ?? false)
 
   function handleLogout() {
     clearAuth()
