@@ -268,7 +268,7 @@ export function ReportsPage() {
                 className="flex items-center justify-between p-3 border rounded hover:bg-muted/50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-medium">{po.title}</p>
+                  <p className="text-sm font-medium">{po.documentNumber}</p>
                   <p className="text-xs text-muted-foreground">{po.supplierName}</p>
                 </div>
                 <Button
@@ -397,7 +397,7 @@ export function ReportsPage() {
                 className="flex items-center justify-between p-3 border rounded hover:bg-muted/50 transition-colors"
               >
                 <div>
-                  <p className="text-sm font-medium">{po.title}</p>
+                  <p className="text-sm font-medium">{po.documentNumber}</p>
                   <p className="text-xs text-muted-foreground">Created: {format(new Date(po.createdAt), 'dd MMM')}</p>
                 </div>
                 <Button

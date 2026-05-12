@@ -356,12 +356,12 @@ export function CreateProformaInvoicePage() {
       <Card>
         <CardContent className="pt-4 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Title</p>
-            <p className="text-sm font-medium">{watchTitle || '—'}</p>
+            <p className="text-xs text-muted-foreground mb-1">Document #</p>
+            <p className="text-sm font-medium">{po?.documentNumber || '—'}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Purchase Order</p>
-            <p className="text-sm font-medium">{po.title}</p>
+            <p className="text-sm font-medium">{po.documentNumber}</p>
           </div>
           {watchNotes && (
             <div className="col-span-2">
@@ -441,7 +441,7 @@ export function CreateProformaInvoicePage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader
         title="Create Proforma Invoice"
-        description={`For PO: ${po.title}`}
+        description={`For PO: ${po.documentNumber}`}
         action={
           <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
@@ -458,7 +458,7 @@ export function CreateProformaInvoicePage() {
           : setCurrentStep(s => s - 1)}
         onSubmit={onSubmit}
         isSubmitting={isSubmitting}
-        canProceed={currentStep === 0 ? watchTitle.trim().length > 0 : true}
+        canProceed={true}
         submitLabel="Create Proforma Invoice"
       >
         {steps[currentStep]}

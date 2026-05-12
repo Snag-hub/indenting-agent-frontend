@@ -76,7 +76,7 @@ export function CreatePaymentPage() {
 
   // Derive display values from whichever entity was loaded
   const supplierName = po?.supplierName ?? pi?.supplierName ?? doEntity?.supplierName ?? '—'
-  const entityTitle = po?.title ?? pi?.title ?? doEntity?.title ?? '—'
+  const entityTitle = po?.documentNumber ?? pi?.documentNumber ?? doEntity?.documentNumber ?? '—'
   const entityStatus = po?.status ?? pi?.status ?? doEntity?.status ?? '—'
   const backTo =
     context === 'pi' ? `/proforma-invoices/${piId}` :

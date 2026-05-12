@@ -98,7 +98,7 @@ export function PurchaseOrderDetailPage() {
               {purchaseOrder.status}
             </Badge>
 
-            {purchaseOrder.status === 'Draft' && (
+            {role === 'Supplier' && purchaseOrder.status === 'Draft' && (
               <Button
                 size="sm"
                 onClick={() => setConfirming(true)}
@@ -107,7 +107,7 @@ export function PurchaseOrderDetailPage() {
               </Button>
             )}
 
-            {purchaseOrder.status === 'Confirmed' && (
+            {role === 'Customer' && purchaseOrder.status === 'Confirmed' && (
               <Button
                 size="sm"
                 variant="outline"
