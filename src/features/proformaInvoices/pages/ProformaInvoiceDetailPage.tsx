@@ -25,7 +25,7 @@ function formatCurrency(value: number): string {
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
-  Submitted: 'default',
+  Sent: 'default',
   Acknowledged: 'secondary',
   Cancelled: 'destructive',
 }
@@ -104,7 +104,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Supplier' && (pi.status === 'Draft' || pi.status === 'Submitted') && (
+            {role === 'Supplier' && (pi.status === 'Draft' || pi.status === 'Sent') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -124,7 +124,7 @@ export function ProformaInvoiceDetailPage() {
             )}
 
             {/* Customer actions */}
-            {role === 'Customer' && pi.status === 'Submitted' && (
+            {role === 'Customer' && pi.status === 'Sent' && (
               <Button
                 size="sm"
                 onClick={() => setAcknowledging(true)}
@@ -133,7 +133,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Customer' && (pi.status === 'Submitted' || pi.status === 'Acknowledged') && (
+            {role === 'Customer' && (pi.status === 'Sent' || pi.status === 'Acknowledged') && (
               <Button
                 size="sm"
                 variant="outline"
