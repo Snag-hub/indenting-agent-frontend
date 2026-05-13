@@ -117,7 +117,7 @@ export function ProformaInvoiceDetailPage() {
             {role === 'Supplier' && pi.status === 'Acknowledged' && (
               <Button
                 size="sm"
-                onClick={() => navigate({ to: '/delivery-orders/new', search: { poId: pi.purchaseOrderId, piId: pi.id } })}
+                onClick={() => navigate({ to: '/delivery-orders/new', search: { piId: pi.id } })}
               >
                 <Truck className="mr-2 h-4 w-4" /> Create DO
               </Button>

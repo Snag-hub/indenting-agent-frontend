@@ -21,10 +21,13 @@ export interface PurchaseOrderItemDto {
   variants?: PurchaseOrderItemVariantDto[];
 }
 
+export type PurchaseOrderSource = "Quotation" | "Direct";
+
 export interface PurchaseOrderSummaryDto {
   id: string;
   documentNumber: string;
-  quotationId: string;
+  quotationId: string | null;
+  source: PurchaseOrderSource;
   supplierName: string;
   status: string;
   itemCount: number;
@@ -33,7 +36,8 @@ export interface PurchaseOrderSummaryDto {
 
 export interface PurchaseOrderDetailDto {
   id: string;
-  quotationId: string;
+  quotationId: string | null;
+  source: PurchaseOrderSource;
   customerId: string;
   companyName?: string;
   companyAddress?: string;
@@ -64,6 +68,27 @@ export interface CreatePurchaseOrderInput {
   notes?: string;
 }
 
+export interface CreateDirectPurchaseOrderVariantInput {
+  supplierItemVariantId: string;
+  quantity: number;
+  unitPrice?: number | null;
+}
+
+export interface CreateDirectPurchaseOrderItemInput {
+  supplierItemId: string;
+  quantity: number;
+  unitPrice: number;
+  notes?: string;
+  variants?: CreateDirectPurchaseOrderVariantInput[];
+}
+
+export interface CreateDirectPurchaseOrderInput {
+  supplierId: string;
+  notes?: string;
+  currency?: string;
+  items: CreateDirectPurchaseOrderItemInput[];
+}
+
 export interface VoucherVariantBalanceDto {
   supplierItemVariantId: string;
   dimensionSummary?: string | null;
@@ -91,6 +116,9 @@ export const purchaseOrderApi = {
 
   create: (data: CreatePurchaseOrderInput) =>
     api.post<string>("/purchase-orders", data).then((r) => r.data),
+
+  createDirect: (data: CreateDirectPurchaseOrderInput) =>
+    api.post<string>("/purchase-orders/direct", data).then((r) => r.data),
 
   get: (id: string) =>
     api

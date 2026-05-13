@@ -40,6 +40,7 @@ import { Route as AppRfqsNewRouteImport } from './routes/_app.rfqs.new'
 import { Route as AppRfqsIdRouteImport } from './routes/_app.rfqs.$id'
 import { Route as AppQuotationsNewRouteImport } from './routes/_app.quotations.new'
 import { Route as AppQuotationsIdRouteImport } from './routes/_app.quotations.$id'
+import { Route as AppPurchaseOrdersNewRouteImport } from './routes/_app.purchase-orders.new'
 import { Route as AppPurchaseOrdersIdRouteImport } from './routes/_app.purchase-orders.$id'
 import { Route as AppProformaInvoicesNewRouteImport } from './routes/_app.proforma-invoices.new'
 import { Route as AppProformaInvoicesIdRouteImport } from './routes/_app.proforma-invoices.$id'
@@ -215,6 +216,11 @@ const AppQuotationsIdRoute = AppQuotationsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppQuotationsRoute,
 } as any)
+const AppPurchaseOrdersNewRoute = AppPurchaseOrdersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppPurchaseOrdersRoute,
+} as any)
 const AppPurchaseOrdersIdRoute = AppPurchaseOrdersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -350,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
   '/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
   '/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
+  '/purchase-orders/new': typeof AppPurchaseOrdersNewRoute
   '/quotations/$id': typeof AppQuotationsIdRoute
   '/quotations/new': typeof AppQuotationsNewRoute
   '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
   '/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
   '/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
+  '/purchase-orders/new': typeof AppPurchaseOrdersNewRoute
   '/quotations/$id': typeof AppQuotationsIdRoute
   '/quotations/new': typeof AppQuotationsNewRoute
   '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/_app/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
   '/_app/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
   '/_app/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
+  '/_app/purchase-orders/new': typeof AppPurchaseOrdersNewRoute
   '/_app/quotations/$id': typeof AppQuotationsIdRoute
   '/_app/quotations/new': typeof AppQuotationsNewRoute
   '/_app/rfqs/$id': typeof AppRfqsIdRouteWithChildren
@@ -505,6 +514,7 @@ export interface FileRouteTypes {
     | '/proforma-invoices/$id'
     | '/proforma-invoices/new'
     | '/purchase-orders/$id'
+    | '/purchase-orders/new'
     | '/quotations/$id'
     | '/quotations/new'
     | '/rfqs/$id'
@@ -555,6 +565,7 @@ export interface FileRouteTypes {
     | '/proforma-invoices/$id'
     | '/proforma-invoices/new'
     | '/purchase-orders/$id'
+    | '/purchase-orders/new'
     | '/quotations/$id'
     | '/quotations/new'
     | '/rfqs/$id'
@@ -607,6 +618,7 @@ export interface FileRouteTypes {
     | '/_app/proforma-invoices/$id'
     | '/_app/proforma-invoices/new'
     | '/_app/purchase-orders/$id'
+    | '/_app/purchase-orders/new'
     | '/_app/quotations/$id'
     | '/_app/quotations/new'
     | '/_app/rfqs/$id'
@@ -847,6 +859,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/quotations/$id'
       preLoaderRoute: typeof AppQuotationsIdRouteImport
       parentRoute: typeof AppQuotationsRoute
+    }
+    '/_app/purchase-orders/new': {
+      id: '/_app/purchase-orders/new'
+      path: '/new'
+      fullPath: '/purchase-orders/new'
+      preLoaderRoute: typeof AppPurchaseOrdersNewRouteImport
+      parentRoute: typeof AppPurchaseOrdersRoute
     }
     '/_app/purchase-orders/$id': {
       id: '/_app/purchase-orders/$id'
@@ -1099,10 +1118,12 @@ const AppPurchaseOrdersIdRouteWithChildren =
 
 interface AppPurchaseOrdersRouteChildren {
   AppPurchaseOrdersIdRoute: typeof AppPurchaseOrdersIdRouteWithChildren
+  AppPurchaseOrdersNewRoute: typeof AppPurchaseOrdersNewRoute
 }
 
 const AppPurchaseOrdersRouteChildren: AppPurchaseOrdersRouteChildren = {
   AppPurchaseOrdersIdRoute: AppPurchaseOrdersIdRouteWithChildren,
+  AppPurchaseOrdersNewRoute: AppPurchaseOrdersNewRoute,
 }
 
 const AppPurchaseOrdersRouteWithChildren =

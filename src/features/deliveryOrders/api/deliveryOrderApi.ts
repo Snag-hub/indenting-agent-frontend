@@ -22,6 +22,7 @@ export interface DeliveryOrderItemDto {
 
 export interface DeliveryOrderSummaryDto {
   id: string;
+  proformaInvoiceId: string;
   purchaseOrderId: string;
   documentNumber: string;
   supplierName: string;
@@ -31,10 +32,10 @@ export interface DeliveryOrderSummaryDto {
 
 export interface DeliveryOrderDetailDto {
   id: string;
+  proformaInvoiceId: string;
+  proformaInvoiceDocumentNumber: string;
   purchaseOrderId: string;
-  purchaseOrderDocumentNumber?: string;
-  proformaInvoiceId?: string;
-  proformaInvoiceDocumentNumber?: string;
+  purchaseOrderDocumentNumber: string;
   customerId: string;
   customerName?: string;
   supplierId: string;
@@ -62,8 +63,7 @@ export const deliveryOrderApi = {
       .then((r) => r.data),
 
   create: (data: {
-    purchaseOrderId: string;
-    proformaInvoiceId?: string;
+    proformaInvoiceId: string;
     notes?: string;
     items: {
       supplierItemId: string;

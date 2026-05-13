@@ -9,7 +9,8 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye } from 'lucide-react'
+import { Eye, Plus } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -74,11 +75,21 @@ export function PurchaseOrdersPage() {
     },
   ]
 
+  const role = useAuthStore((s) => s.user?.role)
+  const canCreateDirect = role === 'Customer' || role === 'Admin'
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Purchase Orders"
         description="Manage purchase orders"
+        action={
+          canCreateDirect ? (
+            <Button onClick={() => navigate({ to: '/purchase-orders/new' })}>
+              <Plus className="mr-2 h-4 w-4" /> New Direct PO
+            </Button>
+          ) : undefined
+        }
       />
 
       {isLoading ? (

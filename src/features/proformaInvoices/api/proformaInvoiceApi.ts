@@ -88,4 +88,28 @@ export const proformaInvoiceApi = {
   acknowledge: (id: string) => api.post(`/proforma-invoices/${id}/acknowledge`),
 
   cancel: (id: string) => api.post(`/proforma-invoices/${id}/cancel`),
+
+  getDispatchBalance: (id: string) =>
+    api
+      .get<PIDispatchBalanceItemDto[]>(`/proforma-invoices/${id}/dispatch-balance`)
+      .then((r) => r.data),
 };
+
+export interface PIDispatchVariantBalanceDto {
+  supplierItemVariantId: string;
+  dimensionSummary?: string | null;
+  sku?: string | null;
+  orderedQty: number;       // invoiced qty for this variant on the PI
+  invoicedQty: number;      // sum already dispatched (mapped from DispatchedQty)
+  remainingQty: number;
+  unitPrice: number;
+}
+
+export interface PIDispatchBalanceItemDto {
+  supplierItemId: string;
+  supplierItemName: string;
+  orderedQty: number;       // invoiced qty for this item on the PI
+  dispatchedQty: number;
+  remainingQty: number;
+  variants?: PIDispatchVariantBalanceDto[] | null;
+}

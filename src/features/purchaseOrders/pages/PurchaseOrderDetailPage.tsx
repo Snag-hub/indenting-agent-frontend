@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, CheckCircle, Lock, FileText, CreditCard, Truck } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Lock, FileText, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
@@ -55,7 +55,6 @@ export function PurchaseOrderDetailPage() {
     enabled: !!purchaseOrder && purchaseOrder.status === 'Confirmed',
   })
 
-  const fullyDispatched = dispatchBalance != null && dispatchBalance.length > 0 && dispatchBalance.every(b => b.remainingQty <= 0)
   const fullyInvoiced = invoiceBalance != null && invoiceBalance.length > 0 && invoiceBalance.every(b => b.remainingQty <= 0)
 
   const confirmPO = useMutation({
@@ -128,17 +127,8 @@ export function PurchaseOrderDetailPage() {
               </Button>
             )}
 
-            {role === 'Supplier' && purchaseOrder.status === 'Confirmed' && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={fullyDispatched}
-                onClick={() => navigate({ to: '/delivery-orders/new', search: { poId: id } })}
-                title={fullyDispatched ? 'All items fully dispatched' : undefined}
-              >
-                <Truck className="mr-2 h-4 w-4" /> {fullyDispatched ? 'Fully Dispatched' : 'Create DO'}
-              </Button>
-            )}
+            {/* DOs are now PI-rooted — supplier must raise a PI first, then create the DO from
+                the PI detail page. This keeps the chain PO → PI → DO single-track. */}
 
             {role === 'Customer' && purchaseOrder.status === 'Confirmed' && (
               <Button

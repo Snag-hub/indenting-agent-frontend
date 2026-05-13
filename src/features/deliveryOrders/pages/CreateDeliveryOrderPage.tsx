@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
+import { proformaInvoiceApi } from '@/features/proformaInvoices/api/proformaInvoiceApi'
 import { deliveryOrderApi } from '@/features/deliveryOrders/api/deliveryOrderApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { MultiStepForm } from '@/components/MultiStepForm'
@@ -58,21 +58,22 @@ const STEPS = [
 ]
 
 export function CreateDeliveryOrderPage() {
-  const { poId, piId } = Route.useSearch()
+  const { piId } = Route.useSearch()
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { data: po, isLoading: poLoading } = useQuery({
-    queryKey: queryKeys.pos.detail(poId),
-    queryFn: () => purchaseOrderApi.get(poId),
-    enabled: !!poId,
+  // The DO inherits its supplier/customer/PO context from the chosen PI.
+  const { data: pi, isLoading: piLoading } = useQuery({
+    queryKey: queryKeys.proformaInvoices.detail(piId),
+    queryFn: () => proformaInvoiceApi.get(piId),
+    enabled: !!piId,
   })
 
   const { data: balance, isLoading: balanceLoading } = useQuery({
-    queryKey: queryKeys.pos.dispatchBalance(poId),
-    queryFn: () => purchaseOrderApi.getDispatchBalance(poId),
-    enabled: !!poId,
+    queryKey: ['proforma-invoices', 'dispatch-balance', piId] as const,
+    queryFn: () => proformaInvoiceApi.getDispatchBalance(piId),
+    enabled: !!piId,
   })
 
   const { register, handleSubmit, watch, reset, control, formState: { errors } } = useForm<CreateDOForm>({
@@ -83,7 +84,7 @@ export function CreateDeliveryOrderPage() {
   const { fields } = useFieldArray({ control, name: 'items' })
 
   useEffect(() => {
-    if (!po || !balance) return
+    if (!pi || !balance) return
     const availableItems = balance.filter(b => b.remainingQty > 0 || b.variants?.some(v => v.remainingQty > 0))
     reset({
       notes: '',
@@ -111,18 +112,15 @@ export function CreateDeliveryOrderPage() {
         }
       }),
     })
-  }, [po, balance, reset])
+  }, [pi, balance, reset])
 
   const notes = watch('notes')
   const watchedItems = watch('items')
 
-  const isLoading = poLoading || balanceLoading
+  const isLoading = piLoading || balanceLoading
 
-  // No PI has been raised yet — all items have orderedQty (= PI invoiced qty) of 0
-  const noPIExists = balance != null && balance.length > 0 && balance.every(b => b.orderedQty === 0)
-
-  // All PI-authorised quantities have already been dispatched
-  const allDispatched = balance != null && !noPIExists && balance.every(b =>
+  // All invoiced quantities for this PI have already been dispatched
+  const allDispatched = balance != null && balance.length > 0 && balance.every(b =>
     b.remainingQty <= 0 && !(b.variants?.some(v => v.remainingQty > 0))
   )
 
@@ -130,7 +128,6 @@ export function CreateDeliveryOrderPage() {
     setIsSubmitting(true)
     try {
       const id = await deliveryOrderApi.create({
-        purchaseOrderId: poId,
         proformaInvoiceId: piId,
         notes: data.notes || undefined,
         items: data.items.map(item => ({
@@ -156,7 +153,7 @@ export function CreateDeliveryOrderPage() {
     }
   })
 
-  if (isLoading || !po || !balance) {
+  if (isLoading || !pi || !balance) {
     return (
       <div className="space-y-4 max-w-3xl mx-auto">
         <Skeleton className="h-8 w-64" />
@@ -165,26 +162,25 @@ export function CreateDeliveryOrderPage() {
     )
   }
 
-  if (noPIExists || allDispatched) {
-    const message = noPIExists
-      ? 'No Proforma Invoice has been raised for this Purchase Order yet. Create a Proforma Invoice first — only invoiced quantities can be dispatched.'
-      : 'All invoiced quantities have been fully dispatched.'
+  if (allDispatched) {
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
         <PageHeader
           title="Create Delivery Order"
-          description={`For PO: ${po.documentNumber}`}
+          description={`For PI: ${pi.documentNumber}`}
           action={
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/proforma-invoices/$id', params: { id: piId } })}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to PI
             </Button>
           }
         />
         <Card>
           <CardContent className="pt-6 text-center py-12">
-            <p className="text-muted-foreground text-sm">{message}</p>
-            <Button className="mt-4" variant="outline" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
-              Back to Purchase Order
+            <p className="text-muted-foreground text-sm">
+              All invoiced quantities on this Proforma Invoice have been fully dispatched.
+            </p>
+            <Button className="mt-4" variant="outline" onClick={() => navigate({ to: '/proforma-invoices/$id', params: { id: piId } })}>
+              Back to Proforma Invoice
             </Button>
           </CardContent>
         </Card>
@@ -198,21 +194,21 @@ export function CreateDeliveryOrderPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground font-normal">Purchase Order Reference</CardTitle>
+          <CardTitle className="text-sm text-muted-foreground font-normal">Proforma Invoice Reference</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">PO Document #</p>
-              <p className="text-sm font-medium">{po.documentNumber}</p>
+              <p className="text-xs text-muted-foreground mb-1">PI Document #</p>
+              <p className="text-sm font-medium">{pi.documentNumber}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-              <p className="text-sm font-medium">{po.supplierName}</p>
+              <p className="text-sm font-medium">{pi.supplierName}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <Badge variant="default">{po.status}</Badge>
+              <Badge variant="default">{pi.status}</Badge>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Items with Remaining Qty</p>
@@ -220,7 +216,7 @@ export function CreateDeliveryOrderPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Created</p>
-              <p className="text-sm">{format(new Date(po.createdAt), 'dd MMM yyyy')}</p>
+              <p className="text-sm">{format(new Date(pi.createdAt), 'dd MMM yyyy')}</p>
             </div>
           </div>
         </CardContent>
@@ -345,7 +341,7 @@ export function CreateDeliveryOrderPage() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Purchase Order</p>
-            <p className="text-sm font-medium">{po.documentNumber}</p>
+            <p className="text-sm font-medium">{pi.documentNumber}</p>
           </div>
           {notes && (
             <div className="col-span-2">
@@ -415,10 +411,10 @@ export function CreateDeliveryOrderPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader
         title="Create Delivery Order"
-        description={`For PO: ${po.documentNumber}`}
+        description={`For PI: ${pi.documentNumber}`}
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders/$id', params: { id: poId } })}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to PO
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/proforma-invoices/$id', params: { id: piId } })}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to PI
           </Button>
         }
       />
@@ -428,7 +424,7 @@ export function CreateDeliveryOrderPage() {
         currentStep={currentStep}
         onNext={() => setCurrentStep(s => s + 1)}
         onBack={() => currentStep === 0
-          ? navigate({ to: '/purchase-orders/$id', params: { id: poId } })
+          ? navigate({ to: '/proforma-invoices/$id', params: { id: piId } })
           : setCurrentStep(s => s - 1)}
         onSubmit={onSubmit}
         isSubmitting={isSubmitting}
