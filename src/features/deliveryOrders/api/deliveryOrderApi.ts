@@ -95,4 +95,51 @@ export const deliveryOrderApi = {
   cancel: (id: string) => api.post(`/delivery-orders/${id}/cancel`),
 
   delete: (id: string) => api.delete(`/delivery-orders/${id}`),
+
+  // Lot tracking ---------------------------------------------------------
+
+  listLots: (deliveryOrderId: string) =>
+    api
+      .get<DeliveryOrderItemLotsDto[]>(`/delivery-orders/${deliveryOrderId}/lots`)
+      .then((r) => r.data),
+
+  addLot: (deliveryOrderId: string, itemId: string, payload: AddLotInput) =>
+    api
+      .post<string>(`/delivery-orders/${deliveryOrderId}/items/${itemId}/lots`, payload)
+      .then((r) => r.data),
+
+  updateLot: (lotId: string, payload: UpdateLotInput) =>
+    api.put(`/delivery-orders/lots/${lotId}`, payload),
+
+  removeLot: (lotId: string) => api.delete(`/delivery-orders/lots/${lotId}`),
 };
+
+export interface DeliveryOrderLotDto {
+  id: string;
+  deliveryOrderItemId: string;
+  lotNumber: string;
+  quantity: number;
+  manufactureDate?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+}
+
+export interface DeliveryOrderItemLotsDto {
+  deliveryOrderItemId: string;
+  supplierItemId: string;
+  supplierItemName: string;
+  quantityDispatched: number;
+  lotsTotalQuantity: number;
+  remainingQuantity: number;
+  lots: DeliveryOrderLotDto[];
+}
+
+export interface AddLotInput {
+  lotNumber: string;
+  quantity: number;
+  manufactureDate?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateLotInput extends AddLotInput {}
