@@ -132,6 +132,9 @@ export const rfqApi = {
   /** POST /rfqs/:id/close — transition RFQ to Closed. */
   close: (id: string) => api.post(`/rfqs/${id}/close`).then((r) => r.data),
 
+  /** DELETE /rfqs/:id — soft-delete an RFQ. */
+  delete: (id: string) => api.delete(`/rfqs/${id}`),
+
   /**
    * GET /rfqs/enquiry-items — items from a linked enquiry.
    * Pass supplierId to filter to one supplier, or omit to return all suppliers' items.

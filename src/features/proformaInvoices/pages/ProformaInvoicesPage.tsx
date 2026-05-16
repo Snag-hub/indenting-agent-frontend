@@ -1,5 +1,5 @@
 import { useNavigate, useChildMatches, Outlet } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { proformaInvoiceApi, type ProformaInvoiceSummaryDto } from '@/features/proformaInvoices/api/proformaInvoiceApi'
@@ -7,10 +7,11 @@ import { queryKeys } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { DataTable } from '@/components/DataTable'
 import { PageHeader } from '@/components/PageHeader'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -23,12 +24,23 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
 export function ProformaInvoicesPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
-  useAuthStore()
+  const qc = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
   const [page, setPage] = useState(1)
+  const [deleting, setDeleting] = useState<string | undefined>()
+  const canDelete = role === 'Supplier' || role === 'Admin'
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.proformaInvoices.list({ page }),
     queryFn: () => proformaInvoiceApi.list({ pageSize: 20, page }),
+  })
+
+  const deletePI = useMutation({
+    mutationFn: (id: string) => proformaInvoiceApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.proformaInvoices.list() })
+      setDeleting(undefined)
+    },
   })
 
   if (childMatches.length > 0) return <Outlet />
@@ -72,6 +84,16 @@ export function ProformaInvoicesPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
+          {canDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDeleting(row.original.id)}
+              title="Delete PI"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -100,6 +122,19 @@ export function ProformaInvoicesPage() {
           isLoading={isLoading}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(undefined)
+        }}
+        title="Delete Proforma Invoice"
+        description="This will permanently remove the PI. PIs with downstream DOs / payments may block deletion."
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={() => deleting && deletePI.mutate(deleting)}
+        isLoading={deletePI.isPending}
+      />
     </div>
   )
 }

@@ -1,15 +1,16 @@
 import { useNavigate, useChildMatches, Outlet } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { purchaseOrderApi, type PurchaseOrderSummaryDto } from '@/features/purchaseOrders/api/purchaseOrderApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { DataTable } from '@/components/DataTable'
 import { PageHeader } from '@/components/PageHeader'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye, Plus } from 'lucide-react'
+import { Eye, Plus, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
@@ -22,16 +23,27 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
 export function PurchaseOrdersPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
+  const qc = useQueryClient()
   const [page, setPage] = useState(1)
+  const [deleting, setDeleting] = useState<string | undefined>()
   // Hooks must be declared before any early return — child-route mount
   // takes the Outlet branch below, and React requires identical hook
   // order on every render.
   const role = useAuthStore((s) => s.user?.role)
   const canCreateDirect = role === 'Customer' || role === 'Admin'
+  const canDelete = role === 'Customer' || role === 'Admin'
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.pos.list({ page }),
     queryFn: () => purchaseOrderApi.list({ pageSize: 20, page }),
+  })
+
+  const deletePO = useMutation({
+    mutationFn: (id: string) => purchaseOrderApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.pos.list() })
+      setDeleting(undefined)
+    },
   })
 
   if (childMatches.length > 0) return <Outlet />
@@ -75,6 +87,16 @@ export function PurchaseOrdersPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
+          {canDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDeleting(row.original.id)}
+              title="Delete PO"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -110,6 +132,19 @@ export function PurchaseOrdersPage() {
           isLoading={isLoading}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(undefined)
+        }}
+        title="Delete Purchase Order"
+        description="This will permanently remove the PO. POs with downstream PIs / DOs may block deletion."
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={() => deleting && deletePO.mutate(deleting)}
+        isLoading={deletePO.isPending}
+      />
     </div>
   )
 }

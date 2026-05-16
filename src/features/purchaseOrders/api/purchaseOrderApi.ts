@@ -129,6 +129,8 @@ export const purchaseOrderApi = {
 
   close: (id: string) => api.post(`/purchase-orders/${id}/close`),
 
+  delete: (id: string) => api.delete(`/purchase-orders/${id}`),
+
   getDispatchBalance: (id: string) =>
     api
       .get<VoucherItemBalanceDto[]>(`/purchase-orders/${id}/dispatch-balance`)

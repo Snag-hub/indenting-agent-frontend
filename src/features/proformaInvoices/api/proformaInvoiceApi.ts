@@ -99,6 +99,8 @@ export const proformaInvoiceApi = {
 
   cancel: (id: string) => api.post(`/proforma-invoices/${id}/cancel`),
 
+  delete: (id: string) => api.delete(`/proforma-invoices/${id}`),
+
   getDispatchBalance: (id: string) =>
     api
       .get<PIDispatchBalanceItemDto[]>(`/proforma-invoices/${id}/dispatch-balance`)

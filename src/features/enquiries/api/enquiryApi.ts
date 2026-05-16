@@ -94,6 +94,8 @@ export const enquiryApi = {
 
   close: (id: string) => api.post(`/enquiries/${id}/close`).then((r) => r.data),
 
+  delete: (id: string) => api.delete(`/enquiries/${id}`),
+
   availableItems: (params?: {
     search?: string;
     supplierId?: string;

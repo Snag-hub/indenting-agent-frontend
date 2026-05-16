@@ -93,4 +93,6 @@ export const deliveryOrderApi = {
   deliver: (id: string) => api.post(`/delivery-orders/${id}/deliver`),
 
   cancel: (id: string) => api.post(`/delivery-orders/${id}/cancel`),
+
+  delete: (id: string) => api.delete(`/delivery-orders/${id}`),
 };
