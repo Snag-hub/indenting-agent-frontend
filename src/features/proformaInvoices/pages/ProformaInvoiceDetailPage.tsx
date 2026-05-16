@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
+import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -232,6 +233,18 @@ export function ProformaInvoiceDetailPage() {
           />
         </CardContent>
         </Card>
+
+        <VoucherTotalsCard
+          totals={{
+            subtotal: pi.subtotal,
+            discountAmount: pi.discountAmount,
+            discountPercent: pi.discountPercent,
+            taxAmount: pi.taxAmount,
+            shippingAmount: pi.shippingAmount,
+            totalAmount: pi.totalAmount,
+            currency: pi.currency,
+          }}
+        />
         </div>
 
         {/* Right sidebar: 1 column */}

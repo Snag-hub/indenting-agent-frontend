@@ -47,6 +47,16 @@ export interface ProformaInvoiceDetailDto {
   validUntil?: string;
   status: string;
   items: ProformaInvoiceItemDto[];
+
+  // Monetary totals (populated by MoneyCalculator on create / mutate)
+  subtotal: number;
+  discountAmount: number;
+  discountPercent?: number | null;
+  taxAmount: number;
+  shippingAmount: number;
+  totalAmount: number;
+  currency?: string | null;
+
   createdAt: string;
 }
 

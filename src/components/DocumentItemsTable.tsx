@@ -95,8 +95,24 @@ export function DocumentItemsTable({
   if (config.showPricing) colCount += 2 // Unit Price + Total
   if (hasActions) colCount += 1
 
-  const grandTotal = config.showTotalRow
-    ? items.reduce((sum, i) => sum + (i.totalPrice ?? 0), 0)
+  // For items with variants the parent's `totalPrice` is often 0 because the
+  // unit price lives on each variant. Roll those up so the displayed total is
+  // never silently wrong. Items without variants fall back to the row-level
+  // totalPrice (or qty × unitPrice if that's also missing).
+  function effectiveItemTotal(item: DocumentItem): number {
+    if (item.variants && item.variants.length > 0) {
+      return item.variants.reduce(
+        (s, v) => s + (v.unitPrice ?? 0) * v.quantity,
+        0,
+      )
+    }
+    if (item.totalPrice != null) return item.totalPrice
+    if (item.unitPrice != null) return item.unitPrice * item.quantity
+    return 0
+  }
+
+  const itemsTotal = config.showTotalRow
+    ? items.reduce((sum, i) => sum + effectiveItemTotal(i), 0)
     : 0
 
   return (
@@ -173,9 +189,12 @@ export function DocumentItemsTable({
                   )}
                   {config.showPricing && (
                     <TableCell className="text-sm text-right font-medium">
-                      {item.totalPrice != null
-                        ? formatCurrency(item.totalPrice)
-                        : <span className="text-muted-foreground">—</span>}
+                      {(() => {
+                        const total = effectiveItemTotal(item)
+                        return total > 0
+                          ? formatCurrency(total)
+                          : <span className="text-muted-foreground">—</span>
+                      })()}
                     </TableCell>
                   )}
 
@@ -260,8 +279,8 @@ export function DocumentItemsTable({
         {config.showTotalRow && items.length > 0 && (
           <tfoot>
             <tr className="border-t bg-slate-50 font-semibold text-sm">
-              <td className="p-4" colSpan={config.showPricing ? 3 : 2}>Grand Total</td>
-              <td className="p-4 text-right">{formatCurrency(grandTotal)}</td>
+              <td className="p-4" colSpan={config.showPricing ? 3 : 2}>Items Total</td>
+              <td className="p-4 text-right">{formatCurrency(itemsTotal)}</td>
               <td className="p-4" />
               {hasActions && <td className="p-4" />}
             </tr>
