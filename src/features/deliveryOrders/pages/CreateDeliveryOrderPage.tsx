@@ -336,11 +336,7 @@ export function CreateDeliveryOrderPage() {
       <Card>
         <CardContent className="pt-4 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-muted-foreground mb-1">Document #</p>
-            <p className="text-sm font-medium">{po?.documentNumber || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Purchase Order</p>
+            <p className="text-xs text-muted-foreground mb-1">Proforma Invoice</p>
             <p className="text-sm font-medium">{pi.documentNumber}</p>
           </div>
           {notes && (
