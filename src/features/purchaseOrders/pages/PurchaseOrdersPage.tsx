@@ -30,6 +30,7 @@ export function PurchaseOrdersPage() {
   // takes the Outlet branch below, and React requires identical hook
   // order on every render.
   const role = useAuthStore((s) => s.user?.role)
+  // Customers own POs — only Customer / Admin see Create-Direct + Delete.
   const canCreateDirect = role === 'Customer' || role === 'Admin'
   const canDelete = role === 'Customer' || role === 'Admin'
 

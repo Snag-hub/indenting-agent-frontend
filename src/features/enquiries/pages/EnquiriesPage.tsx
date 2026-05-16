@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Send, Lock, Trash2 } from 'lucide-react'
 import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
+import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -25,6 +26,9 @@ export function EnquiriesPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
   const qc = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
+  // Customers own Enquiries; only they (and Admin) see the Delete action.
+  const canDelete = role === 'Customer' || role === 'Admin'
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [submitting, setSubmitting] = useState<string | undefined>()
@@ -128,14 +132,16 @@ export function EnquiriesPage() {
             </Button>
           )}
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setDeleting(row.original.id)}
-            title="Delete Enquiry"
-          >
-            <Trash2 className="h-4 w-4 text-red-400" />
-          </Button>
+          {canDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDeleting(row.original.id)}
+              title="Delete Enquiry"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          )}
         </div>
       ),
     },
