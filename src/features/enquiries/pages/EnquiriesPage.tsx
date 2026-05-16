@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye, Plus, Send, Lock } from 'lucide-react'
+import { Eye, Plus, Send, Lock, Trash2 } from 'lucide-react'
 import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
+import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -25,10 +26,14 @@ export function EnquiriesPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
   const qc = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
+  // Customers own Enquiries; only they (and Admin) see the Delete action.
+  const canDelete = role === 'Customer' || role === 'Admin'
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [submitting, setSubmitting] = useState<string | undefined>()
   const [closing, setClosing] = useState<string | undefined>()
+  const [deleting, setDeleting] = useState<string | undefined>()
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.enquiries.list({ search, page }),
@@ -48,6 +53,14 @@ export function EnquiriesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.enquiries.list() })
       setClosing(undefined)
+    },
+  })
+
+  const deleteEnquiry = useMutation({
+    mutationFn: (id: string) => enquiryApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.enquiries.list() })
+      setDeleting(undefined)
     },
   })
 
@@ -118,6 +131,17 @@ export function EnquiriesPage() {
               <Lock className="h-4 w-4" />
             </Button>
           )}
+
+          {canDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDeleting(row.original.id)}
+              title="Delete Enquiry"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -186,6 +210,19 @@ export function EnquiriesPage() {
         confirmLabel="Close"
         onConfirm={() => closing && closeEnquiry.mutate(closing)}
         isLoading={closeEnquiry.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(undefined)
+        }}
+        title="Delete Enquiry"
+        description="This will permanently remove the enquiry. RFQs/POs that depend on it may block deletion."
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={() => deleting && deleteEnquiry.mutate(deleting)}
+        isLoading={deleteEnquiry.isPending}
       />
     </div>
   )

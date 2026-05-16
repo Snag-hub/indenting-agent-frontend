@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, Send, Check, X, Plus, Trash2, ShoppingCart, Eye, Pencil, Lock, RotateCcw } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
+import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -385,6 +386,19 @@ export function QuotationDetailPage() {
                             onDelete: (item) => setRemovingItemId(item.id),
                           } : undefined}
                           emptyMessage="No items in this version."
+                        />
+
+                        <VoucherTotalsCard
+                          title={`Pricing — Version ${version.versionNumber}`}
+                          totals={{
+                            subtotal: version.subtotal,
+                            discountAmount: version.discountAmount,
+                            discountPercent: version.discountPercent,
+                            taxAmount: version.taxAmount,
+                            shippingAmount: version.shippingAmount,
+                            totalAmount: version.totalAmount,
+                            currency: version.currency,
+                          }}
                         />
 
                         {!isLatestVersion && (

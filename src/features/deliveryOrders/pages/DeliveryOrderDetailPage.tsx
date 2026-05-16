@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Send, X, CheckCircle, Ticket, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
+import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -209,6 +210,18 @@ export function DeliveryOrderDetailPage() {
           />
         </CardContent>
         </Card>
+
+        <VoucherTotalsCard
+          totals={{
+            subtotal: deliveryOrder.subtotal,
+            discountAmount: deliveryOrder.discountAmount,
+            discountPercent: deliveryOrder.discountPercent,
+            taxAmount: deliveryOrder.taxAmount,
+            shippingAmount: deliveryOrder.shippingAmount,
+            totalAmount: deliveryOrder.totalAmount,
+            currency: deliveryOrder.currency,
+          }}
+        />
         </div>
 
         {/* Right sidebar: 1 column */}

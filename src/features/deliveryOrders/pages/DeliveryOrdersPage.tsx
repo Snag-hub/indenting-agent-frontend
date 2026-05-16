@@ -1,15 +1,17 @@
 import { useNavigate, useChildMatches, Outlet } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { deliveryOrderApi, type DeliveryOrderSummaryDto } from '@/features/deliveryOrders/api/deliveryOrderApi'
 import { queryKeys } from '@/lib/queryKeys'
+import { useAuthStore } from '@/stores/authStore'
 import { DataTable } from '@/components/DataTable'
 import { PageHeader } from '@/components/PageHeader'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -22,11 +24,23 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
 export function DeliveryOrdersPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
+  const qc = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
   const [page, setPage] = useState(1)
+  const [deleting, setDeleting] = useState<string | undefined>()
+  const canDelete = role === 'Supplier' || role === 'Admin'
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.deliveryOrders.list({ page }),
     queryFn: () => deliveryOrderApi.list({ pageSize: 20, page }),
+  })
+
+  const deleteDO = useMutation({
+    mutationFn: (id: string) => deliveryOrderApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.list() })
+      setDeleting(undefined)
+    },
   })
 
   if (childMatches.length > 0) return <Outlet />
@@ -65,6 +79,16 @@ export function DeliveryOrdersPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
+          {canDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDeleting(row.original.id)}
+              title="Delete DO"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -93,6 +117,19 @@ export function DeliveryOrdersPage() {
           isLoading={isLoading}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(undefined)
+        }}
+        title="Delete Delivery Order"
+        description="This will permanently remove the DO. DOs with downstream payments may block deletion."
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={() => deleting && deleteDO.mutate(deleting)}
+        isLoading={deleteDO.isPending}
+      />
     </div>
   )
 }

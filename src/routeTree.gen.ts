@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/_auth.login'
+import { Route as AuthAcceptInviteRouteImport } from './routes/_auth.accept-invite'
 import { Route as AppTicketsRouteImport } from './routes/_app.tickets'
 import { Route as AppThreadsRouteImport } from './routes/_app.threads'
 import { Route as AppSuppliersRouteImport } from './routes/_app.suppliers'
@@ -25,6 +26,7 @@ import { Route as AppProformaInvoicesRouteImport } from './routes/_app.proforma-
 import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
 import { Route as AppNotificationsRouteImport } from './routes/_app.notifications'
 import { Route as AppMyItemsRouteImport } from './routes/_app.my-items'
+import { Route as AppMyEmployeesRouteImport } from './routes/_app.my-employees'
 import { Route as AppMyDimensionsRouteImport } from './routes/_app.my-dimensions'
 import { Route as AppItemMappingRouteImport } from './routes/_app.item-mapping'
 import { Route as AppEnquiriesRouteImport } from './routes/_app.enquiries'
@@ -40,6 +42,7 @@ import { Route as AppRfqsNewRouteImport } from './routes/_app.rfqs.new'
 import { Route as AppRfqsIdRouteImport } from './routes/_app.rfqs.$id'
 import { Route as AppQuotationsNewRouteImport } from './routes/_app.quotations.new'
 import { Route as AppQuotationsIdRouteImport } from './routes/_app.quotations.$id'
+import { Route as AppPurchaseOrdersNewRouteImport } from './routes/_app.purchase-orders.new'
 import { Route as AppPurchaseOrdersIdRouteImport } from './routes/_app.purchase-orders.$id'
 import { Route as AppProformaInvoicesNewRouteImport } from './routes/_app.proforma-invoices.new'
 import { Route as AppProformaInvoicesIdRouteImport } from './routes/_app.proforma-invoices.$id'
@@ -53,6 +56,7 @@ import { Route as AppDeliveryOrdersIdRouteImport } from './routes/_app.delivery-
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
 import { Route as AppCatalogItemsRouteImport } from './routes/_app.catalog.items'
 import { Route as AppCatalogCategoriesRouteImport } from './routes/_app.catalog.categories'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppAdminDocumentNumberSettingsRouteImport } from './routes/_app.admin.document-number-settings'
 import { Route as AppRfqsIdComparisonRouteImport } from './routes/_app.rfqs.$id.comparison'
 import { Route as AppPurchaseOrdersIdPrintRouteImport } from './routes/_app.purchase-orders.$id.print'
@@ -76,6 +80,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthAcceptInviteRoute = AuthAcceptInviteRouteImport.update({
+  id: '/accept-invite',
+  path: '/accept-invite',
   getParentRoute: () => AuthRoute,
 } as any)
 const AppTicketsRoute = AppTicketsRouteImport.update({
@@ -136,6 +145,11 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
 const AppMyItemsRoute = AppMyItemsRouteImport.update({
   id: '/my-items',
   path: '/my-items',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyEmployeesRoute = AppMyEmployeesRouteImport.update({
+  id: '/my-employees',
+  path: '/my-employees',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyDimensionsRoute = AppMyDimensionsRouteImport.update({
@@ -215,6 +229,11 @@ const AppQuotationsIdRoute = AppQuotationsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppQuotationsRoute,
 } as any)
+const AppPurchaseOrdersNewRoute = AppPurchaseOrdersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppPurchaseOrdersRoute,
+} as any)
 const AppPurchaseOrdersIdRoute = AppPurchaseOrdersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -280,6 +299,11 @@ const AppCatalogCategoriesRoute = AppCatalogCategoriesRouteImport.update({
   path: '/catalog/categories',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminDocumentNumberSettingsRoute =
   AppAdminDocumentNumberSettingsRouteImport.update({
     id: '/admin/document-number-settings',
@@ -323,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/enquiries': typeof AppEnquiriesRouteWithChildren
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
+  '/my-employees': typeof AppMyEmployeesRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/payments': typeof AppPaymentsRouteWithChildren
@@ -335,8 +360,10 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/threads': typeof AppThreadsRoute
   '/tickets': typeof AppTicketsRouteWithChildren
+  '/accept-invite': typeof AuthAcceptInviteRoute
   '/login': typeof AuthLoginRoute
   '/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
   '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
@@ -350,6 +377,7 @@ export interface FileRoutesByFullPath {
   '/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
   '/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
   '/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
+  '/purchase-orders/new': typeof AppPurchaseOrdersNewRoute
   '/quotations/$id': typeof AppQuotationsIdRoute
   '/quotations/new': typeof AppQuotationsNewRoute
   '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
@@ -373,6 +401,7 @@ export interface FileRoutesByTo {
   '/enquiries': typeof AppEnquiriesRouteWithChildren
   '/item-mapping': typeof AppItemMappingRoute
   '/my-dimensions': typeof AppMyDimensionsRoute
+  '/my-employees': typeof AppMyEmployeesRoute
   '/my-items': typeof AppMyItemsRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/payments': typeof AppPaymentsRouteWithChildren
@@ -385,8 +414,10 @@ export interface FileRoutesByTo {
   '/suppliers': typeof AppSuppliersRouteWithChildren
   '/threads': typeof AppThreadsRoute
   '/tickets': typeof AppTicketsRouteWithChildren
+  '/accept-invite': typeof AuthAcceptInviteRoute
   '/login': typeof AuthLoginRoute
   '/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/catalog/categories': typeof AppCatalogCategoriesRoute
   '/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/customers/$id': typeof AppCustomersIdRoute
@@ -400,6 +431,7 @@ export interface FileRoutesByTo {
   '/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
   '/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
   '/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
+  '/purchase-orders/new': typeof AppPurchaseOrdersNewRoute
   '/quotations/$id': typeof AppQuotationsIdRoute
   '/quotations/new': typeof AppQuotationsNewRoute
   '/rfqs/$id': typeof AppRfqsIdRouteWithChildren
@@ -426,6 +458,7 @@ export interface FileRoutesById {
   '/_app/enquiries': typeof AppEnquiriesRouteWithChildren
   '/_app/item-mapping': typeof AppItemMappingRoute
   '/_app/my-dimensions': typeof AppMyDimensionsRoute
+  '/_app/my-employees': typeof AppMyEmployeesRoute
   '/_app/my-items': typeof AppMyItemsRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/payments': typeof AppPaymentsRouteWithChildren
@@ -438,8 +471,10 @@ export interface FileRoutesById {
   '/_app/suppliers': typeof AppSuppliersRouteWithChildren
   '/_app/threads': typeof AppThreadsRoute
   '/_app/tickets': typeof AppTicketsRouteWithChildren
+  '/_auth/accept-invite': typeof AuthAcceptInviteRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_app/admin/document-number-settings': typeof AppAdminDocumentNumberSettingsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/catalog/categories': typeof AppCatalogCategoriesRoute
   '/_app/catalog/items': typeof AppCatalogItemsRouteWithChildren
   '/_app/customers/$id': typeof AppCustomersIdRoute
@@ -453,6 +488,7 @@ export interface FileRoutesById {
   '/_app/proforma-invoices/$id': typeof AppProformaInvoicesIdRouteWithChildren
   '/_app/proforma-invoices/new': typeof AppProformaInvoicesNewRoute
   '/_app/purchase-orders/$id': typeof AppPurchaseOrdersIdRouteWithChildren
+  '/_app/purchase-orders/new': typeof AppPurchaseOrdersNewRoute
   '/_app/quotations/$id': typeof AppQuotationsIdRoute
   '/_app/quotations/new': typeof AppQuotationsNewRoute
   '/_app/rfqs/$id': typeof AppRfqsIdRouteWithChildren
@@ -478,6 +514,7 @@ export interface FileRouteTypes {
     | '/enquiries'
     | '/item-mapping'
     | '/my-dimensions'
+    | '/my-employees'
     | '/my-items'
     | '/notifications'
     | '/payments'
@@ -490,8 +527,10 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/threads'
     | '/tickets'
+    | '/accept-invite'
     | '/login'
     | '/admin/document-number-settings'
+    | '/admin/users'
     | '/catalog/categories'
     | '/catalog/items'
     | '/customers/$id'
@@ -505,6 +544,7 @@ export interface FileRouteTypes {
     | '/proforma-invoices/$id'
     | '/proforma-invoices/new'
     | '/purchase-orders/$id'
+    | '/purchase-orders/new'
     | '/quotations/$id'
     | '/quotations/new'
     | '/rfqs/$id'
@@ -528,6 +568,7 @@ export interface FileRouteTypes {
     | '/enquiries'
     | '/item-mapping'
     | '/my-dimensions'
+    | '/my-employees'
     | '/my-items'
     | '/notifications'
     | '/payments'
@@ -540,8 +581,10 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/threads'
     | '/tickets'
+    | '/accept-invite'
     | '/login'
     | '/admin/document-number-settings'
+    | '/admin/users'
     | '/catalog/categories'
     | '/catalog/items'
     | '/customers/$id'
@@ -555,6 +598,7 @@ export interface FileRouteTypes {
     | '/proforma-invoices/$id'
     | '/proforma-invoices/new'
     | '/purchase-orders/$id'
+    | '/purchase-orders/new'
     | '/quotations/$id'
     | '/quotations/new'
     | '/rfqs/$id'
@@ -580,6 +624,7 @@ export interface FileRouteTypes {
     | '/_app/enquiries'
     | '/_app/item-mapping'
     | '/_app/my-dimensions'
+    | '/_app/my-employees'
     | '/_app/my-items'
     | '/_app/notifications'
     | '/_app/payments'
@@ -592,8 +637,10 @@ export interface FileRouteTypes {
     | '/_app/suppliers'
     | '/_app/threads'
     | '/_app/tickets'
+    | '/_auth/accept-invite'
     | '/_auth/login'
     | '/_app/admin/document-number-settings'
+    | '/_app/admin/users'
     | '/_app/catalog/categories'
     | '/_app/catalog/items'
     | '/_app/customers/$id'
@@ -607,6 +654,7 @@ export interface FileRouteTypes {
     | '/_app/proforma-invoices/$id'
     | '/_app/proforma-invoices/new'
     | '/_app/purchase-orders/$id'
+    | '/_app/purchase-orders/new'
     | '/_app/quotations/$id'
     | '/_app/quotations/new'
     | '/_app/rfqs/$id'
@@ -657,6 +705,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/accept-invite': {
+      id: '/_auth/accept-invite'
+      path: '/accept-invite'
+      fullPath: '/accept-invite'
+      preLoaderRoute: typeof AuthAcceptInviteRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_app/tickets': {
@@ -741,6 +796,13 @@ declare module '@tanstack/react-router' {
       path: '/my-items'
       fullPath: '/my-items'
       preLoaderRoute: typeof AppMyItemsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-employees': {
+      id: '/_app/my-employees'
+      path: '/my-employees'
+      fullPath: '/my-employees'
+      preLoaderRoute: typeof AppMyEmployeesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-dimensions': {
@@ -848,6 +910,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQuotationsIdRouteImport
       parentRoute: typeof AppQuotationsRoute
     }
+    '/_app/purchase-orders/new': {
+      id: '/_app/purchase-orders/new'
+      path: '/new'
+      fullPath: '/purchase-orders/new'
+      preLoaderRoute: typeof AppPurchaseOrdersNewRouteImport
+      parentRoute: typeof AppPurchaseOrdersRoute
+    }
     '/_app/purchase-orders/$id': {
       id: '/_app/purchase-orders/$id'
       path: '/$id'
@@ -937,6 +1006,13 @@ declare module '@tanstack/react-router' {
       path: '/catalog/categories'
       fullPath: '/catalog/categories'
       preLoaderRoute: typeof AppCatalogCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/admin/document-number-settings': {
@@ -1099,10 +1175,12 @@ const AppPurchaseOrdersIdRouteWithChildren =
 
 interface AppPurchaseOrdersRouteChildren {
   AppPurchaseOrdersIdRoute: typeof AppPurchaseOrdersIdRouteWithChildren
+  AppPurchaseOrdersNewRoute: typeof AppPurchaseOrdersNewRoute
 }
 
 const AppPurchaseOrdersRouteChildren: AppPurchaseOrdersRouteChildren = {
   AppPurchaseOrdersIdRoute: AppPurchaseOrdersIdRouteWithChildren,
+  AppPurchaseOrdersNewRoute: AppPurchaseOrdersNewRoute,
 }
 
 const AppPurchaseOrdersRouteWithChildren =
@@ -1208,6 +1286,7 @@ interface AppRouteChildren {
   AppEnquiriesRoute: typeof AppEnquiriesRouteWithChildren
   AppItemMappingRoute: typeof AppItemMappingRoute
   AppMyDimensionsRoute: typeof AppMyDimensionsRoute
+  AppMyEmployeesRoute: typeof AppMyEmployeesRoute
   AppMyItemsRoute: typeof AppMyItemsRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppPaymentsRoute: typeof AppPaymentsRouteWithChildren
@@ -1221,6 +1300,7 @@ interface AppRouteChildren {
   AppThreadsRoute: typeof AppThreadsRoute
   AppTicketsRoute: typeof AppTicketsRouteWithChildren
   AppAdminDocumentNumberSettingsRoute: typeof AppAdminDocumentNumberSettingsRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
   AppCatalogCategoriesRoute: typeof AppCatalogCategoriesRoute
   AppCatalogItemsRoute: typeof AppCatalogItemsRouteWithChildren
 }
@@ -1232,6 +1312,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEnquiriesRoute: AppEnquiriesRouteWithChildren,
   AppItemMappingRoute: AppItemMappingRoute,
   AppMyDimensionsRoute: AppMyDimensionsRoute,
+  AppMyEmployeesRoute: AppMyEmployeesRoute,
   AppMyItemsRoute: AppMyItemsRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppPaymentsRoute: AppPaymentsRouteWithChildren,
@@ -1245,6 +1326,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppThreadsRoute: AppThreadsRoute,
   AppTicketsRoute: AppTicketsRouteWithChildren,
   AppAdminDocumentNumberSettingsRoute: AppAdminDocumentNumberSettingsRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
   AppCatalogCategoriesRoute: AppCatalogCategoriesRoute,
   AppCatalogItemsRoute: AppCatalogItemsRouteWithChildren,
 }
@@ -1252,10 +1334,12 @@ const AppRouteChildren: AppRouteChildren = {
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface AuthRouteChildren {
+  AuthAcceptInviteRoute: typeof AuthAcceptInviteRoute
   AuthLoginRoute: typeof AuthLoginRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthAcceptInviteRoute: AuthAcceptInviteRoute,
   AuthLoginRoute: AuthLoginRoute,
 }
 

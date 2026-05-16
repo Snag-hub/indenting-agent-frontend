@@ -119,6 +119,8 @@ export const quotationApi = {
   get: (id: string): Promise<QuotationDetailDto> =>
     api.get<QuotationDetailDto>(`/quotations/${id}`).then((r) => r.data),
 
+  delete: (id: string) => api.delete(`/quotations/${id}`),
+
   addItem: (id: string, versionId: string, data: AddQuotationItemInput) =>
     api
       .post(`/quotations/${id}/items/version/${versionId}`, data)

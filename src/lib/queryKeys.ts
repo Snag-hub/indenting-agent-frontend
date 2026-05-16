@@ -106,6 +106,16 @@ export const queryKeys = {
   dashboard: {
     overview: () => ["dashboard", "overview"] as const,
   },
+  users: {
+    list: (params?: Record<string, unknown>) =>
+      ["users", "list", params ?? {}] as const,
+    detail: (id: string) => ["users", "detail", id] as const,
+  },
+  myEmployees: {
+    list: (params?: Record<string, unknown>) =>
+      ["my-employees", "list", params ?? {}] as const,
+    detail: (id: string) => ["my-employees", "detail", id] as const,
+  },
   threads: {
     list: (params?: Record<string, unknown>) =>
       ["threads", "list", params ?? {}] as const,

@@ -22,6 +22,7 @@ export interface DeliveryOrderItemDto {
 
 export interface DeliveryOrderSummaryDto {
   id: string;
+  proformaInvoiceId: string;
   purchaseOrderId: string;
   documentNumber: string;
   supplierName: string;
@@ -31,10 +32,10 @@ export interface DeliveryOrderSummaryDto {
 
 export interface DeliveryOrderDetailDto {
   id: string;
+  proformaInvoiceId: string;
+  proformaInvoiceDocumentNumber: string;
   purchaseOrderId: string;
-  purchaseOrderDocumentNumber?: string;
-  proformaInvoiceId?: string;
-  proformaInvoiceDocumentNumber?: string;
+  purchaseOrderDocumentNumber: string;
   customerId: string;
   customerName?: string;
   supplierId: string;
@@ -47,6 +48,16 @@ export interface DeliveryOrderDetailDto {
   poReference?: string;
   status: string;
   items: DeliveryOrderItemDto[];
+
+  // Monetary totals (resolved from PO pricing via PI, then MoneyCalculator)
+  subtotal: number;
+  discountAmount: number;
+  discountPercent?: number | null;
+  taxAmount: number;
+  shippingAmount: number;
+  totalAmount: number;
+  currency?: string | null;
+
   createdAt: string;
 }
 
@@ -62,8 +73,7 @@ export const deliveryOrderApi = {
       .then((r) => r.data),
 
   create: (data: {
-    purchaseOrderId: string;
-    proformaInvoiceId?: string;
+    proformaInvoiceId: string;
     notes?: string;
     items: {
       supplierItemId: string;
@@ -83,4 +93,6 @@ export const deliveryOrderApi = {
   deliver: (id: string) => api.post(`/delivery-orders/${id}/deliver`),
 
   cancel: (id: string) => api.post(`/delivery-orders/${id}/cancel`),
+
+  delete: (id: string) => api.delete(`/delivery-orders/${id}`),
 };

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye, Plus, Send, Lock } from 'lucide-react'
+import { Eye, Plus, Send, Lock, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -31,6 +31,7 @@ export function RFQsPage() {
   const [page, setPage] = useState(1)
   const [sending, setSending] = useState<string | undefined>()
   const [closing, setClosing] = useState<string | undefined>()
+  const [deleting, setDeleting] = useState<string | undefined>()
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.rfqs.list({ search, page }),
@@ -50,6 +51,14 @@ export function RFQsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.rfqs.list() })
       setClosing(undefined)
+    },
+  })
+
+  const deleteRFQ = useMutation({
+    mutationFn: (id: string) => rfqApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.rfqs.list() })
+      setDeleting(undefined)
     },
   })
 
@@ -128,6 +137,17 @@ export function RFQsPage() {
               <Lock className="h-4 w-4" />
             </Button>
           )}
+
+          {(role === 'Customer' || role === 'Admin') && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setDeleting(row.original.id)}
+              title="Delete RFQ"
+            >
+              <Trash2 className="h-4 w-4 text-red-400" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -197,6 +217,19 @@ export function RFQsPage() {
         confirmLabel="Close"
         onConfirm={() => closing && closeRFQ.mutate(closing)}
         isLoading={closeRFQ.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(undefined)
+        }}
+        title="Delete RFQ"
+        description="This will permanently remove the RFQ. Quotations / POs that depend on it may block deletion."
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={() => deleting && deleteRFQ.mutate(deleting)}
+        isLoading={deleteRFQ.isPending}
       />
     </div>
   )

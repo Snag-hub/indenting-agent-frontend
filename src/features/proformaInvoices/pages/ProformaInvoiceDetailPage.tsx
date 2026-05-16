@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
+import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -25,7 +26,7 @@ function formatCurrency(value: number): string {
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
-  Submitted: 'default',
+  Sent: 'default',
   Acknowledged: 'secondary',
   Cancelled: 'destructive',
 }
@@ -104,7 +105,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Supplier' && (pi.status === 'Draft' || pi.status === 'Submitted') && (
+            {role === 'Supplier' && (pi.status === 'Draft' || pi.status === 'Sent') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -117,14 +118,14 @@ export function ProformaInvoiceDetailPage() {
             {role === 'Supplier' && pi.status === 'Acknowledged' && (
               <Button
                 size="sm"
-                onClick={() => navigate({ to: '/delivery-orders/new', search: { poId: pi.purchaseOrderId, piId: pi.id } })}
+                onClick={() => navigate({ to: '/delivery-orders/new', search: { piId: pi.id } })}
               >
                 <Truck className="mr-2 h-4 w-4" /> Create DO
               </Button>
             )}
 
             {/* Customer actions */}
-            {role === 'Customer' && pi.status === 'Submitted' && (
+            {role === 'Customer' && pi.status === 'Sent' && (
               <Button
                 size="sm"
                 onClick={() => setAcknowledging(true)}
@@ -133,7 +134,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Customer' && (pi.status === 'Submitted' || pi.status === 'Acknowledged') && (
+            {role === 'Customer' && (pi.status === 'Sent' || pi.status === 'Acknowledged') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -232,6 +233,18 @@ export function ProformaInvoiceDetailPage() {
           />
         </CardContent>
         </Card>
+
+        <VoucherTotalsCard
+          totals={{
+            subtotal: pi.subtotal,
+            discountAmount: pi.discountAmount,
+            discountPercent: pi.discountPercent,
+            taxAmount: pi.taxAmount,
+            shippingAmount: pi.shippingAmount,
+            totalAmount: pi.totalAmount,
+            currency: pi.currency,
+          }}
+        />
         </div>
 
         {/* Right sidebar: 1 column */}
