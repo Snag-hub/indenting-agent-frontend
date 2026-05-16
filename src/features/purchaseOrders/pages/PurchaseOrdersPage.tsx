@@ -23,6 +23,11 @@ export function PurchaseOrdersPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
   const [page, setPage] = useState(1)
+  // Hooks must be declared before any early return — child-route mount
+  // takes the Outlet branch below, and React requires identical hook
+  // order on every render.
+  const role = useAuthStore((s) => s.user?.role)
+  const canCreateDirect = role === 'Customer' || role === 'Admin'
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.pos.list({ page }),
@@ -74,9 +79,6 @@ export function PurchaseOrdersPage() {
       ),
     },
   ]
-
-  const role = useAuthStore((s) => s.user?.role)
-  const canCreateDirect = role === 'Customer' || role === 'Admin'
 
   return (
     <div className="space-y-6">
