@@ -193,22 +193,22 @@ function ItemLotBlock({ item, canEdit, onAdd, onEdit, onRemove }: BlockProps) {
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground">
             <tr>
-              <th className="text-left py-1 font-normal">Lot #</th>
-              <th className="text-right py-1 font-normal">Qty</th>
-              <th className="text-left py-1 font-normal">Mfg</th>
-              <th className="text-left py-1 font-normal">Expiry</th>
-              <th className="text-left py-1 font-normal">Notes</th>
+              <th className="text-left py-1 pr-4 font-normal">Lot #</th>
+              <th className="text-right py-1 pr-6 font-normal w-20">Qty</th>
+              <th className="text-left py-1 pr-4 font-normal">Mfg</th>
+              <th className="text-left py-1 pr-4 font-normal">Expiry</th>
+              <th className="text-left py-1 pr-4 font-normal">Notes</th>
               {canEdit && <th className="w-16" />}
             </tr>
           </thead>
           <tbody>
             {item.lots.map((lot) => (
               <tr key={lot.id} className="border-t">
-                <td className="py-1 font-mono">{lot.lotNumber}</td>
-                <td className="py-1 text-right font-mono">{lot.quantity}</td>
-                <td className="py-1">{fmtDate(lot.manufactureDate)}</td>
-                <td className="py-1">{expiryCell(lot.expiryDate)}</td>
-                <td className="py-1 text-muted-foreground">{lot.notes || '—'}</td>
+                <td className="py-1 pr-4 font-mono">{lot.lotNumber}</td>
+                <td className="py-1 pr-6 text-right font-mono w-20">{lot.quantity}</td>
+                <td className="py-1 pr-4">{fmtDate(lot.manufactureDate)}</td>
+                <td className="py-1 pr-4">{expiryCell(lot.expiryDate)}</td>
+                <td className="py-1 pr-4 text-muted-foreground">{lot.notes || '—'}</td>
                 {canEdit && (
                   <td className="py-1 text-right whitespace-nowrap">
                     <Button size="icon" variant="ghost" onClick={() => onEdit(lot)} title="Edit lot">
