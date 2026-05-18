@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Send, X, CheckCircle, Ticket, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
+import { DeliveryOrderLotsCard } from '@/features/deliveryOrders/components/DeliveryOrderLotsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
@@ -210,6 +211,8 @@ export function DeliveryOrderDetailPage() {
           />
         </CardContent>
         </Card>
+
+        <DeliveryOrderLotsCard deliveryOrderId={id} />
 
         <VoucherTotalsCard
           totals={{
