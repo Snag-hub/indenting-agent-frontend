@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { rfqApi } from '@/features/rfqs/api/rfqApi'
 import { quotationApi } from '@/features/quotations/api/quotationApi'
-import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { PageHeader } from '@/components/PageHeader'
@@ -23,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Send, Lock, Plus, Trash2, Edit2, Copy, Eye } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
@@ -61,8 +60,9 @@ export function RFQDetailPage() {
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false)
   const [itemSearch, setItemSearch] = useState('')
   const [replicateDialogOpen, setReplicateDialogOpen] = useState(false)
-  const [selectedReplicateSupplier, setSelectedReplicateSupplier] = useState<string>('')
   const [removingItemId, setRemovingItemId] = useState<string | undefined>()
+  const [declineDialogOpen, setDeclineDialogOpen] = useState(false)
+  const [declineReason, setDeclineReason] = useState('')
 
   const { user } = useAuthStore()
   const role = user?.role
@@ -70,11 +70,6 @@ export function RFQDetailPage() {
   const { data: rfq, isLoading } = useQuery({
     queryKey: queryKeys.rfqs.detail(id),
     queryFn: () => rfqApi.get(id),
-  })
-
-  const { data: suppliers = [] } = useQuery({
-    queryKey: queryKeys.suppliers.list(),
-    queryFn: () => supplierApi.list({ page: 1, pageSize: 1000 }).then(r => r.data ?? []),
   })
 
   const { data: quotationsData } = useQuery({
@@ -99,7 +94,7 @@ export function RFQDetailPage() {
     defaultValues: { quantity: 1 },
   })
 
-  const { register, handleSubmit, formState: { errors } } = useForm<EditRFQForm>({
+  const { register, handleSubmit } = useForm<EditRFQForm>({
     resolver: zodResolver(editRFQSchema),
     defaultValues: {
       notes: rfq?.notes ?? '',
@@ -160,13 +155,24 @@ export function RFQDetailPage() {
   })
 
   const replicateRFQ = useMutation({
-    mutationFn: (supplierId: string) => rfqApi.clone(id, supplierId),
+    // Clone copies the source's supplier list when supplierIds is empty.
+    mutationFn: () => rfqApi.clone(id, []),
     onSuccess: (newId) => {
       qc.invalidateQueries({ queryKey: queryKeys.rfqs.list() })
       setReplicateDialogOpen(false)
-      setSelectedReplicateSupplier('')
       navigate({ to: '/rfqs/$id', params: { id: newId } })
     },
+  })
+
+  const declineRFQ = useMutation({
+    mutationFn: () => rfqApi.decline(id, declineReason || undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.rfqs.detail(id) })
+      toast.success('You have declined this RFQ')
+      setDeclineDialogOpen(false)
+      setDeclineReason('')
+    },
+    onError: () => toast.error('Failed to decline RFQ'),
   })
 
   if (isLoading) {
@@ -182,14 +188,16 @@ export function RFQDetailPage() {
     return <div className="text-muted-foreground">RFQ not found.</div>
   }
 
-  // Suppliers available for replication (exclude the supplier already on this RFQ)
-  const replicateSupplierOptions = suppliers.filter(s => s.id !== rfq.supplierId)
+  // Find this supplier's own RFQSupplier row (for the Decline button).
+  const ownSupplierRow = role === 'Supplier'
+    ? rfq.suppliers.find(s => s.status !== 'Declined')
+    : undefined
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`RFQ ${rfq.documentNumber || '(unsaved)'}`}
-        description={`Supplier: ${rfq.supplierName}${rfq.dueDate ? ` — Due: ${format(new Date(rfq.dueDate), 'dd MMM yyyy')}` : ''}`}
+        description={rfq.dueDate ? `Due: ${format(new Date(rfq.dueDate), 'dd MMM yyyy')}` : undefined}
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[rfq.status]}>
@@ -235,8 +243,8 @@ export function RFQDetailPage() {
               </Button>
             )}
 
-            {/* Customer: Compare quotations (when ≥ 2 exist) */}
-            {role === 'Customer' && rfq.status === 'Submitted' && (quotationsData?.data?.length ?? 0) >= 2 && (
+            {/* Customer: Compare quotations (available for any Submitted RFQ with multiple suppliers) */}
+            {role === 'Customer' && rfq.status === 'Submitted' && rfq.suppliers.length >= 2 && (
               <Button
                 size="sm"
                 variant="outline"
@@ -250,14 +258,26 @@ export function RFQDetailPage() {
             {role === 'Supplier' && rfq.status === 'Submitted' && (
               alreadyQuoted ? (
                 <Badge variant="secondary">Quotation Submitted</Badge>
+              ) : ownSupplierRow?.status === 'Declined' ? (
+                <Badge variant="destructive">Declined</Badge>
               ) : (
-                <Button
-                  size="sm"
-                  onClick={() => navigate({ to: '/quotations/new', search: { rfqId: id } })}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Quotation
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate({ to: '/quotations/new', search: { rfqId: id } })}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Quotation
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive border-destructive hover:bg-destructive/10"
+                    onClick={() => setDeclineDialogOpen(true)}
+                  >
+                    Decline
+                  </Button>
+                </>
               )
             )}
 
@@ -272,14 +292,10 @@ export function RFQDetailPage() {
         }
       />
 
-      {/* Supplier + meta info card */}
+      {/* Meta info card */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-              <p className="text-sm font-medium">{rfq.supplierName}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Status</p>
               <Badge variant={statusColors[rfq.status]}>{rfq.status}</Badge>
@@ -305,6 +321,54 @@ export function RFQDetailPage() {
               <p className="text-sm">{format(new Date(rfq.createdAt), 'dd MMM yyyy')}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Invited Suppliers card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Invited Suppliers ({rfq.suppliers.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Invited</TableHead>
+                <TableHead>Responded</TableHead>
+                <TableHead>Decline Reason</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rfq.suppliers.map((s) => {
+                const supplierStatusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+                  Invited: 'outline',
+                  Quoted: 'default',
+                  Declined: 'destructive',
+                }
+                return (
+                  <TableRow key={s.supplierId}>
+                    <TableCell className="font-medium">{s.supplierName}</TableCell>
+                    <TableCell>
+                      <Badge variant={supplierStatusColors[s.status] ?? 'outline'}>{s.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(s.invitedAt), 'dd MMM yyyy')}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {s.respondedAt ? format(new Date(s.respondedAt), 'dd MMM yyyy') : '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {s.declineReason ?? '—'}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -522,60 +586,62 @@ export function RFQDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Replicate RFQ Dialog */}
-      <Dialog
-        open={replicateDialogOpen}
-        onOpenChange={(open) => {
-          setReplicateDialogOpen(open)
-          if (!open) setSelectedReplicateSupplier('')
-        }}
-      >
+      {/* Replicate RFQ Dialog — copies the same invited suppliers */}
+      <Dialog open={replicateDialogOpen} onOpenChange={setReplicateDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Replicate RFQ</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Creates a copy of this RFQ with all items for a different supplier.
+              Creates a copy of this RFQ with all its items and the same invited suppliers. The new RFQ will be in Draft state.
             </p>
-
-            <div className="space-y-1">
-              <Label htmlFor="replicate-supplier">Select Supplier</Label>
-              <Select
-                value={selectedReplicateSupplier || '__none__'}
-                onValueChange={(v) => setSelectedReplicateSupplier(v === '__none__' ? '' : v)}
-              >
-                <SelectTrigger id="replicate-supplier">
-                  <SelectValue placeholder="Select a supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__" disabled>Select a supplier</SelectItem>
-                  {replicateSupplierOptions.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {replicateSupplierOptions.length === 0 && (
-                <p className="text-xs text-muted-foreground">No other suppliers available.</p>
-              )}
-            </div>
-
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => { setReplicateDialogOpen(false); setSelectedReplicateSupplier('') }}
-              >
+              <Button type="button" variant="outline" onClick={() => setReplicateDialogOpen(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={() => selectedReplicateSupplier && replicateRFQ.mutate(selectedReplicateSupplier)}
-                disabled={!selectedReplicateSupplier || replicateRFQ.isPending}
+                onClick={() => replicateRFQ.mutate()}
+                disabled={replicateRFQ.isPending}
               >
                 {replicateRFQ.isPending ? 'Replicating…' : 'Replicate'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Decline RFQ Dialog — Supplier declines to quote */}
+      <Dialog open={declineDialogOpen} onOpenChange={(open) => { setDeclineDialogOpen(open); if (!open) setDeclineReason('') }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Decline RFQ</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You are about to decline to quote on this RFQ. This will be visible to the customer. Provide an optional reason.
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="decline-reason">Reason (optional)</Label>
+              <Textarea
+                id="decline-reason"
+                placeholder="e.g. Out of stock, capacity constraints…"
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                maxLength={1000}
+                rows={3}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDeclineDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => declineRFQ.mutate()}
+                disabled={declineRFQ.isPending}
+              >
+                {declineRFQ.isPending ? 'Declining…' : 'Decline RFQ'}
               </Button>
             </DialogFooter>
           </div>
@@ -588,7 +654,7 @@ export function RFQDetailPage() {
         open={sending}
         onOpenChange={(open) => { if (!open) setSending(false) }}
         title="Send RFQ"
-        description={`This will send the RFQ to ${rfq.supplierName}.`}
+        description={`This will send the RFQ to ${rfq.suppliers.length} invited supplier(s).`}
         confirmLabel="Send"
         onConfirm={() => sendRFQ.mutate()}
         isLoading={sendRFQ.isPending}

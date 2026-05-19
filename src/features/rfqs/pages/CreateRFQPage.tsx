@@ -150,16 +150,11 @@ export function CreateRFQPage() {
         }),
       })
     },
-    onSuccess: (rfqIds) => {
+    onSuccess: (rfqId) => {
       qc.invalidateQueries({ queryKey: queryKeys.rfqs.list() })
-      toast.success(`${rfqIds.length} RFQ${rfqIds.length !== 1 ? 's' : ''} created successfully`)
-      // Navigate back to the enquiry if one was linked, otherwise go to RFQ list
-      const linkedEnquiryId = watch('enquiryId')
-      if (linkedEnquiryId) {
-        navigate({ to: '/enquiries/$id', params: { id: linkedEnquiryId } })
-      } else {
-        navigate({ to: '/rfqs' })
-      }
+      toast.success('RFQ created successfully')
+      // Navigate to the new RFQ's detail page so the customer can review and send it.
+      navigate({ to: '/rfqs/$id', params: { id: rfqId } })
     },
     onError: () => toast.error('Failed to create RFQ'),
   })

@@ -70,11 +70,26 @@ export function RFQsPage() {
       header: 'Doc #',
       cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
     },
-    { accessorKey: 'title', header: 'Title' },
     {
-      accessorKey: 'supplierName',
-      header: 'Supplier',
-      cell: ({ getValue }) => <span>{(getValue() as string) || '—'}</span>,
+      id: 'suppliers',
+      header: 'Suppliers',
+      cell: ({ row }) => {
+        const { ownSupplierStatus, invitedSupplierCount, respondedSupplierCount } = row.original
+        // Supplier role sees their own invitation status; Customer/Admin see counts.
+        if (ownSupplierStatus) {
+          const supplierStatusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+            Invited: 'outline',
+            Quoted: 'default',
+            Declined: 'destructive',
+          }
+          return <Badge variant={supplierStatusColors[ownSupplierStatus] ?? 'outline'}>{ownSupplierStatus}</Badge>
+        }
+        return (
+          <span className="text-sm text-muted-foreground">
+            {respondedSupplierCount}/{invitedSupplierCount} responded
+          </span>
+        )
+      },
     },
     {
       accessorKey: 'status',
