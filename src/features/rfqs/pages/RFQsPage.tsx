@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Send, Lock, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
+import { supplierStatusBadgeVariant } from '@/lib/utils'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -77,12 +78,7 @@ export function RFQsPage() {
         const { ownSupplierStatus, invitedSupplierCount, respondedSupplierCount } = row.original
         // Supplier role sees their own invitation status; Customer/Admin see counts.
         if (ownSupplierStatus) {
-          const supplierStatusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-            Invited: 'outline',
-            Quoted: 'default',
-            Declined: 'destructive',
-          }
-          return <Badge variant={supplierStatusColors[ownSupplierStatus] ?? 'outline'}>{ownSupplierStatus}</Badge>
+          return <Badge variant={supplierStatusBadgeVariant(ownSupplierStatus)}>{ownSupplierStatus}</Badge>
         }
         return (
           <span className="text-sm text-muted-foreground">

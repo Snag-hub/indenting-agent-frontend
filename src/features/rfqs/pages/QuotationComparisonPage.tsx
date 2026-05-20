@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { rfqApi, type SupplierQuotationComparisonDto } from '@/features/rfqs/api/rfqApi'
 import { quotationApi } from '@/features/quotations/api/quotationApi'
@@ -14,26 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ArrowLeft, ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { format } from 'date-fns'
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-function formatCurrency(amount: number | null | undefined, currency?: string | null) {
-  if (amount == null) return '—'
-  const sym = currency ?? 'USD'
-  try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: sym, minimumFractionDigits: 2 }).format(amount)
-  } catch {
-    return `${sym} ${amount.toFixed(2)}`
-  }
-}
-
-const inviteStatusBadge = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  switch (status) {
-    case 'Quoted': return 'default'
-    case 'Declined': return 'destructive'
-    default: return 'outline'   // Invited / Pending
-  }
-}
+import { formatCurrency, supplierStatusBadgeVariant } from '@/lib/utils'
 
 // ─── component ───────────────────────────────────────────────────────────────
 
@@ -92,6 +73,105 @@ export function QuotationComparisonPage() {
   // ── currency — use the first quoted supplier's currency as display currency ─
   const displayCurrency = supplierQuotations.find(s => s.currency)?.currency ?? 'USD'
 
+  // ── pre-build all table rows so toggling expand doesn't re-run on every render ─
+  const tableRows = useMemo(() => requestedItems.flatMap((reqItem) => {
+    const rows: React.ReactNode[] = []
+
+    const hasAnyVariants = supplierQuotations.some(sq =>
+      sq.quotedItems.find(qi => qi.rfqItemId === reqItem.rfqItemId)?.variants?.length
+    )
+    const isExpanded = expandedItems.has(reqItem.rfqItemId)
+
+    rows.push(
+      <TableRow
+        key={reqItem.rfqItemId}
+        className={hasAnyVariants ? 'cursor-pointer select-none' : ''}
+        onClick={() => hasAnyVariants && toggleExpand(reqItem.rfqItemId)}
+      >
+        <TableCell className="text-sm font-medium">
+          <div className="flex items-center gap-1">
+            {hasAnyVariants && (
+              isExpanded
+                ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <div>
+              <div>{reqItem.itemName}</div>
+              {reqItem.notes && (
+                <div className="text-xs text-muted-foreground">{reqItem.notes}</div>
+              )}
+            </div>
+          </div>
+        </TableCell>
+        <TableCell className="text-center text-sm">{reqItem.quantityRequested}</TableCell>
+        {supplierQuotations.map((sq) => {
+          const qi = sq.quotedItems.find(q => q.rfqItemId === reqItem.rfqItemId)
+          if (sq.invitationStatus === 'Declined') {
+            return (
+              <TableCell key={sq.supplierId} className="text-right text-xs text-muted-foreground italic">
+                Declined
+              </TableCell>
+            )
+          }
+          if (!qi || sq.invitationStatus === 'Invited') {
+            return (
+              <TableCell key={sq.supplierId} className="text-right text-muted-foreground text-sm">—</TableCell>
+            )
+          }
+          return (
+            <TableCell key={sq.supplierId} className="text-right text-sm tabular-nums">
+              {qi.unitPrice != null
+                ? <>{formatCurrency(qi.unitPrice, sq.currency)} <span className="text-muted-foreground text-xs">/ {formatCurrency(qi.totalPrice, sq.currency)}</span></>
+                : <span className="text-muted-foreground">—</span>
+              }
+            </TableCell>
+          )
+        })}
+      </TableRow>
+    )
+
+    if (hasAnyVariants && isExpanded) {
+      const allVariantLabels = new Map<string, string>()
+      supplierQuotations.forEach((sq) => {
+        const qi = sq.quotedItems.find(q => q.rfqItemId === reqItem.rfqItemId)
+        qi?.variants?.forEach((v) => {
+          const key = v.supplierItemVariantId
+          if (!allVariantLabels.has(key)) {
+            allVariantLabels.set(key, v.dimensionSummary ?? v.sku ?? key.slice(0, 8))
+          }
+        })
+      })
+
+      allVariantLabels.forEach((label, variantId) => {
+        rows.push(
+          <TableRow key={`${reqItem.rfqItemId}-v-${variantId}`} className="bg-muted/30">
+            <TableCell className="text-xs pl-10 py-2 text-muted-foreground">
+              {label}
+            </TableCell>
+            <TableCell className="py-2" />
+            {supplierQuotations.map((sq) => {
+              const qi = sq.quotedItems.find(q => q.rfqItemId === reqItem.rfqItemId)
+              const v = qi?.variants?.find(vv => vv.supplierItemVariantId === variantId)
+              if (!v) {
+                return <TableCell key={sq.supplierId} className="text-right text-xs py-2 text-muted-foreground">—</TableCell>
+              }
+              return (
+                <TableCell key={sq.supplierId} className="text-right text-xs py-2 tabular-nums">
+                  {formatCurrency(v.unitPrice, sq.currency)}{' '}
+                  <span className="text-muted-foreground">× {v.quantity}</span>
+                  {' = '}
+                  {formatCurrency(v.totalPrice, sq.currency)}
+                </TableCell>
+              )
+            })}
+          </TableRow>
+        )
+      })
+    }
+
+    return rows
+  }), [requestedItems, supplierQuotations, expandedItems, toggleExpand])
+
   // ── render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -123,7 +203,7 @@ export function QuotationComparisonPage() {
                     </p>
                   )}
                 </div>
-                <Badge variant={inviteStatusBadge(sq.invitationStatus)} className="shrink-0">
+                <Badge variant={supplierStatusBadgeVariant(sq.invitationStatus)} className="shrink-0">
                   {sq.invitationStatus}
                 </Badge>
               </div>
@@ -205,109 +285,7 @@ export function QuotationComparisonPage() {
                       No items found.
                     </TableCell>
                   </TableRow>
-                ) : (
-                  requestedItems.flatMap((reqItem) => {
-                    const rows: React.ReactNode[] = []
-
-                    // Check whether any supplier has variants for this item
-                    const hasAnyVariants = supplierQuotations.some(sq =>
-                      sq.quotedItems.find(qi => qi.rfqItemId === reqItem.rfqItemId)?.variants?.length
-                    )
-                    const isExpanded = expandedItems.has(reqItem.rfqItemId)
-
-                    // ── main item row ────────────────────────────────────────
-                    rows.push(
-                      <TableRow
-                        key={reqItem.rfqItemId}
-                        className={hasAnyVariants ? 'cursor-pointer select-none' : ''}
-                        onClick={() => hasAnyVariants && toggleExpand(reqItem.rfqItemId)}
-                      >
-                        <TableCell className="text-sm font-medium">
-                          <div className="flex items-center gap-1">
-                            {hasAnyVariants && (
-                              isExpanded
-                                ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            )}
-                            <div>
-                              <div>{reqItem.itemName}</div>
-                              {reqItem.notes && (
-                                <div className="text-xs text-muted-foreground">{reqItem.notes}</div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center text-sm">{reqItem.quantityRequested}</TableCell>
-                        {supplierQuotations.map((sq) => {
-                          const qi = sq.quotedItems.find(q => q.rfqItemId === reqItem.rfqItemId)
-                          if (sq.invitationStatus === 'Declined') {
-                            return (
-                              <TableCell key={sq.supplierId} className="text-right text-xs text-muted-foreground italic">
-                                Declined
-                              </TableCell>
-                            )
-                          }
-                          if (!qi || sq.invitationStatus === 'Invited') {
-                            return (
-                              <TableCell key={sq.supplierId} className="text-right text-muted-foreground text-sm">—</TableCell>
-                            )
-                          }
-                          return (
-                            <TableCell key={sq.supplierId} className="text-right text-sm tabular-nums">
-                              {qi.unitPrice != null
-                                ? <>{formatCurrency(qi.unitPrice, sq.currency)} <span className="text-muted-foreground text-xs">/ {formatCurrency(qi.totalPrice, sq.currency)}</span></>
-                                : <span className="text-muted-foreground">—</span>
-                              }
-                            </TableCell>
-                          )
-                        })}
-                      </TableRow>
-                    )
-
-                    // ── variant sub-rows ─────────────────────────────────────
-                    if (hasAnyVariants && isExpanded) {
-                      // Collect the union of all variant dimension summaries across suppliers
-                      const allVariantLabels = new Map<string, string>()
-                      supplierQuotations.forEach((sq) => {
-                        const qi = sq.quotedItems.find(q => q.rfqItemId === reqItem.rfqItemId)
-                        qi?.variants?.forEach((v) => {
-                          const key = v.supplierItemVariantId
-                          if (!allVariantLabels.has(key)) {
-                            allVariantLabels.set(key, v.dimensionSummary ?? v.sku ?? key.slice(0, 8))
-                          }
-                        })
-                      })
-
-                      allVariantLabels.forEach((label, variantId) => {
-                        rows.push(
-                          <TableRow key={`${reqItem.rfqItemId}-v-${variantId}`} className="bg-muted/30">
-                            <TableCell className="text-xs pl-10 py-2 text-muted-foreground">
-                              {label}
-                            </TableCell>
-                            <TableCell className="py-2" />
-                            {supplierQuotations.map((sq) => {
-                              const qi = sq.quotedItems.find(q => q.rfqItemId === reqItem.rfqItemId)
-                              const v = qi?.variants?.find(vv => vv.supplierItemVariantId === variantId)
-                              if (!v) {
-                                return <TableCell key={sq.supplierId} className="text-right text-xs py-2 text-muted-foreground">—</TableCell>
-                              }
-                              return (
-                                <TableCell key={sq.supplierId} className="text-right text-xs py-2 tabular-nums">
-                                  {formatCurrency(v.unitPrice, sq.currency)}{' '}
-                                  <span className="text-muted-foreground">× {v.quantity}</span>
-                                  {' = '}
-                                  {formatCurrency(v.totalPrice, sq.currency)}
-                                </TableCell>
-                              )
-                            })}
-                          </TableRow>
-                        )
-                      })
-                    }
-
-                    return rows
-                  })
-                )}
+                ) : tableRows}
               </TableBody>
             </Table>
           </div>

@@ -28,6 +28,7 @@ import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
+import { supplierStatusBadgeVariant } from '@/lib/utils'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -190,7 +191,7 @@ export function RFQDetailPage() {
 
   // Find this supplier's own RFQSupplier row (for the Decline button).
   const ownSupplierRow = role === 'Supplier'
-    ? rfq.suppliers.find(s => s.status !== 'Declined')
+    ? rfq.suppliers.find(s => s.supplierId === user?.supplierId)
     : undefined
 
   return (
@@ -343,17 +344,11 @@ export function RFQDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rfq.suppliers.map((s) => {
-                const supplierStatusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-                  Invited: 'outline',
-                  Quoted: 'default',
-                  Declined: 'destructive',
-                }
-                return (
+              {rfq.suppliers.map((s) => (
                   <TableRow key={s.supplierId}>
                     <TableCell className="font-medium">{s.supplierName}</TableCell>
                     <TableCell>
-                      <Badge variant={supplierStatusColors[s.status] ?? 'outline'}>{s.status}</Badge>
+                      <Badge variant={supplierStatusBadgeVariant(s.status)}>{s.status}</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(s.invitedAt), 'dd MMM yyyy')}
@@ -365,8 +360,7 @@ export function RFQDetailPage() {
                       {s.declineReason ?? '—'}
                     </TableCell>
                   </TableRow>
-                )
-              })}
+              ))}
             </TableBody>
           </Table>
         </CardContent>
