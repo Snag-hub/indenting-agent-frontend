@@ -17,7 +17,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, ChevronRight, ChevronDown } from 'lucide-react'
+import { useCurrencies } from '@/hooks/useSettings'
 import { format } from 'date-fns'
 import { Route } from '@/routes/_app.quotations.new'
 
@@ -42,6 +44,7 @@ const itemPriceSchema = z.object({
 })
 
 const createQuotationSchema = z.object({
+  currency: z.string().min(1),
   notes: z.string().optional(),
   validUntil: z.string().optional(),
   items: z.array(itemPriceSchema),
@@ -65,6 +68,7 @@ export function CreateQuotationPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set())
+  const { currencies } = useCurrencies()
 
   const { data: rfq, isLoading } = useQuery({
     queryKey: queryKeys.rfqs.detail(rfqId),
@@ -72,9 +76,9 @@ export function CreateQuotationPage() {
     enabled: !!rfqId,
   })
 
-  const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm<CreateQuotationForm>({
+  const { register, control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CreateQuotationForm>({
     resolver: zodResolver(createQuotationSchema),
-    defaultValues: { notes: '', validUntil: '', items: [] },
+    defaultValues: { currency: 'USD', notes: '', validUntil: '', items: [] },
   })
 
   const { fields } = useFieldArray({ control, name: 'items' })
@@ -123,7 +127,7 @@ export function CreateQuotationPage() {
     setIsSubmitting(true)
     try {
       // 1. Create the quotation (backend seeds items at price 0, qty from RFQ)
-      const quotationId = await quotationApi.create(rfqId)
+      const quotationId = await quotationApi.create(rfqId, data.currency)
       // 2. Fetch to get version + item IDs
       const quotation = await quotationApi.get(quotationId)
       const version = quotation.versions[0]
@@ -197,6 +201,20 @@ export function CreateQuotationPage() {
 
       {/* Quotation fields */}
       <div className="space-y-4">
+        <div className="space-y-1">
+          <Label>Quote Currency <span className="text-destructive">*</span></Label>
+          <Select value={watch('currency')} onValueChange={(v) => setValue('currency', v)}>
+            <SelectTrigger className="max-w-xs">
+              <SelectValue placeholder="Select currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {currencies.map(c => (
+                <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">All prices in this quotation are in this currency.</p>
+        </div>
         <div className="space-y-1">
           <Label htmlFor="notes">Notes (optional)</Label>
           <Textarea

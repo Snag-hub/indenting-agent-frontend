@@ -52,25 +52,10 @@ export function QuotationComparisonPage() {
       return next
     })
 
-  // ── loading / empty states ─────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    )
-  }
-
-  if (!comparison) {
-    return <div className="text-muted-foreground">RFQ not found.</div>
-  }
-
-  const { requestedItems, supplierQuotations } = comparison
-  // How many suppliers actually submitted a quotation
+  // Derived values — default to empty arrays so the useMemo below is always called
+  // (hooks must not appear after conditional returns).
+  const { requestedItems = [], supplierQuotations = [] } = comparison ?? {}
   const quotedCount = supplierQuotations.filter(s => s.invitationStatus === 'Quoted').length
-
-  // ── currency — use the first quoted supplier's currency as display currency ─
   const displayCurrency = supplierQuotations.find(s => s.currency)?.currency ?? 'USD'
 
   // ── pre-build all table rows so toggling expand doesn't re-run on every render ─
@@ -120,7 +105,7 @@ export function QuotationComparisonPage() {
           }
           return (
             <TableCell key={sq.supplierId} className="text-right text-sm tabular-nums">
-              {qi.unitPrice != null
+              {qi.unitPrice != null && qi.unitPrice > 0
                 ? <>{formatCurrency(qi.unitPrice, sq.currency)} <span className="text-muted-foreground text-xs">/ {formatCurrency(qi.totalPrice, sq.currency)}</span></>
                 : <span className="text-muted-foreground">—</span>
               }
@@ -171,6 +156,20 @@ export function QuotationComparisonPage() {
 
     return rows
   }), [requestedItems, supplierQuotations, expandedItems, toggleExpand])
+
+  // ── loading / empty states (after all hooks) ───────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  if (!comparison) {
+    return <div className="text-muted-foreground">RFQ not found.</div>
+  }
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (

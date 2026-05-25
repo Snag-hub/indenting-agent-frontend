@@ -5,9 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
 import { proformaInvoiceApi } from '@/features/proformaInvoices/api/proformaInvoiceApi'
-import { deliveryOrderApi } from '@/features/deliveryOrders/api/deliveryOrderApi'
 import { paymentApi } from '@/features/payments/api/paymentApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { MultiStepForm } from '@/components/MultiStepForm'
@@ -22,13 +20,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft } from 'lucide-react'
 import { Route } from '@/routes/_app.payments.new'
+import { useCurrencies } from '@/hooks/useSettings'
 
-function formatCurrency(value: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value)
+function formatCurrency(value: number, currency?: string | null): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency ?? 'USD' }).format(value)
 }
 
 const PAYMENT_METHODS = ['Bank Transfer', 'Wire Transfer', 'Cheque', 'Letter of Credit', 'Cash']
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'PKR', 'CNY']
 
 const createPaymentSchema = z.object({
   amount: z.number().positive('Amount must be greater than 0'),
@@ -46,46 +44,27 @@ const STEPS = [
 ]
 
 export function CreatePaymentPage() {
-  const { poId, piId, doId } = Route.useSearch()
+  const { piId } = Route.useSearch()
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { currencies } = useCurrencies()
 
-  // Determine context: PI > DO > PO
-  const context = piId ? 'pi' : doId ? 'do' : 'po'
-
-  const { data: po, isLoading: poLoading } = useQuery({
-    queryKey: queryKeys.pos.detail(poId!),
-    queryFn: () => purchaseOrderApi.get(poId!),
-    enabled: context === 'po' && !!poId,
-  })
-
-  const { data: pi, isLoading: piLoading } = useQuery({
+  const { data: pi, isLoading } = useQuery({
     queryKey: queryKeys.proformaInvoices.detail(piId!),
     queryFn: () => proformaInvoiceApi.get(piId!),
-    enabled: context === 'pi' && !!piId,
+    enabled: !!piId,
   })
-
-  const { data: doEntity, isLoading: doLoading } = useQuery({
-    queryKey: queryKeys.deliveryOrders.detail(doId!),
-    queryFn: () => deliveryOrderApi.get(doId!),
-    enabled: context === 'do' && !!doId,
-  })
-
-  const isLoading = poLoading || piLoading || doLoading
-
-  // Derive display values from whichever entity was loaded
-  const supplierName = po?.supplierName ?? pi?.supplierName ?? doEntity?.supplierName ?? '—'
-  const entityTitle = po?.documentNumber ?? pi?.documentNumber ?? doEntity?.documentNumber ?? '—'
-  const entityStatus = po?.status ?? pi?.status ?? doEntity?.status ?? '—'
-  const backTo =
-    context === 'pi' ? `/proforma-invoices/${piId}` :
-    context === 'do' ? `/delivery-orders/${doId}` :
-    `/purchase-orders/${poId}`
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CreatePaymentForm>({
     resolver: zodResolver(createPaymentSchema),
-    defaultValues: { amount: 0, currency: 'USD', paymentMethod: '', referenceNumber: '', notes: '' },
+    defaultValues: {
+      amount: pi?.totalAmount ?? 0,
+      currency: pi?.currency ?? 'USD',
+      paymentMethod: '',
+      referenceNumber: '',
+      notes: '',
+    },
   })
 
   const amount = watch('amount')
@@ -97,12 +76,11 @@ export function CreatePaymentPage() {
   const isStep1Valid = amount > 0 && currency.length > 0 && paymentMethod.length > 0 && referenceNumber.trim().length > 0
 
   const onSubmit = handleSubmit(async (data) => {
+    if (!piId) return
     setIsSubmitting(true)
     try {
       const id = await paymentApi.create({
-        purchaseOrderId: context === 'po' ? poId : undefined,
-        proformaInvoiceId: context === 'pi' ? piId : undefined,
-        deliveryOrderId: context === 'do' ? doId : undefined,
+        proformaInvoiceId: piId,
         amount: data.amount,
         currency: data.currency,
         paymentMethod: data.paymentMethod,
@@ -129,32 +107,32 @@ export function CreatePaymentPage() {
     )
   }
 
-  // Context reference card shown at the top of step 1
-  const contextLabel =
-    context === 'pi' ? 'Proforma Invoice Reference' :
-    context === 'do' ? 'Delivery Order Reference' :
-    'Purchase Order Reference'
+  if (!pi) {
+    return <div className="text-muted-foreground">Proforma Invoice not found.</div>
+  }
 
-  const contextCard = (
+  const piCard = (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground font-normal">{contextLabel}</CardTitle>
+        <CardTitle className="text-sm text-muted-foreground font-normal">Proforma Invoice Reference</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
-            <p className="text-xs text-muted-foreground mb-1">
-              {context === 'pi' ? 'PI Title' : context === 'do' ? 'DO Title' : 'PO Title'}
-            </p>
-            <p className="text-sm font-medium">{entityTitle}</p>
+            <p className="text-xs text-muted-foreground mb-1">PI Number</p>
+            <p className="text-sm font-medium">{pi.documentNumber}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-            <p className="text-sm font-medium">{supplierName}</p>
+            <p className="text-sm font-medium">{pi.supplierName}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">PI Total</p>
+            <p className="text-sm font-semibold">{formatCurrency(pi.totalAmount, pi.currency)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Status</p>
-            <Badge variant="default">{entityStatus}</Badge>
+            <Badge variant="default">{pi.status}</Badge>
           </div>
         </div>
       </CardContent>
@@ -165,7 +143,7 @@ export function CreatePaymentPage() {
 
   const step1 = (
     <div className="space-y-6">
-      {contextCard}
+      {piCard}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
@@ -188,8 +166,8 @@ export function CreatePaymentPage() {
               <SelectValue placeholder="Select currency" />
             </SelectTrigger>
             <SelectContent>
-              {CURRENCIES.map(c => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+              {currencies.map(c => (
+                <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -252,14 +230,12 @@ export function CreatePaymentPage() {
             <p className="text-sm font-medium">{referenceNumber || '—'}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-1">
-              {context === 'pi' ? 'Proforma Invoice' : context === 'do' ? 'Delivery Order' : 'Purchase Order'}
-            </p>
-            <p className="text-sm font-medium">{entityTitle}</p>
+            <p className="text-xs text-muted-foreground mb-1">Proforma Invoice</p>
+            <p className="text-sm font-medium">{pi.documentNumber}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-            <p className="text-sm font-medium">{supplierName}</p>
+            <p className="text-sm font-medium">{pi.supplierName}</p>
           </div>
           {notes && (
             <div className="col-span-2">
@@ -282,9 +258,9 @@ export function CreatePaymentPage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader
         title="Record Payment"
-        description={`For: ${entityTitle}`}
+        description={`For PI: ${pi.documentNumber}`}
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: backTo as any })}>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: `/proforma-invoices/${piId}` as any })}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
         }
@@ -295,7 +271,7 @@ export function CreatePaymentPage() {
         currentStep={currentStep}
         onNext={() => setCurrentStep(s => s + 1)}
         onBack={() => currentStep === 0
-          ? navigate({ to: backTo as any })
+          ? navigate({ to: `/proforma-invoices/${piId}` as any })
           : setCurrentStep(s => s - 1)}
         onSubmit={onSubmit}
         isSubmitting={isSubmitting}

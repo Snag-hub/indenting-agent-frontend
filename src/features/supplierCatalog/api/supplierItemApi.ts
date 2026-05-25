@@ -12,12 +12,14 @@ export interface SupplierItemVariantDto {
   id: string
   sku: string | null
   values: SupplierItemVariantValueDto[]
+  quantityTiers: number[]
 }
 
 export interface SupplierItemVariantSummaryDto {
   id: string
   sku: string | null
   dimensionSummary: string
+  quantityTiers: number[]
 }
 
 export interface EnquirySupplierItemVariantDto {
@@ -27,6 +29,7 @@ export interface EnquirySupplierItemVariantDto {
   enquiryQuantity: number
   allocatedQuantity: number
   remainingQuantity: number
+  quantityTiers: number[]
 }
 
 export interface SupplierItemSummaryDto {
@@ -43,6 +46,7 @@ export interface SupplierItemSummaryDto {
   categoryId: string | null
   categoryName: string | null
   createdAt: string
+  quantityTiers: number[]
 }
 
 export interface SupplierItemDetailDto {
@@ -61,6 +65,7 @@ export interface SupplierItemDetailDto {
   categoryName: string | null
   variants: SupplierItemVariantDto[]
   createdAt: string
+  quantityTiers: number[]
 }
 
 export interface CreateSupplierItemPayload {
@@ -70,6 +75,7 @@ export interface CreateSupplierItemPayload {
   batchSize: number
   leadTimeDays: number
   categoryId?: string | null
+  quantityTiers?: number[]
 }
 
 export interface UpdateSupplierItemPayload {
@@ -79,11 +85,13 @@ export interface UpdateSupplierItemPayload {
   batchSize: number
   leadTimeDays: number
   categoryId?: string | null
+  quantityTiers?: number[]
 }
 
 export interface AddVariantPayload {
   sku?: string | null
   values: { dimensionId: string; dimensionValueId: string }[]
+  quantityTiers?: number[]
 }
 
 export const supplierItemApi = {
@@ -116,6 +124,12 @@ export const supplierItemApi = {
 
   removeVariant: (variantId: string) =>
     api.delete(`/my/supplier-items/variants/${variantId}`),
+
+  setItemQuantityTiers: (itemId: string, quantityTiers: number[]) =>
+    api.put(`/my/supplier-items/${itemId}/quantity-tiers`, { quantityTiers }),
+
+  setVariantQuantityTiers: (variantId: string, quantityTiers: number[]) =>
+    api.put(`/my/supplier-items/variants/${variantId}/quantity-tiers`, { quantityTiers }),
 
   getVariants: (id: string) =>
     api.get<SupplierItemVariantSummaryDto[]>(`/supplier-items/${id}/variants`).then((r) => r.data),

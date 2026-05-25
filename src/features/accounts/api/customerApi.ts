@@ -6,6 +6,7 @@ export interface CustomerDto {
   name: string
   contactEmail: string | null
   contactPhone: string | null
+  preferredCurrency: string
   createdAt: string
 }
 
@@ -24,12 +25,14 @@ export interface CreateCustomerPayload {
   name: string
   contactEmail?: string
   contactPhone?: string
+  preferredCurrency: string
 }
 
 export interface UpdateCustomerPayload {
   name: string
   contactEmail?: string
   contactPhone?: string
+  preferredCurrency: string
 }
 
 export const customerApi = {

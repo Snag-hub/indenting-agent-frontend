@@ -67,12 +67,12 @@ export function MyItemsPage() {
   const categoryIdValue = useWatch({ control, name: 'categoryId' })
 
   const create = useMutation({
-    mutationFn: (d: FormData) => supplierItemApi.create({ ...d, categoryId: d.categoryId || null }),
+    mutationFn: (d: FormData) => supplierItemApi.create({ name: d.name, description: d.description, minOrderQty: d.minOrderQty, batchSize: d.batchSize, leadTimeDays: d.leadTimeDays, categoryId: d.categoryId || null }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.supplierItems.mine() }); setFormOpen(false); reset() },
   })
 
   const update = useMutation({
-    mutationFn: (d: FormData) => supplierItemApi.update(editing!.id, { ...d, categoryId: d.categoryId || null }),
+    mutationFn: (d: FormData) => supplierItemApi.update(editing!.id, { name: d.name, description: d.description, minOrderQty: d.minOrderQty, batchSize: d.batchSize, leadTimeDays: d.leadTimeDays, categoryId: d.categoryId || null }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.supplierItems.mine() })
       qc.invalidateQueries({ queryKey: queryKeys.supplierItems.detail(editing!.id) })
@@ -111,6 +111,16 @@ export function MyItemsPage() {
     { accessorKey: 'minOrderQty', header: 'MOQ' },
     { accessorKey: 'batchSize', header: 'Batch Size' },
     { accessorKey: 'leadTimeDays', header: 'Lead Time (days)' },
+    {
+      id: 'orderQtys',
+      header: 'Lot Sizes',
+      cell: ({ row }) => {
+        const tiers = row.original.quantityTiers ?? []
+        return tiers.length > 0
+          ? tiers.map((t) => t.toLocaleString()).join(', ')
+          : <span className="text-muted-foreground text-xs">Any</span>
+      },
+    },
     {
       id: 'actions', header: '',
       cell: ({ row }) => (
@@ -152,7 +162,7 @@ export function MyItemsPage() {
         page={page} pageSize={20} onPageChange={setPage} isLoading={isLoading} />
 
       <Dialog open={formOpen} onOpenChange={(o) => { setFormOpen(o); if (!o) setEditing(undefined) }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Item' : 'New Item'}</DialogTitle>
           </DialogHeader>
@@ -198,6 +208,7 @@ export function MyItemsPage() {
                 <Input type="number" {...register('leadTimeDays', { valueAsNumber: true })} />
               </div>
             </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={create.isPending || update.isPending}>

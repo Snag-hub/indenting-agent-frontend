@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, X, CheckCircle, Ticket, CreditCard } from 'lucide-react'
+import { ArrowLeft, Send, X, CheckCircle, Ticket } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { DeliveryOrderLotsCard } from '@/features/deliveryOrders/components/DeliveryOrderLotsCard'
@@ -116,16 +116,6 @@ export function DeliveryOrderDetailPage() {
                 onClick={() => setDelivering(true)}
               >
                 <CheckCircle className="mr-2 h-4 w-4" /> Confirm Delivery
-              </Button>
-            )}
-
-            {role === 'Customer' && (deliveryOrder.status === 'Dispatched' || deliveryOrder.status === 'Delivered') && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate({ to: '/payments/new', search: { doId: id } })}
-              >
-                <CreditCard className="mr-2 h-4 w-4" /> Record Payment
               </Button>
             )}
 

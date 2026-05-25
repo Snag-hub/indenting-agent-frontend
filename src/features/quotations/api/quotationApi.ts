@@ -99,6 +99,7 @@ export interface UpdateQuotationItemInput {
 export interface ReviseQuotationInput {
   notes?: string;
   validUntil?: string;
+  currency?: string;
 }
 
 export const quotationApi = {
@@ -113,8 +114,8 @@ export const quotationApi = {
       .get<PagedResult<QuotationSummaryDto>>("/quotations", { params })
       .then((r) => r.data),
 
-  create: (rfqId: string) =>
-    api.post<string>("/quotations", { rfqId }).then((r) => r.data),
+  create: (rfqId: string, currency = 'USD') =>
+    api.post<string>("/quotations", { rfqId, currency }).then((r) => r.data),
 
   get: (id: string): Promise<QuotationDetailDto> =>
     api.get<QuotationDetailDto>(`/quotations/${id}`).then((r) => r.data),

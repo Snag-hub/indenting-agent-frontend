@@ -6,6 +6,7 @@ export interface SupplierDto {
   name: string
   contactEmail: string | null
   contactPhone: string | null
+  preferredCurrency: string
   createdAt: string
 }
 
@@ -17,12 +18,14 @@ export interface CreateSupplierPayload {
   name: string
   contactEmail?: string
   contactPhone?: string
+  preferredCurrency: string
 }
 
 export interface UpdateSupplierPayload {
   name: string
   contactEmail?: string
   contactPhone?: string
+  preferredCurrency: string
 }
 
 export const supplierApi = {

@@ -21,40 +21,30 @@ export interface RFQItemDto {
   variants: RFQItemVariantDto[];
 }
 
-/** One invited supplier on an RFQ + their response state. */
-export interface RFQSupplierDto {
-  supplierId: string;
-  supplierName: string;
-  /** "Invited" | "Quoted" | "Declined" */
-  status: string;
-  invitedAt: string;
-  respondedAt?: string | null;
-  declineReason?: string | null;
-}
-
-/** Summary row in the RFQ list. */
+/** Summary row in the RFQ list — one supplier per RFQ. */
 export interface RFQSummaryDto {
   id: string;
-  invitedSupplierCount: number;
-  respondedSupplierCount: number;
-  /** null for Customer/Admin; one of Invited/Quoted/Declined for Supplier. */
-  ownSupplierStatus?: string | null;
+  supplierId: string;
+  supplierName: string;
   customerName?: string;
   status: string;
+  declineReason?: string | null;
   itemCount: number;
   dueDate?: string;
   createdAt: string;
   documentNumber: string;
 }
 
-/** Full RFQ detail — N invited suppliers. */
+/** Full RFQ detail — one supplier per RFQ after the per-supplier split. */
 export interface RFQDetailDto {
   id: string;
   enquiryId?: string;
   enquiryDocumentNumber?: string;
-  suppliers: RFQSupplierDto[];
+  supplierId: string;
+  supplierName: string;
   notes?: string;
   status: string;
+  declineReason?: string | null;
   dueDate?: string;
   items: RFQItemDto[];
   createdAt: string;
@@ -87,7 +77,7 @@ export interface QuotedItemComparisonDto {
 export interface SupplierQuotationComparisonDto {
   supplierId: string;
   supplierName: string;
-  /** "Invited" | "Quoted" | "Declined" */
+  /** RFQ status — "Submitted" | "Declined" | etc. */
   invitationStatus: string;
   declineReason?: string | null;
   quotationId?: string | null;
@@ -131,7 +121,7 @@ export interface CreateRFQInput {
   notes?: string;
   dueDate?: string;
   enquiryId?: string;
-  /** All invited supplier IDs — backend creates ONE RFQ with N RFQSupplier rows. */
+  /** Invited supplier IDs — backend creates one RFQ per supplier. */
   supplierIds: string[];
   items?: {
     supplierItemId: string;
@@ -156,12 +146,14 @@ export interface EnquiryItemForRFQDto {
   enquiryItemId: string;
   supplierItemId: string;
   itemName: string;
+  supplierId: string;
   supplierName: string;
   suggestedQuantity: number;
   notes?: string;
   hasVariants: boolean;
   allocatedQuantity: number;
   availableQuantity: number;
+  quantityTiers?: number[];
 }
 
 // ─── API surface ─────────────────────────────────────────────────────────────
@@ -179,17 +171,17 @@ export const rfqApi = {
       .then((r) => r.data),
 
   /**
-   * POST /rfqs — create ONE RFQ inviting all selected suppliers.
-   * Returns a single RFQ GUID.
+   * POST /rfqs — creates one RFQ per invited supplier.
+   * Returns an array of new RFQ GUIDs (one per supplier).
    */
   create: (data: CreateRFQInput) =>
-    api.post<string>("/rfqs", data).then((r) => r.data),
+    api.post<string[]>("/rfqs", data).then((r) => r.data),
 
-  /** GET /rfqs/:id — full detail including all invited suppliers and items. */
+  /** GET /rfqs/:id — full detail for a single RFQ. */
   get: (id: string): Promise<RFQDetailDto> =>
     api.get<RFQDetailDto>(`/rfqs/${id}`).then((r) => r.data),
 
-  /** GET /rfqs/:id/comparison — side-by-side supplier quotation comparison. */
+  /** GET /rfqs/:id/comparison — quotation comparison for this RFQ's supplier. */
   getComparison: (id: string): Promise<RFQComparisonDto> =>
     api.get<RFQComparisonDto>(`/rfqs/${id}/comparison`).then((r) => r.data),
 
@@ -205,16 +197,13 @@ export const rfqApi = {
   removeItem: (id: string, itemId: string) =>
     api.delete(`/rfqs/${id}/items/${itemId}`).then((r) => r.data),
 
-  /** POST /rfqs/:id/send — transition RFQ from Draft → Submitted (notifies all suppliers). */
+  /** POST /rfqs/:id/send — transition RFQ from Draft → Submitted. */
   send: (id: string) => api.post(`/rfqs/${id}/send`).then((r) => r.data),
 
   /** POST /rfqs/:id/close — transition RFQ to Closed. */
   close: (id: string) => api.post(`/rfqs/${id}/close`).then((r) => r.data),
 
-  /**
-   * POST /rfqs/:id/decline — Supplier declines to quote.
-   * The reason is optional; the body may be omitted entirely for no reason.
-   */
+  /** POST /rfqs/:id/decline — Supplier declines to quote. */
   decline: (id: string, reason?: string) =>
     api.post(`/rfqs/${id}/decline`, { reason }).then((r) => r.data),
 
@@ -233,12 +222,12 @@ export const rfqApi = {
       .then((r) => r.data),
 
   /**
-   * POST /rfqs/:id/clone — clone the RFQ for a new set of suppliers.
-   * Pass an empty array to copy the source RFQ's invited supplier list.
+   * POST /rfqs/:id/clone — clone the RFQ, optionally re-targeting a different supplier.
+   * Omit supplierId to keep the source's supplier.
    * Returns new RFQ GUID.
    */
-  clone: (id: string, supplierIds: string[] = []) =>
+  clone: (id: string, supplierId?: string) =>
     api
-      .post<string>(`/rfqs/${id}/clone`, { supplierIds })
+      .post<string>(`/rfqs/${id}/clone`, supplierId ? { supplierId } : {})
       .then((r) => r.data),
 };

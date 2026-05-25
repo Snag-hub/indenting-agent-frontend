@@ -1,19 +1,22 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supplierApi, type SupplierDto } from '../api/supplierApi'
 import { queryKeys } from '@/lib/queryKeys'
+import { useCurrencies } from '@/hooks/useSettings'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   contactEmail: z.string().email('Invalid email').optional().or(z.literal('')),
   contactPhone: z.string().optional(),
+  preferredCurrency: z.string().min(1, 'Currency is required'),
 })
 
 type FormData = z.infer<typeof schema>
@@ -27,10 +30,11 @@ interface Props {
 export function SupplierFormDialog({ open, onOpenChange, existing }: Props) {
   const qc = useQueryClient()
   const isEdit = !!existing
+  const { currencies } = useCurrencies()
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', contactEmail: '', contactPhone: '' },
+    defaultValues: { name: '', contactEmail: '', contactPhone: '', preferredCurrency: 'USD' },
   })
 
   // Re-populate fields whenever the dialog opens or the target row changes
@@ -41,8 +45,9 @@ export function SupplierFormDialog({ open, onOpenChange, existing }: Props) {
           name: existing.name,
           contactEmail: existing.contactEmail ?? '',
           contactPhone: existing.contactPhone ?? '',
+          preferredCurrency: existing.preferredCurrency ?? 'USD',
         }
-        : { name: '', contactEmail: '', contactPhone: '' })
+        : { name: '', contactEmail: '', contactPhone: '', preferredCurrency: 'USD' })
     }
   }, [open, existing, reset])
 
@@ -91,6 +96,26 @@ export function SupplierFormDialog({ open, onOpenChange, existing }: Props) {
           <div className="space-y-1">
             <Label htmlFor="contactPhone">Phone</Label>
             <Input id="contactPhone" {...register('contactPhone')} />
+          </div>
+          <div className="space-y-1">
+            <Label>Preferred Currency</Label>
+            <Controller
+              control={control}
+              name="preferredCurrency"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.preferredCurrency && <p className="text-xs text-red-500">{errors.preferredCurrency.message}</p>}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>

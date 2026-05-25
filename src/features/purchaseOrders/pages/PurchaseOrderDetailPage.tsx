@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, CheckCircle, Lock, FileText, CreditCard } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Lock, FileText, Pencil, Trash2 } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
@@ -38,6 +38,7 @@ export function PurchaseOrderDetailPage() {
   const role = user?.role
   const [confirming, setConfirming] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const { data: purchaseOrder, isLoading } = useQuery({
     queryKey: queryKeys.pos.detail(id),
@@ -74,6 +75,14 @@ export function PurchaseOrderDetailPage() {
     },
   })
 
+  const deletePO = useMutation({
+    mutationFn: () => purchaseOrderApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.pos.list() })
+      navigate({ to: '/purchase-orders' })
+    },
+  })
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -98,13 +107,31 @@ export function PurchaseOrderDetailPage() {
               {purchaseOrder.status}
             </Badge>
 
-            {role === 'Supplier' && purchaseOrder.status === 'Draft' && (
-              <Button
-                size="sm"
-                onClick={() => setConfirming(true)}
-              >
-                <CheckCircle className="mr-2 h-4 w-4" /> Confirm PO
-              </Button>
+            {role === 'Customer' && purchaseOrder.status === 'Draft' && (
+              <>
+                {purchaseOrder.source === 'Direct' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate({ to: '/purchase-orders/direct/new', search: { editId: id } })}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => setConfirming(true)}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" /> Confirm &amp; Send
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setDeleting(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              </>
             )}
 
             {role === 'Customer' && purchaseOrder.status === 'Confirmed' && (
@@ -130,16 +157,6 @@ export function PurchaseOrderDetailPage() {
 
             {/* DOs are now PI-rooted — supplier must raise a PI first, then create the DO from
                 the PI detail page. This keeps the chain PO → PI → DO single-track. */}
-
-            {role === 'Customer' && purchaseOrder.status === 'Confirmed' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate({ to: '/payments/new', search: { poId: id } })}
-              >
-                <CreditCard className="mr-2 h-4 w-4" /> Record Payment
-              </Button>
-            )}
 
             <Button
               variant="outline"
@@ -231,6 +248,7 @@ export function PurchaseOrderDetailPage() {
             threadId={`PurchaseOrder-${id}`}
             title={`PO ${purchaseOrder.documentNumber}`}
             canPostInternal={user?.role === 'Admin'}
+            disabledReason={purchaseOrder.status === 'Draft' ? 'Confirm this purchase order to unlock messaging.' : undefined}
           />
         </aside>
       </div>
@@ -242,9 +260,9 @@ export function PurchaseOrderDetailPage() {
         onOpenChange={(open) => {
           if (!open) setConfirming(false)
         }}
-        title="Confirm Purchase Order"
-        description="This will confirm the purchase order."
-        confirmLabel="Confirm"
+        title="Confirm & Send Purchase Order"
+        description="This will confirm the purchase order and send it to the supplier. You will no longer be able to edit it."
+        confirmLabel="Confirm & Send"
         onConfirm={() => confirmPO.mutate()}
         isLoading={confirmPO.isPending}
       />
@@ -259,6 +277,19 @@ export function PurchaseOrderDetailPage() {
         confirmLabel="Close"
         onConfirm={() => closePO.mutate()}
         isLoading={closePO.isPending}
+      />
+
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(false)
+        }}
+        title="Delete Purchase Order"
+        description="This will permanently delete the purchase order. This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => deletePO.mutate()}
+        isLoading={deletePO.isPending}
       />
 
     </div>

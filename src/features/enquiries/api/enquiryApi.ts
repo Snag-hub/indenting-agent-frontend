@@ -52,19 +52,26 @@ export interface EnquiryDetailDto {
   notes?: string;
   status: string;
   customerName: string;
+  supplierId?: string | null;
+  supplierName?: string | null;
   items: EnquiryItemDto[];
   createdAt: string;
 }
 
-export interface AvailableEnquiryItemDto {
-  id: string;
-  type: "Master" | "Supplier";
-  resolvedName: string;
-  originalName?: string;
-  supplierName?: string;
+export interface AvailableItemOfferDto {
+  supplierId: string;
+  supplierName: string;
+  supplierItemId: string;
   hasVariants: boolean;
-  customerItemId?: string;
-  supplierItemId?: string;  // For Master type: the linked supplier item ID to use for variant loading; for Supplier type: same as id
+  quantityTiers: number[];   // empty array means "any quantity"
+}
+
+export interface AvailableEnquiryItemDto {
+  id: string;                // Master item id (Type=Master) or SupplierItem id (Type=Supplier)
+  type: "Master" | "Supplier";
+  name: string;
+  resolvedName: string;      // custom-name overlay, falls back to name
+  offers: AvailableItemOfferDto[];  // 1+ entries (one per supplier offering this item)
 }
 
 export const enquiryApi = {
@@ -86,6 +93,22 @@ export const enquiryApi = {
     items?: EnquiryItemInput[];
   }) => api.post<string>("/enquiries", data).then((r) => r.data),
 
+  /**
+   * Create one enquiry per supplier in a single transaction.
+   * Returns the ordered list of created enquiry IDs.
+   */
+  createBatch: (data: {
+    enquiries: {
+      supplierId: string;
+      title?: string;
+      notes?: string;
+      items: EnquiryItemInput[];
+    }[];
+  }) =>
+    api
+      .post<string[]>("/enquiries/batch", data)
+      .then((r) => r.data),
+
   get: (id: string): Promise<EnquiryDetailDto> =>
     api.get<EnquiryDetailDto>(`/enquiries/${id}`).then((r) => r.data),
 
@@ -96,12 +119,27 @@ export const enquiryApi = {
 
   delete: (id: string) => api.delete(`/enquiries/${id}`),
 
+  addItem: (enquiryId: string, data: EnquiryItemInput) =>
+    api.post<string>(`/enquiries/${enquiryId}/items`, data).then((r) => r.data),
+
+  updateItem: (itemId: string, data: { quantity: number; notes?: string }) =>
+    api.put(`/enquiries/items/${itemId}`, data),
+
+  removeItem: (itemId: string) =>
+    api.delete(`/enquiries/items/${itemId}`),
+
   availableItems: (params?: {
     search?: string;
-    supplierId?: string;
+    supplierIds?: string[];   // empty/undefined → all suppliers in tenant
     categoryId?: string;
   }): Promise<AvailableEnquiryItemDto[]> =>
     api
-      .get<AvailableEnquiryItemDto[]>("/enquiries/available-items", { params })
+      .get<AvailableEnquiryItemDto[]>("/enquiries/available-items", {
+        params,
+        // Axios needs explicit "repeat" serializer for List<Guid> → ?supplierIds=...&supplierIds=...
+        paramsSerializer: {
+          indexes: null,   // foo=a&foo=b instead of foo[]=a or foo[0]=a
+        },
+      })
       .then((r) => r.data),
 };

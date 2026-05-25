@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useChildMatches, Outlet } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -22,18 +22,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Plus, Edit2, Copy } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
-import { supplierStatusBadgeVariant } from '@/lib/utils'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
   Submitted: 'default',
   Closed: 'secondary',
+  Declined: 'destructive',
 }
 
 const editRFQSchema = z.object({
@@ -55,6 +55,7 @@ export function RFQDetailPage() {
   const { id } = useParams({ from: '/_app/rfqs/$id' })
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const childMatches = useChildMatches()
   const [sending, setSending] = useState(false)
   const [closing, setClosing] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -156,8 +157,8 @@ export function RFQDetailPage() {
   })
 
   const replicateRFQ = useMutation({
-    // Clone copies the source's supplier list when supplierIds is empty.
-    mutationFn: () => rfqApi.clone(id, []),
+    // Clone without a supplierId keeps the source's supplier.
+    mutationFn: () => rfqApi.clone(id),
     onSuccess: (newId) => {
       qc.invalidateQueries({ queryKey: queryKeys.rfqs.list() })
       setReplicateDialogOpen(false)
@@ -176,6 +177,9 @@ export function RFQDetailPage() {
     onError: () => toast.error('Failed to decline RFQ'),
   })
 
+  // Child route active (e.g. /comparison) — let it render instead of this page.
+  if (childMatches.length > 0) return <Outlet />
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -189,10 +193,8 @@ export function RFQDetailPage() {
     return <div className="text-muted-foreground">RFQ not found.</div>
   }
 
-  // Find this supplier's own RFQSupplier row (for the Decline button).
-  const ownSupplierRow = role === 'Supplier'
-    ? rfq.suppliers.find(s => s.supplierId === user?.supplierId)
-    : undefined
+  // For Supplier role: this RFQ is theirs, so status/declineReason live directly on rfq.
+  const isDeclined = rfq.status === 'Declined'
 
   return (
     <div className="space-y-6">
@@ -244,23 +246,10 @@ export function RFQDetailPage() {
               </Button>
             )}
 
-            {/* Customer: Compare quotations (available for any Submitted RFQ with multiple suppliers) */}
-            {role === 'Customer' && rfq.status === 'Submitted' && rfq.suppliers.length >= 2 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => navigate({ to: '/rfqs/$id/comparison', params: { id } })}
-              >
-                <Eye className="mr-2 h-4 w-4" /> Compare
-              </Button>
-            )}
-
             {/* Supplier-only actions */}
             {role === 'Supplier' && rfq.status === 'Submitted' && (
               alreadyQuoted ? (
                 <Badge variant="secondary">Quotation Submitted</Badge>
-              ) : ownSupplierRow?.status === 'Declined' ? (
-                <Badge variant="destructive">Declined</Badge>
               ) : (
                 <>
                   <Button
@@ -280,6 +269,10 @@ export function RFQDetailPage() {
                   </Button>
                 </>
               )
+            )}
+
+            {role === 'Supplier' && isDeclined && (
+              <Badge variant="destructive">Declined</Badge>
             )}
 
             <Button
@@ -325,44 +318,23 @@ export function RFQDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Invited Suppliers card */}
+      {/* Supplier card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Invited Suppliers ({rfq.suppliers.length})
-          </CardTitle>
+          <CardTitle className="text-base">Supplier</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Invited</TableHead>
-                <TableHead>Responded</TableHead>
-                <TableHead>Decline Reason</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rfq.suppliers.map((s) => (
-                  <TableRow key={s.supplierId}>
-                    <TableCell className="font-medium">{s.supplierName}</TableCell>
-                    <TableCell>
-                      <Badge variant={supplierStatusBadgeVariant(s.status)}>{s.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(s.invitedAt), 'dd MMM yyyy')}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {s.respondedAt ? format(new Date(s.respondedAt), 'dd MMM yyyy') : '—'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {s.declineReason ?? '—'}
-                    </TableCell>
-                  </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="flex items-center gap-4">
+            <p className="font-medium">{rfq.supplierName}</p>
+            {rfq.status === 'Declined' && (
+              <Badge variant="destructive">Declined</Badge>
+            )}
+          </div>
+          {rfq.declineReason && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Decline reason: {rfq.declineReason}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -465,6 +437,7 @@ export function RFQDetailPage() {
                 threadId={`RFQ-${id}`}
                 title={`RFQ ${rfq.documentNumber}`}
                 canPostInternal={user?.role === 'Admin'}
+                disabledReason={rfq.status === 'Draft' ? 'Submit this RFQ to suppliers to unlock messaging.' : undefined}
               />
             </TabsContent>
           </Tabs>
@@ -648,7 +621,7 @@ export function RFQDetailPage() {
         open={sending}
         onOpenChange={(open) => { if (!open) setSending(false) }}
         title="Send RFQ"
-        description={`This will send the RFQ to ${rfq.suppliers.length} invited supplier(s).`}
+        description={`This will send the RFQ to ${rfq.supplierName}.`}
         confirmLabel="Send"
         onConfirm={() => sendRFQ.mutate()}
         isLoading={sendRFQ.isPending}

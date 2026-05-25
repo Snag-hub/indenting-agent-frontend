@@ -1,11 +1,12 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,36 +14,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
-import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
-import { enquiryApi } from '../api/enquiryApi'
+import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, X } from 'lucide-react'
+import { LineItemsEditor, type LineItem, type CatalogItem } from '@/components/LineItemsEditor'
+import { enquiryApi, type EnquiryItemInput } from '../api/enquiryApi'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { useAuthStore } from '@/stores/authStore'
 
-const enquiryItemVariantSchema = z.object({
-  supplierItemVariantId: z.string(),
-  quantity: z.number().positive(),
-  dimensionSummary: z.string().optional(),
-  sku: z.string().nullable().optional(),
-})
-
-const enquiryItemSchema = z.object({
-  supplierItemId: z.string(),
-  availableItemId: z.string(), // tracks which dropdown option is selected (for display)
-  quantity: z.number().positive('Quantity must be greater than 0'),
-  notes: z.string().optional(),
-  variants: z.array(enquiryItemVariantSchema).optional(),
-  hasVariants: z.boolean(),
-  itemName: z.string(),
-})
-
 const createEnquirySchema = z.object({
   enquiryType: z.enum(['General', 'ItemSpecific'] as const),
-  supplierId: z.string().optional(),
   title: z.string().optional(),
   addTitle: z.boolean().default(false),
   notes: z.string().optional(),
-  items: z.array(enquiryItemSchema).optional(),
 })
 
 type CreateEnquiryFormData = z.infer<typeof createEnquirySchema>
@@ -50,13 +33,8 @@ type CreateEnquiryFormData = z.infer<typeof createEnquirySchema>
 export function CreateEnquiryPage() {
   const navigate = useNavigate()
   const customerId = useAuthStore((s) => s.user?.id)
-  const [variantDialogOpen, setVariantDialogOpen] = useState(false)
-  const [selectedItemForVariants, setSelectedItemForVariants] = useState<{
-    index: number
-    availableItemId: string
-    supplierItemId: string
-    itemName: string
-  } | null>(null)
+  const [supplierIds, setSupplierIds] = useState<string[]>([])
+  const [lineItems, setLineItems] = useState<LineItem[]>([])
 
   const form = useForm<CreateEnquiryFormData>({
     resolver: zodResolver(createEnquirySchema) as any,
@@ -65,19 +43,11 @@ export function CreateEnquiryPage() {
       title: '',
       addTitle: false,
       notes: '',
-      items: [],
     },
   })
 
   const enquiryType = form.watch('enquiryType')
-  const supplierId = form.watch('supplierId')
-  const items = form.watch('items')
   const addTitle = form.watch('addTitle')
-
-  const { fields: itemFields, append: appendItem, remove: removeItem, update: updateItem } = useFieldArray({
-    control: form.control,
-    name: 'items',
-  })
 
   // Fetch suppliers for customer
   const { data: suppliers = [] } = useQuery({
@@ -87,120 +57,168 @@ export function CreateEnquiryPage() {
     select: (data) => (data ? data.data : []),
   })
 
-  // Fetch available items for selected supplier
+  // Fetch available items across selected suppliers
   const { data: availableItems = [] } = useQuery({
-    queryKey: ['availableEnquiryItems', supplierId],
-    queryFn: () => enquiryApi.availableItems({ supplierId }),
-    enabled: supplierId !== undefined,
+    queryKey: ['availableEnquiryItems', supplierIds.slice().sort().join(',')],
+    queryFn: () => enquiryApi.availableItems({ supplierIds }),
+    enabled: supplierIds.length > 0,
   })
 
-  // Create enquiry mutation
-  const createMutation = useMutation({
+  // Drop selected supplier IDs that are no longer permitted (defensive)
+  const catalog: CatalogItem[] = useMemo(
+    () =>
+      availableItems.map((i) => ({
+        id: i.id,
+        label: i.resolvedName,
+        offers: i.offers.map((o) => ({
+          supplierId: o.supplierId,
+          supplierName: o.supplierName,
+          supplierItemId: o.supplierItemId,
+          hasVariants: o.hasVariants,
+          quantityTiers: o.quantityTiers,
+        })),
+      })),
+    [availableItems],
+  )
+
+  function toggleSupplier(id: string, checked: boolean) {
+    setSupplierIds((prev) => {
+      const next = checked ? [...prev, id] : prev.filter((s) => s !== id)
+      // Drop line items whose supplier was deselected
+      setLineItems((items) => items.filter((li) => next.includes(li.supplierId)))
+      return next
+    })
+  }
+
+  function removeSupplier(id: string) {
+    setSupplierIds((prev) => prev.filter((s) => s !== id))
+    setLineItems((items) => items.filter((li) => li.supplierId !== id))
+  }
+
+  // Create enquiry / batch mutations
+  const createGeneralMutation = useMutation({
     mutationFn: (data: Parameters<typeof enquiryApi.create>[0]) => enquiryApi.create(data),
     onSuccess: (enquiryId) => {
       navigate({ to: '/enquiries/$id', params: { id: enquiryId } })
     },
   })
 
+  const createBatchMutation = useMutation({
+    mutationFn: (data: Parameters<typeof enquiryApi.createBatch>[0]) => enquiryApi.createBatch(data),
+    onSuccess: (ids) => {
+      if (ids.length === 1) {
+        navigate({ to: '/enquiries/$id', params: { id: ids[0] } })
+      } else {
+        toast.success(`Created ${ids.length} enquiries.`)
+        navigate({ to: '/enquiries' })
+      }
+    },
+  })
+
+  const isSubmitting = createGeneralMutation.isPending || createBatchMutation.isPending
+
   const handleSubmit = () => {
     const data = form.getValues()
 
     if (data.enquiryType === 'General') {
-      createMutation.mutate({
+      createGeneralMutation.mutate({
         enquiryType: 'General',
         title: addTitle ? data.title! : '',
         notes: data.notes || undefined,
         items: [],
       })
-    } else {
-      createMutation.mutate({
-        enquiryType: 'ItemSpecific',
-        supplierId: data.supplierId,
-        title: addTitle ? data.title! : '',
-        notes: data.notes || undefined,
-        items: (data.items ?? []).map((item) => {
-          const hasVariants = item.variants && Array.isArray(item.variants) && item.variants.length > 0
-          const validVariants = hasVariants
-            ? item.variants!.filter((v) => v.quantity && v.quantity > 0)
-            : []
+      return
+    }
 
-          return {
-            supplierItemId: item.supplierItemId,
-            quantity: item.quantity,
-            notes: item.notes || undefined,
-            variants: validVariants.length > 0
+    // ItemSpecific — split lineItems by supplier and create one enquiry per supplier
+    const bySupplier = new Map<string, LineItem[]>()
+    for (const li of lineItems) {
+      if (!bySupplier.has(li.supplierId)) bySupplier.set(li.supplierId, [])
+      bySupplier.get(li.supplierId)!.push(li)
+    }
+
+    const entries = Array.from(bySupplier.entries()).map(([supplierId, items]) => ({
+      supplierId,
+      title: addTitle ? (data.title || undefined) : undefined,
+      notes: data.notes || undefined,
+      items: items.map<EnquiryItemInput>((item) => {
+        const validVariants = item.variants.filter((v) => v.quantity > 0)
+        return {
+          supplierItemId: item.supplierItemId,
+          quantity: item.quantity,
+          notes: item.notes || undefined,
+          variants:
+            validVariants.length > 0
               ? validVariants.map((v) => ({
                   supplierItemVariantId: v.supplierItemVariantId,
                   quantityRequested: v.quantity,
                 }))
               : undefined,
-          }
-        }),
-      })
-    }
+        }
+      }),
+    }))
+
+    createBatchMutation.mutate({ enquiries: entries })
   }
 
-  const handleAddItem = () => {
-    appendItem({
-      supplierItemId: '',
-      availableItemId: '',
-      quantity: 1,
-      itemName: '',
-      hasVariants: false,
-    })
-  }
+  const enquiryTypeField = (
+    <div>
+      <Label htmlFor="enquiryType">Enquiry Type</Label>
+      <Controller
+        control={form.control}
+        name="enquiryType"
+        render={({ field }) => (
+          <Select value={field.value} onValueChange={field.onChange}>
+            <SelectTrigger id="enquiryType">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="General">General Enquiry</SelectItem>
+              <SelectItem value="ItemSpecific">Item-Specific Enquiry</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </div>
+  )
 
-  const handleItemSelect = (itemIndex: number, availableItemId: string) => {
-    const availableItem = availableItems.find((item) => item.id === availableItemId)
-    if (availableItem) {
-      // For Master type items, use the linked supplierItemId for variant loading and as the line item FK.
-      // For Supplier type items, supplierItemId === id.
-      const resolvedSupplierItemId = availableItem.supplierItemId ?? availableItemId
+  const titleToggle = (
+    <div className="border-t pt-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="addTitle"
+          checked={addTitle}
+          onCheckedChange={(checked) => form.setValue('addTitle', !!checked)}
+        />
+        <Label htmlFor="addTitle" className="font-normal cursor-pointer">
+          Add a title (optional)
+        </Label>
+      </div>
+      {addTitle && (
+        <Input id="title" placeholder="Enquiry title" {...form.register('title')} />
+      )}
+    </div>
+  )
 
-      if (availableItem.hasVariants) {
-        setSelectedItemForVariants({
-          index: itemIndex,
-          availableItemId: availableItemId,
-          supplierItemId: resolvedSupplierItemId,
-          itemName: availableItem.resolvedName,
-        })
-        setVariantDialogOpen(true)
-      } else {
-        updateItem(itemIndex, {
-          supplierItemId: resolvedSupplierItemId,
-          availableItemId: availableItemId,
-          quantity: 1,
-          itemName: availableItem.resolvedName,
-          hasVariants: false,
-        })
-      }
-    }
-  }
+  const notesField = (
+    <div>
+      <Label htmlFor="notes">Notes & Description</Label>
+      <Textarea
+        id="notes"
+        placeholder="Provide any additional details for suppliers..."
+        {...form.register('notes')}
+        rows={4}
+      />
+    </div>
+  )
 
-  const handleVariantConfirm = (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => {
-    if (selectedItemForVariants) {
-      const totalQty = variants.reduce((sum, v) => sum + v.quantity, 0)
-      const mappedVariants = variants.map((v) => ({
-        supplierItemVariantId: v.variantId,
-        quantity: v.quantity,
-        dimensionSummary: v.dimensionSummary,
-        sku: v.sku,
-      }))
-      updateItem(selectedItemForVariants.index, {
-        supplierItemId: selectedItemForVariants.supplierItemId,
-        availableItemId: selectedItemForVariants.availableItemId,
-        quantity: totalQty,
-        itemName: selectedItemForVariants.itemName,
-        hasVariants: true,
-        variants: mappedVariants,
-      })
-      setVariantDialogOpen(false)
-      setSelectedItemForVariants(null)
-    }
-  }
+  const enquiriesToCreate = useMemo(() => {
+    const set = new Set(lineItems.map((li) => li.supplierId))
+    return set.size
+  }, [lineItems])
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 p-6">
+    <div className="max-w-3xl mx-auto space-y-6 p-6">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -215,255 +233,102 @@ export function CreateEnquiryPage() {
       <Card>
         <CardContent className="pt-6">
           {enquiryType === 'General' ? (
-            // General enquiry: single form
-            <form
-              onSubmit={form.handleSubmit(handleSubmit)}
-              className="space-y-6"
-            >
-              <div>
-                <Label htmlFor="enquiryType">Enquiry Type</Label>
-                <Controller
-                  control={form.control}
-                  name="enquiryType"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="enquiryType">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="General">General Enquiry</SelectItem>
-                        <SelectItem value="ItemSpecific">Item-Specific Enquiry</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-3 border-t pt-4">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="addTitle"
-                    checked={addTitle}
-                    onCheckedChange={(checked) => form.setValue('addTitle', !!checked)}
-                  />
-                  <Label htmlFor="addTitle" className="font-normal cursor-pointer">
-                    Add a title (optional)
-                  </Label>
-                </div>
-
-                {addTitle && (
-                  <Input
-                    id="title"
-                    placeholder="Enquiry title"
-                    {...form.register('title')}
-                  />
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes & Description</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Provide any additional details for suppliers..."
-                  {...form.register('notes')}
-                  rows={4}
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? 'Creating...' : 'Create Enquiry'}
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              {enquiryTypeField}
+              {titleToggle}
+              {notesField}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating...' : 'Create Enquiry'}
               </Button>
             </form>
           ) : (
-            // ItemSpecific enquiry: 2-step form (Supplier + Items combined, then Review)
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-              <div>
-                <Label htmlFor="enquiryType">Enquiry Type</Label>
-                <Controller
-                  control={form.control}
-                  name="enquiryType"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="enquiryType">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="General">General Enquiry</SelectItem>
-                        <SelectItem value="ItemSpecific">Item-Specific Enquiry</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
+              {enquiryTypeField}
 
-              {/* Supplier Selection */}
-              <div className="border-t pt-4">
-                <Label htmlFor="supplier">Select Supplier</Label>
-                <Controller
-                  control={form.control}
-                  name="supplierId"
-                  render={({ field }) => (
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="supplier">
-                        <SelectValue placeholder="Choose a supplier..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier: typeof suppliers[0]) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {/* Supplier multi-select */}
+              <div className="border-t pt-4 space-y-2">
+                <Label>Suppliers (one enquiry will be created per supplier)</Label>
+                {supplierIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {supplierIds.map((id) => {
+                      const s = suppliers.find((x) => x.id === id)
+                      if (!s) return null
+                      return (
+                        <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                          {s.name}
+                          <button
+                            type="button"
+                            onClick={() => removeSupplier(id)}
+                            className="rounded-full hover:bg-muted p-0.5"
+                            aria-label={`Remove ${s.name}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                )}
+                <div className="border rounded-md max-h-40 overflow-y-auto divide-y">
+                  {suppliers.length === 0 && (
+                    <div className="text-sm text-slate-500 py-2 px-3">No suppliers available.</div>
                   )}
-                />
+                  {suppliers.map((s) => {
+                    const checked = supplierIds.includes(s.id)
+                    return (
+                      <label
+                        key={s.id}
+                        className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-slate-50"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(c) => toggleSupplier(s.id, !!c)}
+                        />
+                        {s.name}
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Items Section */}
-              {supplierId && (
-                <div className="border-t pt-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Items</Label>
-                    <Button
-                      type="button"
-                      onClick={handleAddItem}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Plus className="mr-2 h-4 w-4" /> Add Item
-                    </Button>
-                  </div>
-
-                  {itemFields.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">
-                      No items added. Click "Add Item" to start.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {itemFields.map((field, index) => (
-                        <Card key={field.id} className="bg-slate-50">
-                          <CardContent className="pt-4">
-                            <div className="space-y-3">
-                              <div className="flex items-end gap-2">
-                                <div className="flex-1">
-                                  <Label htmlFor={`item-${index}`} className="text-xs">
-                                    Item
-                                  </Label>
-                                  <Select
-                                    value={items?.[index]?.availableItemId || ''}
-                                    onValueChange={(value) => handleItemSelect(index, value)}
-                                  >
-                                    <SelectTrigger id={`item-${index}`} className="mt-1">
-                                      <SelectValue placeholder="Select item..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {availableItems.map((item) => (
-                                        <SelectItem key={item.id} value={item.id}>
-                                          {item.resolvedName}
-                                          {item.hasVariants && ' (variants)'}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeItem(index)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              {!items?.[index]?.hasVariants && (
-                                <div>
-                                  <Label htmlFor={`qty-${index}`} className="text-xs">
-                                    Quantity
-                                  </Label>
-                                  <Input
-                                    id={`qty-${index}`}
-                                    type="number"
-                                    min="1"
-                                    className="mt-1"
-                                    {...form.register(`items.${index}.quantity`, {
-                                      valueAsNumber: true,
-                                    })}
-                                  />
-                                </div>
-                              )}
-
-                              {items?.[index]?.hasVariants && items[index]?.variants && (
-                                <div className="rounded bg-white p-2 text-sm">
-                                  <p className="font-medium text-xs">Variants selected:</p>
-                                  <div className="mt-1 space-y-1">
-                                    {items[index].variants.map((v, vIdx) => (
-                                      <p key={vIdx} className="text-xs text-muted-foreground">
-                                        {v.dimensionSummary || v.sku || `Variant ${vIdx + 1}`} — Qty {v.quantity}
-                                      </p>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+              {supplierIds.length > 0 && (
+                <div className="border-t pt-4">
+                  <LineItemsEditor
+                    items={lineItems}
+                    catalog={catalog}
+                    onAdd={(item) => setLineItems((prev) => [...prev, item])}
+                    onAddMany={(items) => setLineItems((prev) => [...prev, ...items])}
+                    onRemove={(id) => setLineItems((prev) => prev.filter((i) => i.id !== id))}
+                    onUpdate={(id, patch) =>
+                      setLineItems((prev) =>
+                        prev.map((i) => (i.id === id ? { ...i, ...patch } : i)),
+                      )
+                    }
+                    emptyMessage='No items added. Click "Add Item" to start.'
+                  />
                 </div>
               )}
 
-              {/* Title Toggle */}
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="addTitle"
-                    checked={addTitle}
-                    onCheckedChange={(checked) => form.setValue('addTitle', !!checked)}
-                  />
-                  <Label htmlFor="addTitle" className="font-normal cursor-pointer">
-                    Add a title (optional)
-                  </Label>
-                </div>
-                {addTitle && (
-                  <Input
-                    id="title"
-                    placeholder="Enquiry title"
-                    {...form.register('title')}
-                  />
-                )}
-              </div>
+              {titleToggle}
+              {notesField}
 
-              {/* Notes */}
-              <div>
-                <Label htmlFor="notes">Notes & Description (optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Provide any additional details..."
-                  {...form.register('notes')}
-                  rows={3}
-                />
-              </div>
-
-              {/* Inline Review Summary */}
-              {itemFields.length > 0 && (
+              {/* Summary */}
+              {lineItems.length > 0 && (
                 <div className="rounded-lg bg-slate-50 p-4 border">
                   <p className="text-sm font-medium mb-2">Summary</p>
                   <dl className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Supplier:</dt>
-                      <dd className="font-medium">
-                        {suppliers.find((s: typeof suppliers[0]) => s.id === supplierId)?.name}
-                      </dd>
+                      <dt className="text-muted-foreground">Suppliers:</dt>
+                      <dd className="font-medium">{supplierIds.length}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Items:</dt>
-                      <dd className="font-medium">{itemFields.length}</dd>
+                      <dt className="text-muted-foreground">Line items:</dt>
+                      <dd className="font-medium">{lineItems.length}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Enquiries to create:</dt>
+                      <dd className="font-medium">{enquiriesToCreate}</dd>
                     </div>
                   </dl>
                 </div>
@@ -472,24 +337,18 @@ export function CreateEnquiryPage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={createMutation.isPending || !supplierId || itemFields.length === 0}
+                disabled={isSubmitting || supplierIds.length === 0 || lineItems.length === 0}
               >
-                {createMutation.isPending ? 'Creating...' : 'Create Enquiry'}
+                {isSubmitting
+                  ? 'Creating...'
+                  : enquiriesToCreate > 1
+                    ? `Create ${enquiriesToCreate} Enquiries`
+                    : 'Create Enquiry'}
               </Button>
             </form>
           )}
         </CardContent>
       </Card>
-
-      {selectedItemForVariants && (
-        <VariantQuantityDialog
-          open={variantDialogOpen}
-          onOpenChange={setVariantDialogOpen}
-          supplierItemId={selectedItemForVariants.supplierItemId}
-          supplierItemName={selectedItemForVariants.itemName}
-          onConfirm={handleVariantConfirm}
-        />
-      )}
     </div>
   )
 }
