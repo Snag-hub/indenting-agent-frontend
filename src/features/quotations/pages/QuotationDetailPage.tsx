@@ -432,6 +432,7 @@ export function QuotationDetailPage() {
             threadId={`Quotation-${id}`}
             title={`Q ${quotation.documentNumber}`}
             canPostInternal={user?.role === 'Admin'}
+            disabledReason={quotation.status === 'Draft' ? 'Submit this quotation to unlock messaging.' : undefined}
           />
         </aside>
       </div>

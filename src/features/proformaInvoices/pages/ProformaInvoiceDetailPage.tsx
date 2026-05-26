@@ -115,7 +115,7 @@ export function ProformaInvoiceDetailPage() {
               </Button>
             )}
 
-            {role === 'Supplier' && pi.status === 'Acknowledged' && (
+            {role === 'Supplier' && (pi.status === 'Sent' || pi.status === 'Acknowledged') && (
               <Button
                 size="sm"
                 onClick={() => navigate({ to: '/delivery-orders/new', search: { piId: pi.id } })}
@@ -253,6 +253,7 @@ export function ProformaInvoiceDetailPage() {
             threadId={`ProformaInvoice-${id}`}
             title={`PI ${pi.documentNumber}`}
             canPostInternal={user?.role === 'Admin'}
+            disabledReason={pi.status === 'Draft' ? 'Submit this proforma invoice to unlock messaging.' : undefined}
           />
         </aside>
       </div>

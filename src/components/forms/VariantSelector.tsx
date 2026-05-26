@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -47,6 +48,7 @@ interface VariantSelectorProps {
   maxTotal?: number
   initialQuantities?: Record<string, number>
   initialPrices?: Record<string, number>
+  itemQuantityTiers?: number[]
 
   onConfirm: (variants: VariantSelectorResult[]) => void
 }
@@ -62,6 +64,7 @@ export function VariantSelector({
   maxTotal,
   initialQuantities,
   initialPrices,
+  itemQuantityTiers,
   onConfirm,
 }: VariantSelectorProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>(initialQuantities ?? {})
@@ -83,13 +86,14 @@ export function VariantSelector({
   })
 
   // Map variants to common structure
-  const variants = variantsData.map((v: { id: string; sku: string | null; dimensionSummary?: string; values?: Array<{ dimensionName: string; value: string }>; enquiryQuantity?: number; remainingQuantity?: number; allocatedQuantity?: number }) => ({
+  const variants = variantsData.map((v: { id: string; sku: string | null; dimensionSummary?: string; values?: Array<{ dimensionName: string; value: string }>; enquiryQuantity?: number; remainingQuantity?: number; allocatedQuantity?: number; quantityTiers?: number[] }) => ({
     id: v.id,
     sku: v.sku,
     dimensionSummary: v.dimensionSummary || v.values?.map((val) => `${val.dimensionName}: ${val.value}`).join(' | ') || '—',
     enquiryQuantity: v.enquiryQuantity ?? 0,
     remainingQuantity: v.remainingQuantity ?? 0,
     allocatedQuantity: v.allocatedQuantity ?? 0,
+    quantityTiers: v.quantityTiers ?? [],
   }))
 
   // Sync initial quantities when dialog opens
@@ -223,32 +227,55 @@ export function VariantSelector({
                             </TableCell>
                           )}
                           <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={
-                                showEnquiryBalance && variant.remainingQuantity !== undefined
-                                  ? Math.max(0, variant.remainingQuantity)
-                                  : maxTotal !== undefined
-                                    ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
-                                    : undefined
-                              }
-                              value={quantities[variant.id] ?? 0}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10) || 0
-                                if (showEnquiryBalance && variant.remainingQuantity !== undefined) {
-                                  const capped = Math.min(val, variant.remainingQuantity)
-                                  handleQuantityChange(variant.id, capped)
-                                } else {
-                                  const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
-                                  const capped = maxTotal !== undefined
-                                    ? Math.min(val, Math.max(0, maxTotal - otherTotal))
-                                    : val
-                                  handleQuantityChange(variant.id, capped)
+                            {(() => {
+                              const effectiveTiers = variant.quantityTiers.length > 0
+                                ? variant.quantityTiers
+                                : (itemQuantityTiers ?? [])
+                              return effectiveTiers.length > 0 ? (
+                                <Select
+                                  value={quantities[variant.id] ? String(quantities[variant.id]) : '0'}
+                                  onValueChange={(v) => handleQuantityChange(variant.id, Number(v))}
+                                >
+                                  <SelectTrigger className="w-28">
+                                    <SelectValue placeholder="Select qty" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0">— None —</SelectItem>
+                                    {effectiveTiers.map((t) => (
+                                      <SelectItem key={t} value={String(t)}>
+                                        {t.toLocaleString()}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                              <Input
+                                type="number"
+                                min="0"
+                                max={
+                                  showEnquiryBalance && variant.remainingQuantity !== undefined
+                                    ? Math.max(0, variant.remainingQuantity)
+                                    : maxTotal !== undefined
+                                      ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
+                                      : undefined
                                 }
-                              }}
-                              className="w-20"
-                            />
+                                value={quantities[variant.id] ?? 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10) || 0
+                                  if (showEnquiryBalance && variant.remainingQuantity !== undefined) {
+                                    const capped = Math.min(val, variant.remainingQuantity)
+                                    handleQuantityChange(variant.id, capped)
+                                  } else {
+                                    const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
+                                    const capped = maxTotal !== undefined
+                                      ? Math.min(val, Math.max(0, maxTotal - otherTotal))
+                                      : val
+                                    handleQuantityChange(variant.id, capped)
+                                  }
+                                }}
+                                className="w-20"
+                              />
+                            )})()}
                           </TableCell>
                           {showPricing && (
                             <TableCell className="text-right">

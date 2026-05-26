@@ -99,6 +99,7 @@ export interface UpdateQuotationItemInput {
 export interface ReviseQuotationInput {
   notes?: string;
   validUntil?: string;
+  currency?: string;
 }
 
 export const quotationApi = {
@@ -113,8 +114,8 @@ export const quotationApi = {
       .get<PagedResult<QuotationSummaryDto>>("/quotations", { params })
       .then((r) => r.data),
 
-  create: (rfqId: string) =>
-    api.post<string>("/quotations", { rfqId }).then((r) => r.data),
+  create: (rfqId: string, currency = 'USD') =>
+    api.post<string>("/quotations", { rfqId, currency }).then((r) => r.data),
 
   get: (id: string): Promise<QuotationDetailDto> =>
     api.get<QuotationDetailDto>(`/quotations/${id}`).then((r) => r.data),
@@ -144,8 +145,15 @@ export const quotationApi = {
   submit: (id: string) =>
     api.post(`/quotations/${id}/submit`).then((r) => r.data),
 
-  accept: (id: string) =>
-    api.post(`/quotations/${id}/accept`).then((r) => r.data),
+  /**
+   * Accept a quotation. Pass `rejectOthers: true` to auto-reject every other
+   * still-submitted quotation on the same RFQ (the "Accept and reject others"
+   * path from the comparison page).
+   */
+  accept: (id: string, options?: { rejectOthers?: boolean }) =>
+    api
+      .post(`/quotations/${id}/accept`, { rejectOthers: options?.rejectOthers ?? false })
+      .then((r) => r.data),
 
   reject: (id: string, reason?: string) =>
     api.post(`/quotations/${id}/reject`, { reason: reason ?? null }).then((r) => r.data),

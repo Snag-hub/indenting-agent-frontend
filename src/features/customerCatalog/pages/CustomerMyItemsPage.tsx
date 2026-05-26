@@ -295,7 +295,8 @@ export function CustomerMyItemsPage() {
                     >
                       <div className="font-medium">{item.resolvedName}</div>
                       <div className="text-xs text-slate-500">
-                        {item.type} {item.supplierName && `• ${item.supplierName}`}
+                        {item.type}
+                        {item.offers.length > 0 && ` • ${item.offers.map((o) => o.supplierName).join(', ')}`}
                       </div>
                     </button>
                   ))}

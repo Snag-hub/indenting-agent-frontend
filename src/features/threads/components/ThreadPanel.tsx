@@ -19,6 +19,8 @@ interface ThreadPanelProps {
   threadId: string
   title?: string
   canPostInternal?: boolean
+  /** When set, the composer is replaced with this notice (e.g. "Submit this document to unlock messaging"). */
+  disabledReason?: string
 }
 
 const messageSchema = z.object({
@@ -28,7 +30,7 @@ const messageSchema = z.object({
 
 type MessageForm = z.infer<typeof messageSchema>
 
-export function ThreadPanel({ threadId, title, canPostInternal = false }: ThreadPanelProps) {
+export function ThreadPanel({ threadId, title, canPostInternal = false, disabledReason }: ThreadPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
@@ -259,6 +261,13 @@ export function ThreadPanel({ threadId, title, canPostInternal = false }: Thread
 
       {/* Message input */}
       <div className="border-t p-4 space-y-3">
+        {disabledReason ? (
+          <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-md">
+            <AlertCircle className="h-4 w-4 text-slate-500 shrink-0" />
+            <p className="text-xs text-slate-600">{disabledReason}</p>
+          </div>
+        ) : (
+        <>
         {!isConnected && (
           <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
@@ -309,6 +318,8 @@ export function ThreadPanel({ threadId, title, canPostInternal = false }: Thread
             )}
           </div>
         </form>
+        </>
+        )}
       </div>
 
       {/* Delete confirmation dialog */}

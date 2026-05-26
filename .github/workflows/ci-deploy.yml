@@ -1,0 +1,85 @@
+name: CI & Deploy — Frontend
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ── Build & Lint ─────────────────────────────────────────────────
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (includes TypeScript check)
+        run: npm run build
+
+      - name: Upload dist artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 7
+
+  # ── Deploy web (push to main/master only, not PRs) ────────────────
+  deploy:
+    name: Deploy Frontend to VPS
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    environment:
+      name: production
+      url: https://${{ secrets.DOMAIN }}
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
+
+            echo "==> Pulling latest frontend..."
+            git -C frontend fetch origin
+            git -C frontend reset --hard origin/$(git -C frontend rev-parse --abbrev-ref HEAD)
+
+            echo "==> Building web image..."
+            docker compose build web
+
+            echo "==> Restarting web (api and db stay up)..."
+            docker compose up -d --no-deps web
+
+            echo "==> Health check..."
+            sleep 5
+            if curl -sf http://localhost > /dev/null; then
+              echo "  Frontend healthy ✓"
+            else
+              docker compose logs --tail=30 web
+              exit 1
+            fi
+
+            docker image prune -f
+            echo "==> Done: $(date)"

@@ -17,8 +17,9 @@ import { useAuthStore } from '@/stores/authStore'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
-  Sent: 'default',
+  Submitted: 'default',
   Closed: 'secondary',
+  Declined: 'destructive',
 }
 
 export function RFQsPage() {
@@ -70,11 +71,12 @@ export function RFQsPage() {
       header: 'Doc #',
       cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
     },
-    { accessorKey: 'title', header: 'Title' },
     {
-      accessorKey: 'supplierName',
+      id: 'supplier',
       header: 'Supplier',
-      cell: ({ getValue }) => <span>{(getValue() as string) || '—'}</span>,
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.supplierName}</span>
+      ),
     },
     {
       accessorKey: 'status',

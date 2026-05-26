@@ -18,13 +18,15 @@ import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { PriceTierEditor } from '@/components/PriceTierEditor'
+import { QuantityTierInput } from '@/components/forms/QuantityTierInput'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, Plus, Trash2, PackageCheck } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface DimensionValue { id: string; value: string }
 interface Dimension { id: string; name: string; values: DimensionValue[] }
@@ -48,6 +50,15 @@ export function MyItemDetailPage() {
   const [variantRows, setVariantRows] = useState<VariantValueRow[]>([
     { dimensionId: '', dimensionValueId: '' },
   ])
+  const [newVariantTiers, setNewVariantTiers] = useState<number[]>([])
+
+  // Editing item-level tiers
+  const [editItemTiersOpen, setEditItemTiersOpen] = useState(false)
+  const [editItemTiersValue, setEditItemTiersValue] = useState<number[]>([])
+
+  // Editing tiers for an existing variant
+  const [editTiersVariantId, setEditTiersVariantId] = useState<string | undefined>()
+  const [editTiersValue, setEditTiersValue] = useState<number[]>([])
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.supplierItems.detail(id),
@@ -68,12 +79,14 @@ export function MyItemDetailPage() {
       supplierItemApi.addVariant(id, {
         sku: d.sku || null,
         values: variantRows.filter((r) => r.dimensionId && r.dimensionValueId),
+        quantityTiers: newVariantTiers.length > 0 ? newVariantTiers : undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.supplierItems.detail(id) })
       setVariantOpen(false)
       reset()
       setVariantRows([{ dimensionId: '', dimensionValueId: '' }])
+      setNewVariantTiers([])
     },
   })
 
@@ -83,6 +96,35 @@ export function MyItemDetailPage() {
       qc.invalidateQueries({ queryKey: queryKeys.supplierItems.detail(id) })
       setDeletingVariantId(undefined)
     },
+  })
+
+  const saveItemTiers = useMutation({
+    mutationFn: (tiers: number[]) => supplierItemApi.setItemQuantityTiers(id, tiers),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.supplierItems.detail(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.supplierItems.mine() })
+      // Invalidate customer-facing item queries that carry quantityTiers
+      qc.invalidateQueries({ queryKey: ['availableEnquiryItems'] })
+      qc.invalidateQueries({ queryKey: ['supplierItems', 'browse'] })
+      qc.invalidateQueries({ queryKey: ['supplier-item-variants'] })
+      qc.invalidateQueries({ queryKey: ['variant-selector'] })
+      setEditItemTiersOpen(false)
+      toast.success('Lot sizes saved.')
+    },
+    onError: () => toast.error('Failed to save lot sizes.'),
+  })
+
+  const saveTiers = useMutation({
+    mutationFn: ({ variantId, tiers }: { variantId: string; tiers: number[] }) =>
+      supplierItemApi.setVariantQuantityTiers(variantId, tiers),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.supplierItems.detail(id) })
+      qc.invalidateQueries({ queryKey: ['supplier-item-variants'] })
+      qc.invalidateQueries({ queryKey: ['variant-selector'] })
+      setEditTiersVariantId(undefined)
+      toast.success('Order quantities saved.')
+    },
+    onError: () => toast.error('Failed to save order quantities.'),
   })
 
   const updateRow = (index: number, field: keyof VariantValueRow, value: string) => {
@@ -106,7 +148,13 @@ export function MyItemDetailPage() {
   function openVariantDialog() {
     reset()
     setVariantRows([{ dimensionId: '', dimensionValueId: '' }])
+    setNewVariantTiers([])
     setVariantOpen(true)
+  }
+
+  function openEditTiers(variantId: string, currentTiers: number[]) {
+    setEditTiersVariantId(variantId)
+    setEditTiersValue([...currentTiers])
   }
 
   if (isLoading) {
@@ -172,6 +220,28 @@ export function MyItemDetailPage() {
                 <p className="font-medium text-slate-500">Supplier</p>
                 <p>{data.supplierName}</p>
               </div>
+              <div className="col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-medium text-slate-500">Lot Sizes</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => { setEditItemTiersValue([...(data.quantityTiers ?? [])]); setEditItemTiersOpen(true) }}
+                  >
+                    <PackageCheck className="h-3 w-3 mr-1" /> Edit
+                  </Button>
+                </div>
+                {(data.quantityTiers?.length ?? 0) > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.quantityTiers.map((t) => (
+                      <Badge key={t} variant="secondary">{t.toLocaleString()}</Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-400 italic">Any quantity accepted</span>
+                )}
+              </div>
               {data.description && (
                 <div className="col-span-2">
                   <p className="font-medium text-slate-500">Description</p>
@@ -204,33 +274,57 @@ export function MyItemDetailPage() {
             <div className="space-y-3">
               {(data.variants ?? []).map((variant) => (
                 <Card key={variant.id}>
-                  <CardContent className="flex items-center justify-between py-4">
-                    <div className="space-y-1">
-                      {variant.sku && (
-                        <p className="text-xs text-muted-foreground font-medium">
-                          SKU: <span className="font-mono">{variant.sku}</span>
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        {variant.values.map((v) => (
-                          <Badge key={v.dimensionId} variant="outline">
-                            <span className="text-muted-foreground mr-1">{v.dimensionName}:</span>
-                            {v.value}
-                          </Badge>
-                        ))}
-                        {variant.values.length === 0 && (
-                          <span className="text-xs text-muted-foreground italic">No dimension values</span>
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-2 flex-1">
+                        {variant.sku && (
+                          <p className="text-xs text-muted-foreground font-medium">
+                            SKU: <span className="font-mono">{variant.sku}</span>
+                          </p>
                         )}
+                        <div className="flex flex-wrap gap-2">
+                          {variant.values.map((v) => (
+                            <Badge key={v.dimensionId} variant="outline">
+                              <span className="text-muted-foreground mr-1">{v.dimensionName}:</span>
+                              {v.value}
+                            </Badge>
+                          ))}
+                          {variant.values.length === 0 && (
+                            <span className="text-xs text-muted-foreground italic">No dimension values</span>
+                          )}
+                        </div>
+                        {/* Order quantities */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Order quantities:</span>
+                          {(variant.quantityTiers?.length ?? 0) > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {variant.quantityTiers.map((t) => (
+                                <Badge key={t} variant="secondary" className="text-xs">{t.toLocaleString()}</Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Any</span>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => openEditTiers(variant.id, variant.quantityTiers ?? [])}
+                          >
+                            <PackageCheck className="h-3 w-3 mr-1" /> Edit
+                          </Button>
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive shrink-0"
+                        onClick={() => setDeletingVariantId(variant.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeletingVariantId(variant.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -265,8 +359,32 @@ export function MyItemDetailPage() {
         </TabsContent>
       </Tabs>
 
+      {/* Edit item-level lot sizes dialog */}
+      <Dialog open={editItemTiersOpen} onOpenChange={(o) => { if (!o) setEditItemTiersOpen(false) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Lot Sizes</DialogTitle>
+          </DialogHeader>
+          <QuantityTierInput
+            value={editItemTiersValue}
+            onChange={setEditItemTiersValue}
+            description="Discrete lot sizes you sell this item in. Variants without their own lot sizes will inherit these. Leave empty to allow any quantity."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItemTiersOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => saveItemTiers.mutate(editItemTiersValue)}
+              disabled={saveItemTiers.isPending}
+            >
+              {saveItemTiers.isPending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Variant dialog */}
       <Dialog open={variantOpen} onOpenChange={setVariantOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Variant</DialogTitle>
           </DialogHeader>
@@ -335,6 +453,12 @@ export function MyItemDetailPage() {
               )}
             </div>
 
+            <QuantityTierInput
+              value={newVariantTiers}
+              onChange={setNewVariantTiers}
+              description="Discrete lot sizes for this variant. Leave empty to inherit item-level quantities or allow any."
+            />
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setVariantOpen(false)}>
                 Cancel
@@ -350,6 +474,29 @@ export function MyItemDetailPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit variant tiers dialog */}
+      <Dialog open={!!editTiersVariantId} onOpenChange={(o) => { if (!o) setEditTiersVariantId(undefined) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Order Quantities</DialogTitle>
+          </DialogHeader>
+          <QuantityTierInput
+            value={editTiersValue}
+            onChange={setEditTiersValue}
+            description="Discrete lot sizes for this variant. Leave empty to allow any quantity."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTiersVariantId(undefined)}>Cancel</Button>
+            <Button
+              onClick={() => editTiersVariantId && saveTiers.mutate({ variantId: editTiersVariantId, tiers: editTiersValue })}
+              disabled={saveTiers.isPending}
+            >
+              {saveTiers.isPending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import type { NotificationDto } from "@/features/notifications/api/notificationApi";
@@ -8,6 +9,7 @@ export function useSignalR() {
   const connectionRef = useRef<any>(null);
   const { accessToken } = useAuthStore();
   const { increment } = useNotificationStore();
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (!accessToken) return;
@@ -26,7 +28,8 @@ export function useSignalR() {
 
     connection.on("notification", (_dto: NotificationDto) => {
       increment();
-      // Optionally show toast notification here
+      // Invalidate the list so the panel reflects the new notification immediately
+      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
     });
 
     connection
@@ -44,7 +47,7 @@ export function useSignalR() {
           .catch((err: any) => console.error("SignalR disconnect error:", err));
       }
     };
-  }, [accessToken, increment]);
+  }, [accessToken, increment, qc]);
 
   return connectionRef.current;
 }

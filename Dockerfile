@@ -15,7 +15,7 @@ COPY src ./src
 COPY public ./public
 
 # Install dependencies and build
-RUN npm ci && npm run build
+RUN npm i && npm ci && npm run build
 
 # Production stage
 FROM nginx:alpine

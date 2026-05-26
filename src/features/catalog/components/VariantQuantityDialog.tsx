@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ interface VariantQuantityDialogProps {
   enquiryVariants?: Array<{ id: string; quantity: number }>  // filter to only these variants when creating from enquiry
   enquiryItemVariants?: Array<{ id: string }>  // filter to only these variants when editing enquiry-linked items
   enquiryId?: string  // enquiry ID for fetching enquiry-filtered variants with balance
+  itemQuantityTiers?: number[]  // item-level tiers used as fallback when variant has no own tiers
   onConfirm: (variants: Array<{ variantId: string; quantity: number; dimensionSummary: string; sku: string | null }>) => void
 }
 
@@ -43,6 +45,7 @@ export function VariantQuantityDialog({
   enquiryVariants,
   enquiryItemVariants,
   enquiryId,
+  itemQuantityTiers,
   onConfirm,
 }: VariantQuantityDialogProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>(initialQuantities ?? {})
@@ -66,6 +69,7 @@ export function VariantQuantityDialog({
     dimensionSummary: v.dimensionSummary,
     enquiryQuantity: v.enquiryQuantity ?? 0,
     remainingQuantity: v.remainingQuantity ?? 0,
+    quantityTiers: (v.quantityTiers ?? []) as number[],
   }))
 
 
@@ -191,33 +195,53 @@ export function VariantQuantityDialog({
                             </TableCell>
                           )}
                           <TableCell className="text-right">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={
-                                enquiryId && variant.remainingQuantity !== undefined
-                                  ? Math.max(0, variant.remainingQuantity)
-                                  : maxTotal !== undefined
-                                    ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
-                                    : undefined
-                              }
-                              value={quantities[variant.id] ?? 0}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10) || 0
-                                // If from enquiry, cap at remaining quantity
-                                if (enquiryId && variant.remainingQuantity !== undefined) {
-                                  const capped = Math.min(val, variant.remainingQuantity)
-                                  handleQuantityChange(variant.id, capped)
-                                } else {
-                                  const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
-                                  const capped = maxTotal !== undefined
-                                    ? Math.min(val, Math.max(0, maxTotal - otherTotal))
-                                    : val
-                                  handleQuantityChange(variant.id, capped)
-                                }
-                              }}
-                              className="w-20"
-                            />
+                            {(() => {
+                              const effectiveTiers = variant.quantityTiers.length > 0
+                                ? variant.quantityTiers
+                                : (itemQuantityTiers ?? [])
+                              return effectiveTiers.length > 0 ? (
+                                <Select
+                                  value={quantities[variant.id] ? String(quantities[variant.id]) : '0'}
+                                  onValueChange={(v) => handleQuantityChange(variant.id, Number(v))}
+                                >
+                                  <SelectTrigger className="w-28">
+                                    <SelectValue placeholder="Select qty" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0">— None —</SelectItem>
+                                    {effectiveTiers.map((t) => (
+                                      <SelectItem key={t} value={String(t)}>{t.toLocaleString()}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max={
+                                    enquiryId && variant.remainingQuantity !== undefined
+                                      ? Math.max(0, variant.remainingQuantity)
+                                      : maxTotal !== undefined
+                                        ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
+                                        : undefined
+                                  }
+                                  value={quantities[variant.id] ?? 0}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10) || 0
+                                    if (enquiryId && variant.remainingQuantity !== undefined) {
+                                      handleQuantityChange(variant.id, Math.min(val, variant.remainingQuantity))
+                                    } else {
+                                      const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
+                                      const capped = maxTotal !== undefined
+                                        ? Math.min(val, Math.max(0, maxTotal - otherTotal))
+                                        : val
+                                      handleQuantityChange(variant.id, capped)
+                                    }
+                                  }}
+                                  className="w-20"
+                                />
+                              )
+                            })()}
                           </TableCell>
                         </TableRow>
                       )}
