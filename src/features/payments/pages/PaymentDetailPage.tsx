@@ -158,7 +158,7 @@ export function PaymentDetailPage() {
             </div>
             <div className="sm:col-span-3">
               <p className="text-xs text-muted-foreground mb-1">PO Reference</p>
-              <p className="text-sm font-mono">{payment.purchaseOrderId}</p>
+              <p className="text-sm font-mono">{payment.purchaseOrderDocumentNumber ?? payment.purchaseOrderId}</p>
             </div>
           </div>
         </CardContent>

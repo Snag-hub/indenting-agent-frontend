@@ -14,6 +14,7 @@ export interface PaymentSummaryDto {
 export interface PaymentDetailDto {
   id: string;
   purchaseOrderId: string;
+  purchaseOrderDocumentNumber?: string;
   customerId: string;
   supplierId: string;
   amount: number;

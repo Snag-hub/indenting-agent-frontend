@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { HubConnectionBuilder, HubConnection, LogLevel } from '@microsoft/signalr'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -18,6 +19,7 @@ interface ThreadMessage {
 export const useThreadHub = (threadId: string | null) => {
   const hubConnectionRef = useRef<HubConnection | null>(null)
   const { accessToken } = useAuthStore()
+  const qc = useQueryClient()
 
   // Initialize and connect to ThreadHub
   useEffect(() => {
@@ -35,18 +37,16 @@ export const useThreadHub = (threadId: string | null) => {
           .build()
 
         // Setup event listeners
-        hubConnection.on('MessageReceived', (message: ThreadMessage) => {
-          // Dispatch action to add message to store or state
-          // This would update your message store/state management
-          console.log('Message received:', message)
+        hubConnection.on('MessageReceived', (_message: ThreadMessage) => {
+          qc.invalidateQueries({ queryKey: ['threads', 'messages', threadId] })
         })
 
-        hubConnection.on('MessageUpdated', (data: { messageId: string; updatedMessage: string; updatedAt: string; updatedBy: string }) => {
-          console.log('Message updated:', data)
+        hubConnection.on('MessageUpdated', (_data: { messageId: string; updatedMessage: string; updatedAt: string; updatedBy: string }) => {
+          qc.invalidateQueries({ queryKey: ['threads', 'messages', threadId] })
         })
 
-        hubConnection.on('MessageDeleted', (data: { messageId: string; deletedAt: string; deletedBy: string }) => {
-          console.log('Message deleted:', data)
+        hubConnection.on('MessageDeleted', (_data: { messageId: string; deletedAt: string; deletedBy: string }) => {
+          qc.invalidateQueries({ queryKey: ['threads', 'messages', threadId] })
         })
 
         hubConnection.on('UserJoined', (data: { userId: string; userName: string; timestamp: string }) => {
@@ -99,7 +99,7 @@ export const useThreadHub = (threadId: string | null) => {
           .catch((err) => console.error('Error leaving thread:', err))
       }
     }
-  }, [threadId, accessToken])
+  }, [threadId, accessToken, qc])
 
   // Send message
   const sendMessage = useCallback(
