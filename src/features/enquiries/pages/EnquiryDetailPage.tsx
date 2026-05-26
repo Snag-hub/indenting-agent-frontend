@@ -12,11 +12,12 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, Lock, FileText, MessageSquare, Paperclip, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, Send, Lock, FileText, Paperclip, Trash2, Plus } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer } from '@/components/detail-page'
-import { formatDistanceToNow } from 'date-fns'
+import { PageHeader } from '@/components/PageHeader'
+import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { formatDistanceToNow, format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -121,114 +122,65 @@ export function EnquiryDetailPage() {
   const threadId = `Enquiry-${id}`
 
   return (
-    <DetailPageContainer className="space-y-4">
-      {/* Sticky Summary Header */}
-      <div className="sticky top-0 z-10 bg-background border-b rounded-t-lg shadow-sm">
-        <div className="p-6 space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold">{enquiry.documentNumber}</h1>
-              <p className="text-sm text-muted-foreground">
-                Created {formatDistanceToNow(new Date(enquiry.createdAt), { addSuffix: true })}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: '/enquiries' })}
-            >
+    <DetailPageContainer>
+      <PageHeader
+        title={enquiry.documentNumber}
+        description={`Created ${formatDistanceToNow(new Date(enquiry.createdAt), { addSuffix: true })}`}
+        action={
+          <div className="flex items-center gap-2">
+            <Badge variant={statusColors[enquiry.status]}>{enquiry.status}</Badge>
+            {enquiry.status === 'Draft' && (
+              <Button size="sm" onClick={() => setSubmitting(true)}>
+                <Send className="mr-2 h-4 w-4" /> Submit
+              </Button>
+            )}
+            {enquiry.status === 'Open' && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate({ to: '/rfqs/new', search: { enquiryId: id } })}
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Create RFQ
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setClosing(true)}>
+                  <Lock className="mr-2 h-4 w-4" /> Close
+                </Button>
+              </>
+            )}
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/enquiries' })}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           </div>
+        }
+      />
 
-          <div className="flex items-center justify-between">
-            <Badge variant={statusColors[enquiry.status]} className="text-base px-3 py-1">
-              {enquiry.status}
-            </Badge>
-            <div className="flex items-center gap-2">
-              {enquiry.status === 'Draft' && (
-                <Button
-                  size="sm"
-                  onClick={() => setSubmitting(true)}
-                >
-                  <Send className="mr-2 h-4 w-4" /> Submit
-                </Button>
-              )}
+      <DetailPageGrid>
+        <DetailPageMainColumn>
+          <DetailPageSummary
+            items={[
+              { label: 'Status', value: <Badge variant={statusColors[enquiry.status]}>{enquiry.status}</Badge> },
+              { label: 'Type', value: enquiry.enquiryType },
+              { label: 'Priority', value: enquiry.priority },
+              { label: 'Created', value: format(new Date(enquiry.createdAt), 'dd MMM yyyy') },
+            ]}
+            columns={4}
+          />
 
-              {enquiry.status === 'Open' && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate({ to: '/rfqs/new', search: { enquiryId: id } })}
-                  >
-                    <FileText className="mr-2 h-4 w-4" /> Create RFQ
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setClosing(true)}
-                  >
-                    <Lock className="mr-2 h-4 w-4" /> Close
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+          <Tabs defaultValue="items" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="items">Items</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="attachments" className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4" /> Attachments
+              </TabsTrigger>
+            </TabsList>
 
-      {/* Tabbed Content */}
-      <Tabs defaultValue="overview" className="w-full">
-        <div className="sticky top-40 z-10 bg-background border-b">
-          <TabsList className="grid w-full grid-cols-4 h-auto p-0">
-            <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground py-4">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="items" className="rounded-none border-b-2 border-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground py-4">
-              Items
-            </TabsTrigger>
-            <TabsTrigger value="attachments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground py-4 flex items-center justify-center gap-2">
-              <Paperclip className="h-4 w-4" />
-              Attachments
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="rounded-none border-b-2 border-transparent data-[state=active]:border-b-2 data-[state=active]:border-foreground py-4 flex items-center justify-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Activity
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Type</p>
-                  <p className="text-sm">{enquiry.enquiryType}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Priority</p>
-                  <p className="text-sm">{enquiry.priority}</p>
-                </div>
-              </div>
-
-              {enquiry.notes && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Notes</p>
-                  <p className="text-sm whitespace-pre-wrap">{enquiry.notes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Items Tab */}
-        <TabsContent value="items" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              {enquiry.status === 'Draft' ? (
+            {/* Items Tab */}
+            <TabsContent value="items" className="space-y-4">
+              <Card>
+                <CardContent className="pt-6">
+                  {enquiry.status === 'Draft' ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold">Line Items</span>
@@ -424,27 +376,33 @@ export function EnquiryDetailPage() {
           </div>
         )}
 
-        {/* Attachments Tab */}
-        <TabsContent value="attachments" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <AttachmentPanel entityType="Enquiry" entityId={id} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Notes Tab */}
+            <TabsContent value="notes" className="space-y-4">
+              <Card>
+                <CardContent className="pt-6">
+                  {enquiry.notes ? (
+                    <p className="text-sm whitespace-pre-wrap">{enquiry.notes}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No notes on this enquiry.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        {/* Activity Tab */}
-        <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <ThreadPanel
-                threadId={threadId}
-                disabledReason={enquiry.status === 'Draft' ? 'Submit this enquiry to suppliers to unlock messaging.' : undefined}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            {/* Attachments Tab */}
+            <TabsContent value="attachments" className="space-y-4">
+              <AttachmentPanel entityType="Enquiry" entityId={id} />
+            </TabsContent>
+          </Tabs>
+        </DetailPageMainColumn>
+
+        <DetailPageSidebar>
+          <ThreadPanel
+            threadId={threadId}
+            disabledReason={enquiry.status === 'Draft' ? 'Submit this enquiry to suppliers to unlock messaging.' : undefined}
+          />
+        </DetailPageSidebar>
+      </DetailPageGrid>
 
       <ConfirmDialog
         open={submitting}

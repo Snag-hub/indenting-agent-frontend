@@ -26,7 +26,7 @@ import { ArrowLeft, Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -197,6 +197,14 @@ export function RFQDetailPage() {
   // For Supplier role: this RFQ is theirs, so status/declineReason live directly on rfq.
   const isDeclined = rfq.status === 'Declined'
 
+  const summaryItems = [
+    { label: 'Status', value: <Badge variant={statusColors[rfq.status]}>{rfq.status}</Badge> },
+    ...(rfq.dueDate ? [{ label: 'Due Date', value: format(new Date(rfq.dueDate), 'dd MMM yyyy') }] : []),
+    ...(rfq.enquiryDocumentNumber ? [{ label: 'Linked Enquiry', value: <a href={`/enquiries/${rfq.enquiryId}`} className="text-blue-600 hover:underline font-semibold text-sm">{rfq.enquiryDocumentNumber}</a> }] : []),
+    { label: 'Supplier', value: rfq.supplierName },
+    { label: 'Created', value: format(new Date(rfq.createdAt), 'dd MMM yyyy') },
+  ]
+
   return (
     <DetailPageContainer>
       <PageHeader
@@ -208,57 +216,36 @@ export function RFQDetailPage() {
               {rfq.status}
             </Badge>
 
-            {/* Customer-only actions */}
             {role === 'Customer' && rfq.status === 'Draft' && (
               <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditDialogOpen(true)}
-                >
+                <Button size="sm" variant="outline" onClick={() => setEditDialogOpen(true)}>
                   <Edit2 className="mr-2 h-4 w-4" /> Edit
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setSending(true)}
-                >
+                <Button size="sm" onClick={() => setSending(true)}>
                   <Send className="mr-2 h-4 w-4" /> Send
                 </Button>
               </>
             )}
 
             {role === 'Customer' && rfq.status === 'Submitted' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setClosing(true)}
-              >
+              <Button size="sm" variant="outline" onClick={() => setClosing(true)}>
                 <Lock className="mr-2 h-4 w-4" /> Close
               </Button>
             )}
 
             {role === 'Customer' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setReplicateDialogOpen(true)}
-              >
+              <Button size="sm" variant="outline" onClick={() => setReplicateDialogOpen(true)}>
                 <Copy className="mr-2 h-4 w-4" /> Replicate
               </Button>
             )}
 
-            {/* Supplier-only actions */}
             {role === 'Supplier' && rfq.status === 'Submitted' && (
               alreadyQuoted ? (
                 <Badge variant="secondary">Quotation Submitted</Badge>
               ) : (
                 <>
-                  <Button
-                    size="sm"
-                    onClick={() => navigate({ to: '/quotations/new', search: { rfqId: id } })}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Quotation
+                  <Button size="sm" onClick={() => navigate({ to: '/quotations/new', search: { rfqId: id } })}>
+                    <Plus className="mr-2 h-4 w-4" /> Create Quotation
                   </Button>
                   <Button
                     size="sm"
@@ -276,174 +263,132 @@ export function RFQDetailPage() {
               <Badge variant="destructive">Declined</Badge>
             )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: '/rfqs' })}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/rfqs' })}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           </div>
         }
       />
 
-      {/* Meta info card */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <Badge variant={statusColors[rfq.status]}>{rfq.status}</Badge>
-            </div>
-            {rfq.dueDate && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Due Date</p>
-                <p className="text-sm">{format(new Date(rfq.dueDate), 'dd MMM yyyy')}</p>
-              </div>
-            )}
-            {rfq.enquiryDocumentNumber && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Linked Enquiry</p>
-                <p className="text-sm font-semibold text-blue-600">
-                  <a href={`/enquiries/${rfq.enquiryId}`} className="hover:underline">
-                    {rfq.enquiryDocumentNumber}
-                  </a>
-                </p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Created</p>
-              <p className="text-sm">{format(new Date(rfq.createdAt), 'dd MMM yyyy')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <DetailPageGrid>
+        <DetailPageMainColumn>
+          <DetailPageSummary items={summaryItems} columns={3} />
 
-      {/* Supplier card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Supplier</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <p className="font-medium">{rfq.supplierName}</p>
-            {rfq.status === 'Declined' && (
-              <Badge variant="destructive">Declined</Badge>
-            )}
-          </div>
-          {rfq.declineReason && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Decline reason: {rfq.declineReason}
-            </p>
+          {rfq.status === 'Declined' && rfq.declineReason && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Decline Reason</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{rfq.declineReason}</p>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
 
-      {rfq.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{rfq.notes}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Quotation & Items</CardTitle>
-          {role === 'Customer' && rfq.status === 'Draft' && (
-            <Button size="sm" variant="outline" onClick={() => setAddItemDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Item
-            </Button>
+          {rfq.notes && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm">{rfq.notes}</p>
+              </CardContent>
+            </Card>
           )}
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="items">
-            <TabsList className="mb-4">
-              <TabsTrigger value="items">Line Items</TabsTrigger>
-              <TabsTrigger value="quotations">Quotations</TabsTrigger>
-              <TabsTrigger value="discussion">Discussion</TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="items" className="space-y-4">
-              <DocumentItemsTable
-                mode="rfq"
-                items={rfq.items.map((item) => ({
-                  id: item.id,
-                  name: item.supplierItemName,
-                  supplierName: item.supplierName,
-                  quantity: item.quantity,
-                  notes: item.notes,
-                  variants: item.variants?.map((v) => ({
-                    id: v.id,
-                    dimensionSummary: v.dimensionSummary,
-                    sku: v.sku,
-                    quantity: v.quantityOffered,
-                  })),
-                }))}
-                actions={role === 'Customer' && rfq.status === 'Draft'
-                  ? { onDelete: (item) => setRemovingItemId(item.id) }
-                  : undefined}
-                emptyMessage="No items added yet."
-              />
-            </TabsContent>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Quotation & Items</CardTitle>
+              {role === 'Customer' && rfq.status === 'Draft' && (
+                <Button size="sm" variant="outline" onClick={() => setAddItemDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Item
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="items">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="items">Line Items</TabsTrigger>
+                  <TabsTrigger value="quotations">Quotations</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="quotations" className="space-y-4">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Supplier Name</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Versions</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {!quotationsData?.data || quotationsData.data.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground text-sm py-6">
-                          No quotations yet.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      quotationsData.data.map((quotation) => (
-                        <TableRow key={quotation.id}>
-                          <TableCell className="text-sm font-medium">{quotation.supplierName}</TableCell>
-                          <TableCell className="text-sm">
-                            <Badge variant="outline">{quotation.status}</Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">{quotation.versionCount}</TableCell>
-                          <TableCell className="text-sm text-right">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => navigate({ to: '/quotations/$id', params: { id: quotation.id } })}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                <TabsContent value="items" className="space-y-4">
+                  <DocumentItemsTable
+                    mode="rfq"
+                    items={rfq.items.map((item) => ({
+                      id: item.id,
+                      name: item.supplierItemName,
+                      supplierName: item.supplierName,
+                      quantity: item.quantity,
+                      notes: item.notes,
+                      variants: item.variants?.map((v) => ({
+                        id: v.id,
+                        dimensionSummary: v.dimensionSummary,
+                        sku: v.sku,
+                        quantity: v.quantityOffered,
+                      })),
+                    }))}
+                    actions={role === 'Customer' && rfq.status === 'Draft'
+                      ? { onDelete: (item) => setRemovingItemId(item.id) }
+                      : undefined}
+                    emptyMessage="No items added yet."
+                  />
+                </TabsContent>
+
+                <TabsContent value="quotations" className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Supplier Name</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Versions</TableHead>
+                          <TableHead></TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
+                      </TableHeader>
+                      <TableBody>
+                        {!quotationsData?.data || quotationsData.data.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground text-sm py-6">
+                              No quotations yet.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          quotationsData.data.map((quotation) => (
+                            <TableRow key={quotation.id}>
+                              <TableCell className="text-sm font-medium">{quotation.supplierName}</TableCell>
+                              <TableCell className="text-sm">
+                                <Badge variant="outline">{quotation.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-sm">{quotation.versionCount}</TableCell>
+                              <TableCell className="text-sm text-right">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => navigate({ to: '/quotations/$id', params: { id: quotation.id } })}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
-            <TabsContent value="discussion" className="h-[600px]">
-              <ThreadPanel
-                threadId={`RFQ-${id}`}
-                title={`RFQ ${rfq.documentNumber}`}
-                canPostInternal={user?.role === 'Admin'}
-                disabledReason={rfq.status === 'Draft' ? 'Submit this RFQ to suppliers to unlock messaging.' : undefined}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          <AttachmentPanel entityType="RFQ" entityId={id} />
+        </DetailPageMainColumn>
+
+        <DetailPageSidebar>
+          <ThreadPanel
+            threadId={`RFQ-${id}`}
+            title={`RFQ ${rfq.documentNumber}`}
+            canPostInternal={user?.role === 'Admin'}
+            disabledReason={rfq.status === 'Draft' ? 'Submit this RFQ to suppliers to unlock messaging.' : undefined}
+          />
+        </DetailPageSidebar>
+      </DetailPageGrid>
 
       {/* Edit RFQ Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -615,8 +560,6 @@ export function RFQDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <AttachmentPanel entityType="RFQ" entityId={id} />
 
       <ConfirmDialog
         open={sending}
