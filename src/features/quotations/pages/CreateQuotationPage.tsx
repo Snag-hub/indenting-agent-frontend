@@ -179,7 +179,7 @@ export function CreateQuotationPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Suppliers</p>
-              <p className="text-sm font-medium">{rfq.suppliers.map(s => s.supplierName).join(', ')}</p>
+              <p className="text-sm font-medium">{rfq.supplierName}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Items</p>
