@@ -22,10 +22,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Send, Lock, Plus, Edit2, Copy } from 'lucide-react'
+import { ArrowLeft, Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
+import { DetailPageContainer } from '@/components/detail-page'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -197,7 +198,7 @@ export function RFQDetailPage() {
   const isDeclined = rfq.status === 'Declined'
 
   return (
-    <div className="space-y-6">
+    <DetailPageContainer>
       <PageHeader
         title={`RFQ ${rfq.documentNumber || '(unsaved)'}`}
         description={rfq.dueDate ? `Due: ${format(new Date(rfq.dueDate), 'dd MMM yyyy')}` : undefined}
@@ -619,6 +620,7 @@ export function RFQDetailPage() {
 
       <ConfirmDialog
         open={sending}
+
         onOpenChange={(open) => { if (!open) setSending(false) }}
         title="Send RFQ"
         description={`This will send the RFQ to ${rfq.supplierName}.`}
@@ -646,6 +648,6 @@ export function RFQDetailPage() {
         onConfirm={() => removingItemId && removeItem.mutate(removingItemId)}
         isLoading={removeItem.isPending}
       />
-    </div>
+    </DetailPageContainer>
   )
 }

@@ -16,6 +16,7 @@ import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { DeliveryOrderLotsCard } from '@/features/deliveryOrders/components/DeliveryOrderLotsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
+import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -31,7 +32,6 @@ export function DeliveryOrderDetailPage() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
   const role = user?.role
-
   const [dispatching, setDispatching] = useState(false)
   const [delivering, setDelivering] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -43,169 +43,100 @@ export function DeliveryOrderDetailPage() {
 
   const dispatchDO = useMutation({
     mutationFn: () => deliveryOrderApi.dispatch(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) })
-      setDispatching(false)
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) }); setDispatching(false) },
   })
-
   const deliverDO = useMutation({
     mutationFn: () => deliveryOrderApi.deliver(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) })
-      setDelivering(false)
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) }); setDelivering(false) },
   })
-
   const cancelDO = useMutation({
     mutationFn: () => deliveryOrderApi.cancel(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) })
-      setCancelling(false)
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) }); setCancelling(false) },
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (isLoading) return (
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-48 w-full" />
+    </div>
+  )
 
-  if (!deliveryOrder) {
-    return <div className="text-muted-foreground">Delivery Order not found.</div>
-  }
+  if (!deliveryOrder) return <div className="text-muted-foreground">Delivery Order not found.</div>
 
   return (
-    <div className="space-y-6">
+    <DetailPageContainer>
       <PageHeader
         title={deliveryOrder.documentNumber}
         description={`Supplier: ${deliveryOrder.supplierName}`}
         action={
           <div className="flex items-center gap-2">
-            <Badge variant={statusColors[deliveryOrder.status]}>
-              {deliveryOrder.status}
-            </Badge>
+            <Badge variant={statusColors[deliveryOrder.status]}>{deliveryOrder.status}</Badge>
 
-            {/* Supplier actions */}
             {role === 'Supplier' && deliveryOrder.status === 'Pending' && (
-              <Button
-                size="sm"
-                onClick={() => setDispatching(true)}
-              >
+              <Button size="sm" onClick={() => setDispatching(true)}>
                 <Send className="mr-2 h-4 w-4" /> Dispatch
               </Button>
             )}
-
             {role === 'Supplier' && (deliveryOrder.status === 'Pending' || deliveryOrder.status === 'Dispatched') && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setCancelling(true)}
-              >
+              <Button size="sm" variant="outline" onClick={() => setCancelling(true)}>
                 <X className="mr-2 h-4 w-4" /> Cancel
               </Button>
             )}
-
-            {/* Customer actions */}
             {role === 'Customer' && deliveryOrder.status === 'Dispatched' && (
-              <Button
-                size="sm"
-                onClick={() => setDelivering(true)}
-              >
+              <Button size="sm" onClick={() => setDelivering(true)}>
                 <CheckCircle className="mr-2 h-4 w-4" /> Confirm Delivery
               </Button>
             )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({
-                to: '/tickets/new',
-                search: {
-                  entityType: 'DO',
-                  entityId: deliveryOrder.id,
-                  entityNumber: deliveryOrder.documentNumber,
-                },
-              })}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/tickets/new', search: { entityType: 'DO', entityId: deliveryOrder.id, entityNumber: deliveryOrder.documentNumber } })}>
               <Ticket className="mr-2 h-4 w-4" /> Create Ticket
             </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: '/delivery-orders' })}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/delivery-orders' })}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           </div>
         }
       />
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Main content: 2 columns */}
-        <div className="col-span-2 space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Badge variant={statusColors[deliveryOrder.status]}>{deliveryOrder.status}</Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-                  <p className="text-sm font-medium">{deliveryOrder.supplierName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
-                  <p className="text-sm">{format(new Date(deliveryOrder.createdAt), 'dd MMM yyyy')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <DetailPageGrid>
+        <DetailPageMainColumn>
+          <DetailPageSummary items={[
+            { label: 'Status', value: <Badge variant={statusColors[deliveryOrder.status]}>{deliveryOrder.status}</Badge> },
+            { label: 'Supplier', value: deliveryOrder.supplierName },
+            { label: 'Created', value: format(new Date(deliveryOrder.createdAt), 'dd MMM yyyy') },
+          ]} />
 
           {deliveryOrder.notes && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap text-sm">{deliveryOrder.notes}</p>
-              </CardContent>
+              <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+              <CardContent><p className="whitespace-pre-wrap text-sm">{deliveryOrder.notes}</p></CardContent>
             </Card>
           )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DocumentItemsTable
-            mode="delivery-order"
-            items={deliveryOrder.items.map((item) => ({
-              id: item.id,
-              name: item.supplierItemName,
-              quantity: item.quantityDispatched,
-              notes: item.notes,
-              variants: item.variants?.map((v) => ({
-                id: v.id,
-                dimensionSummary: v.dimensionSummary,
-                sku: v.sku,
-                quantity: v.quantity,
-              })),
-            }))}
-            emptyMessage="No items in this delivery order."
-          />
-        </CardContent>
-        </Card>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Items</CardTitle></CardHeader>
+            <CardContent>
+              <DocumentItemsTable
+                mode="delivery-order"
+                items={deliveryOrder.items.map((item) => ({
+                  id: item.id,
+                  name: item.supplierItemName,
+                  quantity: item.quantityDispatched,
+                  notes: item.notes,
+                  variants: item.variants?.map((v) => ({
+                    id: v.id,
+                    dimensionSummary: v.dimensionSummary,
+                    sku: v.sku,
+                    quantity: v.quantity,
+                  })),
+                }))}
+                emptyMessage="No items in this delivery order."
+              />
+            </CardContent>
+          </Card>
 
-        <DeliveryOrderLotsCard deliveryOrderId={id} />
+          <DeliveryOrderLotsCard deliveryOrderId={id} />
 
-        <VoucherTotalsCard
-          totals={{
+          <VoucherTotalsCard totals={{
             subtotal: deliveryOrder.subtotal,
             discountAmount: deliveryOrder.discountAmount,
             discountPercent: deliveryOrder.discountPercent,
@@ -213,48 +144,29 @@ export function DeliveryOrderDetailPage() {
             shippingAmount: deliveryOrder.shippingAmount,
             totalAmount: deliveryOrder.totalAmount,
             currency: deliveryOrder.currency,
-          }}
-        />
-        </div>
+          }} />
+        </DetailPageMainColumn>
 
-        {/* Right sidebar: 1 column */}
-        <aside>
+        <DetailPageSidebar>
           <ThreadPanel
             threadId={`DeliveryOrder-${id}`}
             title={`DO ${deliveryOrder.documentNumber}`}
-            canPostInternal={user?.role === 'Admin'}
+            canPostInternal={role === 'Admin'}
           />
-        </aside>
-      </div>
+        </DetailPageSidebar>
+      </DetailPageGrid>
 
       <AttachmentPanel entityType="DeliveryOrder" entityId={id} />
 
-      <ConfirmDialog
-        open={dispatching}
-        onOpenChange={(o) => { if (!o) setDispatching(false) }}
-        title="Dispatch Delivery Order"
-        description="Are you sure you want to dispatch this delivery order?"
-        onConfirm={() => dispatchDO.mutate()}
-        isLoading={dispatchDO.isPending}
-      />
-
-      <ConfirmDialog
-        open={delivering}
-        onOpenChange={(o) => { if (!o) setDelivering(false) }}
-        title="Confirm Delivery"
-        description="Are you sure you want to confirm delivery of this order?"
-        onConfirm={() => deliverDO.mutate()}
-        isLoading={deliverDO.isPending}
-      />
-
-      <ConfirmDialog
-        open={cancelling}
-        onOpenChange={(o) => { if (!o) setCancelling(false) }}
-        title="Cancel Delivery Order"
-        description="Are you sure you want to cancel this delivery order?"
-        onConfirm={() => cancelDO.mutate()}
-        isLoading={cancelDO.isPending}
-      />
-    </div>
+      <ConfirmDialog open={dispatching} onOpenChange={(o) => { if (!o) setDispatching(false) }}
+        title="Dispatch Delivery Order" description="Are you sure you want to dispatch this delivery order?"
+        onConfirm={() => dispatchDO.mutate()} isLoading={dispatchDO.isPending} />
+      <ConfirmDialog open={delivering} onOpenChange={(o) => { if (!o) setDelivering(false) }}
+        title="Confirm Delivery" description="Are you sure you want to confirm delivery of this order?"
+        onConfirm={() => deliverDO.mutate()} isLoading={deliverDO.isPending} />
+      <ConfirmDialog open={cancelling} onOpenChange={(o) => { if (!o) setCancelling(false) }}
+        title="Cancel Delivery Order" description="Are you sure you want to cancel this delivery order?"
+        onConfirm={() => cancelDO.mutate()} isLoading={cancelDO.isPending} />
+    </DetailPageContainer>
   )
 }

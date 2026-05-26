@@ -1,0 +1,6 @@
+export { DetailPageContainer } from './DetailPageContainer'
+export { DetailPageGrid } from './DetailPageGrid'
+export { DetailPageMainColumn } from './DetailPageMainColumn'
+export { DetailPageSidebar } from './DetailPageSidebar'
+export { DetailPageSummary } from './DetailPageSummary'
+export type { SummaryItem } from './DetailPageSummary'

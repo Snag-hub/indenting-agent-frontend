@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Send, Lock, FileText, MessageSquare, Paperclip, Trash2, Plus } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
+import { DetailPageContainer } from '@/components/detail-page'
 import { formatDistanceToNow } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -120,7 +121,7 @@ export function EnquiryDetailPage() {
   const threadId = `Enquiry-${id}`
 
   return (
-    <div className="space-y-4">
+    <DetailPageContainer className="space-y-4">
       {/* Sticky Summary Header */}
       <div className="sticky top-0 z-10 bg-background border-b rounded-t-lg shadow-sm">
         <div className="p-6 space-y-4">
@@ -479,6 +480,6 @@ export function EnquiryDetailPage() {
         onConfirm={() => removingItemId && removeItem.mutate(removingItemId)}
         isLoading={removeItem.isPending}
       />
-    </div>
+    </DetailPageContainer>
   )
 }
