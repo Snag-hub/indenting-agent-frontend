@@ -9,15 +9,14 @@ import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, Lock, FileText, Paperclip, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, Send, Lock, FileText, Trash2, Plus } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { PageHeader } from '@/components/PageHeader'
 import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
-import { formatDistanceToNow, format } from 'date-fns'
+import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -79,7 +78,6 @@ export function EnquiryDetailPage() {
     onError: () => toast.error('Failed to update quantity.'),
   })
 
-  // Available-items search (only when picker is open)
   const { data: availableItems = [], isFetching: searchingItems } = useQuery({
     queryKey: ['enquiry-item-picker', id, pickerSearch, enquiry?.supplierId],
     queryFn: () =>
@@ -101,7 +99,6 @@ export function EnquiryDetailPage() {
     onError: () => toast.error('Failed to add item.'),
   })
 
-  // Focus search box when picker opens
   useEffect(() => {
     if (pickerOpen) setTimeout(() => pickerSearchRef.current?.focus(), 50)
   }, [pickerOpen])
@@ -110,7 +107,7 @@ export function EnquiryDetailPage() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     )
   }
@@ -125,7 +122,7 @@ export function EnquiryDetailPage() {
     <DetailPageContainer>
       <PageHeader
         title={enquiry.documentNumber}
-        description={`Created ${formatDistanceToNow(new Date(enquiry.createdAt), { addSuffix: true })}`}
+        description={`${enquiry.enquiryType} · ${enquiry.priority} priority`}
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[enquiry.status]}>{enquiry.status}</Badge>
@@ -167,102 +164,97 @@ export function EnquiryDetailPage() {
             columns={4}
           />
 
-          <Tabs defaultValue="items" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="items">Items</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="attachments" className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4" /> Attachments
-              </TabsTrigger>
-            </TabsList>
+          {enquiry.notes && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm">{enquiry.notes}</p>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Items Tab */}
-            <TabsContent value="items" className="space-y-4">
-              <Card>
-                <CardContent className="pt-6">
-                  {enquiry.status === 'Draft' ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold">Line Items</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setPickerOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Add Item
-                    </Button>
-                  </div>
-                  {enquiry.items.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">No items yet. Click "Add Item" to get started.</p>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-xs text-slate-500 border-b">
-                        <tr>
-                          <th className="pb-2">Item</th>
-                          <th className="pb-2 w-40">Quantity</th>
-                          <th className="pb-2 w-10" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {enquiry.items.map((item) => {
-                          const pendingQty = editingQty[item.id] ?? item.quantity
-                          const dirty = pendingQty !== item.quantity
-                          return (
-                            <tr key={item.id} className="border-b last:border-b-0">
-                              <td className="py-2 pr-4">
-                                <div className="font-medium">{item.itemName}</div>
-                                {item.supplierName && (
-                                  <div className="text-xs text-slate-500">{item.supplierName}</div>
-                                )}
-                              </td>
-                              <td className="py-2 pr-2">
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    value={pendingQty}
-                                    onChange={(e) =>
-                                      setEditingQty((prev) => ({
-                                        ...prev,
-                                        [item.id]: Number(e.target.value) || 1,
-                                      }))
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Items</CardTitle>
+              {enquiry.status === 'Draft' && (
+                <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Item
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {enquiry.status === 'Draft' ? (
+                enquiry.items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No items yet. Click "Add Item" to get started.
+                  </p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs text-muted-foreground border-b">
+                      <tr>
+                        <th className="pb-2">Item</th>
+                        <th className="pb-2 w-40">Quantity</th>
+                        <th className="pb-2 w-10" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enquiry.items.map((item) => {
+                        const pendingQty = editingQty[item.id] ?? item.quantity
+                        const dirty = pendingQty !== item.quantity
+                        return (
+                          <tr key={item.id} className="border-b last:border-b-0">
+                            <td className="py-2 pr-4">
+                              <div className="font-medium">{item.itemName}</div>
+                              {item.supplierName && (
+                                <div className="text-xs text-muted-foreground">{item.supplierName}</div>
+                              )}
+                            </td>
+                            <td className="py-2 pr-2">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={pendingQty}
+                                  onChange={(e) =>
+                                    setEditingQty((prev) => ({
+                                      ...prev,
+                                      [item.id]: Number(e.target.value) || 1,
+                                    }))
+                                  }
+                                  className="w-24 h-8"
+                                />
+                                {dirty && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 text-xs"
+                                    disabled={updateItemQty.isPending}
+                                    onClick={() =>
+                                      updateItemQty.mutate({ itemId: item.id, quantity: pendingQty })
                                     }
-                                    className="w-24 h-8"
-                                  />
-                                  {dirty && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      className="h-8 text-xs"
-                                      disabled={updateItemQty.isPending}
-                                      onClick={() =>
-                                        updateItemQty.mutate({ itemId: item.id, quantity: pendingQty })
-                                      }
-                                    >
-                                      Save
-                                    </Button>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-2">
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => setRemovingItemId(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-400" />
-                                </Button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              ) : enquiry.items && enquiry.items.length > 0 ? (
+                                  >
+                                    Save
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setRemovingItemId(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-400" />
+                              </Button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )
+              ) : (
                 <DocumentItemsTable
                   mode="enquiry"
                   items={enquiry.items.map((item) => ({
@@ -280,154 +272,122 @@ export function EnquiryDetailPage() {
                   }))}
                   emptyMessage="No line items specified."
                 />
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No line items specified.
-                </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Item picker overlay (Draft only) */}
-        {pickerOpen && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Add Item</h3>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setPickerOpen(false); setPickerSearch('') }}
-                >
-                  ×
-                </Button>
-              </div>
-              <Input
-                ref={pickerSearchRef}
-                placeholder="Search items…"
-                value={pickerSearch}
-                onChange={(e) => setPickerSearch(e.target.value)}
-              />
-              <div className="max-h-80 overflow-y-auto border rounded">
-                {searchingItems ? (
-                  <div className="text-center py-4 text-sm text-slate-500">Searching…</div>
-                ) : availableItems.length === 0 ? (
-                  <div className="text-center py-4 text-sm text-slate-500">No items found.</div>
-                ) : (
-                  availableItems.map((catalogItem) => {
-                    // For this enquiry, filter to the offer matching the enquiry's supplier (if any)
-                    const relevantOffers = enquiry.supplierId
-                      ? catalogItem.offers.filter((o) => o.supplierId === enquiry.supplierId)
-                      : catalogItem.offers
-
-                    if (relevantOffers.length === 0) return null
-
-                    const alreadyAddedIds = new Set(enquiry.items.map((i) => i.supplierItemId))
-                    const allAdded = relevantOffers.every((o) => alreadyAddedIds.has(o.supplierItemId))
-
-                    return (
-                      <button
-                        key={catalogItem.id}
-                        type="button"
-                        disabled={allAdded || addItem.isPending}
-                        onClick={() => {
-                          const offer = relevantOffers.find((o) => !alreadyAddedIds.has(o.supplierItemId))
-                          if (!offer) return
-                          addItem.mutate({
-                            supplierItemId: offer.supplierItemId,
-                            quantity: offer.quantityTiers[0] ?? 1,
-                          })
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed border-b last:border-b-0"
-                      >
-                        <div className="text-sm font-medium">{catalogItem.resolvedName}</div>
-                        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
-                          {relevantOffers.map((o) => {
-                            const added = alreadyAddedIds.has(o.supplierItemId)
-                            return (
-                              <span
-                                key={o.supplierItemId}
-                                className={added ? 'line-through text-slate-400' : ''}
-                              >
-                                {o.supplierName}
-                                {o.quantityTiers.length > 0 && (
-                                  <span className="ml-1">
-                                    (lots: {o.quantityTiers.map((t) => t.toLocaleString()).join(', ')})
-                                  </span>
-                                )}
-                              </span>
-                            )
-                          })}
-                        </div>
-                        {allAdded && (
-                          <div className="mt-0.5 text-xs text-slate-400">Already added</div>
-                        )}
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-              <p className="text-xs text-slate-500">
-                Clicking an item adds it with the first available lot size (or qty 1 if no tiers).
-              </p>
-            </div>
-          </div>
-        )}
-
-            {/* Notes Tab */}
-            <TabsContent value="notes" className="space-y-4">
-              <Card>
-                <CardContent className="pt-6">
-                  {enquiry.notes ? (
-                    <p className="text-sm whitespace-pre-wrap">{enquiry.notes}</p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No notes on this enquiry.</p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Attachments Tab */}
-            <TabsContent value="attachments" className="space-y-4">
-              <AttachmentPanel entityType="Enquiry" entityId={id} />
-            </TabsContent>
-          </Tabs>
         </DetailPageMainColumn>
 
         <DetailPageSidebar>
           <ThreadPanel
             threadId={threadId}
-            disabledReason={enquiry.status === 'Draft' ? 'Submit this enquiry to suppliers to unlock messaging.' : undefined}
+            disabledReason={enquiry.status === 'Draft' ? 'Submit this enquiry to unlock messaging.' : undefined}
           />
         </DetailPageSidebar>
       </DetailPageGrid>
 
+      <AttachmentPanel entityType="Enquiry" entityId={id} />
+
+      {/* Item picker overlay */}
+      {pickerOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Add Item</h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => { setPickerOpen(false); setPickerSearch('') }}
+              >
+                ×
+              </Button>
+            </div>
+            <Input
+              ref={pickerSearchRef}
+              placeholder="Search items…"
+              value={pickerSearch}
+              onChange={(e) => setPickerSearch(e.target.value)}
+            />
+            <div className="max-h-80 overflow-y-auto border rounded">
+              {searchingItems ? (
+                <div className="text-center py-4 text-sm text-muted-foreground">Searching…</div>
+              ) : availableItems.length === 0 ? (
+                <div className="text-center py-4 text-sm text-muted-foreground">No items found.</div>
+              ) : (
+                availableItems.map((catalogItem) => {
+                  const relevantOffers = enquiry.supplierId
+                    ? catalogItem.offers.filter((o) => o.supplierId === enquiry.supplierId)
+                    : catalogItem.offers
+
+                  if (relevantOffers.length === 0) return null
+
+                  const alreadyAddedIds = new Set(enquiry.items.map((i) => i.supplierItemId))
+                  const allAdded = relevantOffers.every((o) => alreadyAddedIds.has(o.supplierItemId))
+
+                  return (
+                    <button
+                      key={catalogItem.id}
+                      type="button"
+                      disabled={allAdded || addItem.isPending}
+                      onClick={() => {
+                        const offer = relevantOffers.find((o) => !alreadyAddedIds.has(o.supplierItemId))
+                        if (!offer) return
+                        addItem.mutate({
+                          supplierItemId: offer.supplierItemId,
+                          quantity: offer.quantityTiers[0] ?? 1,
+                        })
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed border-b last:border-b-0"
+                    >
+                      <div className="text-sm font-medium">{catalogItem.resolvedName}</div>
+                      <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {relevantOffers.map((o) => {
+                          const added = alreadyAddedIds.has(o.supplierItemId)
+                          return (
+                            <span key={o.supplierItemId} className={added ? 'line-through opacity-40' : ''}>
+                              {o.supplierName}
+                              {o.quantityTiers.length > 0 && (
+                                <span className="ml-1">
+                                  (lots: {o.quantityTiers.map((t) => t.toLocaleString()).join(', ')})
+                                </span>
+                              )}
+                            </span>
+                          )
+                        })}
+                      </div>
+                      {allAdded && (
+                        <div className="mt-0.5 text-xs text-muted-foreground">Already added</div>
+                      )}
+                    </button>
+                  )
+                })
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Clicking an item adds it with the first available lot size (or qty 1 if no tiers).
+            </p>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog
         open={submitting}
-        onOpenChange={(open) => {
-          if (!open) setSubmitting(false)
-        }}
+        onOpenChange={(open) => { if (!open) setSubmitting(false) }}
         title="Submit Enquiry"
         description="This will change the status to Open and notify relevant parties."
         confirmLabel="Submit"
         onConfirm={() => submitEnquiry.mutate()}
         isLoading={submitEnquiry.isPending}
       />
-
       <ConfirmDialog
         open={closing}
-        onOpenChange={(open) => {
-          if (!open) setClosing(false)
-        }}
+        onOpenChange={(open) => { if (!open) setClosing(false) }}
         title="Close Enquiry"
         description="This will mark the enquiry as Closed."
         confirmLabel="Close"
         onConfirm={() => closeEnquiry.mutate()}
         isLoading={closeEnquiry.isPending}
       />
-
       <ConfirmDialog
         open={!!removingItemId}
         onOpenChange={(open) => { if (!open) setRemovingItemId(null) }}
