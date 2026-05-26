@@ -26,7 +26,7 @@ export const useThreadHub = (threadId: string | null) => {
     const initializeHub = async () => {
       try {
         const hubConnection = new HubConnectionBuilder()
-          .withUrl(`${import.meta.env.VITE_SIGNALR_BASE_URL}/hubs/threads`, {
+          .withUrl(`${import.meta.env.VITE_SIGNALR_BASE_URL ?? ''}/hubs/threads`, {
             accessTokenFactory: () => accessToken,
             withCredentials: true,
           })
