@@ -55,11 +55,21 @@ export function CreateDirectPurchaseOrderPage() {
         supplierId: supplierId!,
         notes: notes || undefined,
         currency,
-        items: lineItems.map(({ supplierItemId, quantity, unitPrice }) => ({
-          supplierItemId,
-          quantity,
-          unitPrice: unitPrice ?? 0,
-        })),
+        items: lineItems.map(({ supplierItemId, quantity, unitPrice, variants }) => {
+          const validVariants = (variants ?? []).filter((v) => v.quantity > 0)
+          return {
+            supplierItemId,
+            quantity,
+            unitPrice: unitPrice ?? 0,
+            variants: validVariants.length > 0
+              ? validVariants.map((v) => ({
+                  supplierItemVariantId: v.supplierItemVariantId,
+                  quantity: v.quantity,
+                  unitPrice: unitPrice ?? undefined,
+                }))
+              : undefined,
+          }
+        }),
       }),
     onSuccess: (id) => {
       toast.success('Purchase order created.')
@@ -73,7 +83,13 @@ export function CreateDirectPurchaseOrderPage() {
   const canSubmit =
     !!supplierId &&
     lineItems.length > 0 &&
-    lineItems.every((i) => i.quantity > 0 && (i.unitPrice ?? 0) >= 0)
+    lineItems.every((i) => {
+      // Variant items: the parent quantity is 0; require at least one variant with qty > 0
+      const hasQty = i.hasVariants
+        ? (i.variants ?? []).some((v) => v.quantity > 0)
+        : i.quantity > 0
+      return hasQty && (i.unitPrice ?? 0) >= 0
+    })
 
   return (
     <div className="space-y-6 max-w-4xl">
