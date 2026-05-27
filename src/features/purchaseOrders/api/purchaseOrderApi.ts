@@ -120,6 +120,9 @@ export const purchaseOrderApi = {
   createDirect: (data: CreateDirectPurchaseOrderInput) =>
     api.post<string>("/purchase-orders/direct", data).then((r) => r.data),
 
+  updateDirect: (id: string, data: CreateDirectPurchaseOrderInput) =>
+    api.put(`/purchase-orders/direct/${id}`, { id, ...data }),
+
   get: (id: string) =>
     api
       .get<PurchaseOrderDetailDto>(`/purchase-orders/${id}`)

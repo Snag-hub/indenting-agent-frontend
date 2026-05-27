@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
@@ -8,7 +8,6 @@ import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
 import { MultiStepForm } from '@/components/MultiStepForm'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -36,6 +35,8 @@ function formatCurrency(value: number, currency: string): string {
 
 export function CreateDirectPurchaseOrderPage() {
   const navigate = useNavigate()
+  const { editId } = useSearch({ from: '/_app/purchase-orders/new' })
+  const isEditing = !!editId
   const [currentStep, setCurrentStep] = useState(0)
 
   // Step 1 state
@@ -46,8 +47,28 @@ export function CreateDirectPurchaseOrderPage() {
   // Step 2 state
   const [lineItems, setLineItems] = useState<LineItem[]>([])
   const [catalogSearch, setCatalogSearch] = useState('')
+  const [preloaded, setPreloaded] = useState(false)
 
   const { currencies } = useCurrencies()
+
+  // ── Load existing PO when editing ──────────────────────────────────────────
+
+  const { data: existingPO } = useQuery({
+    queryKey: ['purchaseOrders', 'detail', editId],
+    queryFn: () => purchaseOrderApi.get(editId!),
+    enabled: isEditing,
+  })
+
+  // Pre-populate form once existing PO loads
+  useEffect(() => {
+    if (!existingPO || preloaded) return
+    setSupplierId(existingPO.supplierId)
+    setCurrency(existingPO.currency ?? 'USD')
+    setNotes(existingPO.notes ?? '')
+    setPreloaded(true)
+  }, [existingPO, preloaded])
+
+  // ── Suppliers & catalog ────────────────────────────────────────────────────
 
   const { data: suppliers } = useQuery({
     queryKey: ['suppliers', 'list', { pageSize: 200 }],
@@ -60,6 +81,36 @@ export function CreateDirectPurchaseOrderPage() {
       supplierItemApi.browse({ supplierId, search: catalogSearch, page: 1, pageSize: 50 }),
     enabled: !!supplierId,
   })
+
+  // Pre-populate line items once catalog loads (edit mode only)
+  useEffect(() => {
+    if (!existingPO || !catalogData || !preloaded || lineItems.length > 0) return
+    if (!existingPO.items || existingPO.items.length === 0) return
+
+    const restored: LineItem[] = existingPO.items.map((item) => {
+      const hasVariants = !!(item.variants && item.variants.length > 0)
+      return {
+        id: crypto.randomUUID(),
+        supplierId: existingPO.supplierId,
+        supplierName: existingPO.supplierName,
+        supplierItemId: item.supplierItemId,
+        itemName: item.supplierItemName,
+        quantity: hasVariants ? 0 : item.quantity,
+        unitPrice: item.unitPrice,
+        hasVariants,
+        variants: (item.variants ?? []).map((v) => ({
+          supplierItemVariantId: v.supplierItemVariantId,
+          quantity: v.quantity,
+          dimensionSummary: v.dimensionSummary ?? '',
+          sku: v.sku ?? null,
+        })),
+        quantityTiers: [],
+        notes: item.notes,
+      }
+    })
+    setLineItems(restored)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingPO, catalogData, preloaded])
 
   // Single-supplier catalog: each entry has exactly one offer (the selected supplier).
   const selectedSupplierName = (suppliers?.data ?? []).find((s) => s.id === supplierId)?.name ?? ''
@@ -101,28 +152,29 @@ export function CreateDirectPurchaseOrderPage() {
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
+  const buildPayload = () => ({
+    supplierId: supplierId!,
+    notes: notes || undefined,
+    currency,
+    items: lineItems.map(({ supplierItemId, quantity, unitPrice, variants }) => {
+      const validVariants = (variants ?? []).filter((v) => v.quantity > 0)
+      return {
+        supplierItemId,
+        quantity,
+        unitPrice: unitPrice ?? 0,
+        variants: validVariants.length > 0
+          ? validVariants.map((v) => ({
+              supplierItemVariantId: v.supplierItemVariantId,
+              quantity: v.quantity,
+              unitPrice: unitPrice ?? undefined,
+            }))
+          : undefined,
+      }
+    }),
+  })
+
   const create = useMutation({
-    mutationFn: () =>
-      purchaseOrderApi.createDirect({
-        supplierId: supplierId!,
-        notes: notes || undefined,
-        currency,
-        items: lineItems.map(({ supplierItemId, quantity, unitPrice, variants }) => {
-          const validVariants = (variants ?? []).filter((v) => v.quantity > 0)
-          return {
-            supplierItemId,
-            quantity,
-            unitPrice: unitPrice ?? 0,
-            variants: validVariants.length > 0
-              ? validVariants.map((v) => ({
-                  supplierItemVariantId: v.supplierItemVariantId,
-                  quantity: v.quantity,
-                  unitPrice: unitPrice ?? undefined,
-                }))
-              : undefined,
-          }
-        }),
-      }),
+    mutationFn: () => purchaseOrderApi.createDirect(buildPayload()),
     onSuccess: (id) => {
       toast.success('Purchase order created.')
       navigate({ to: '/purchase-orders/$id', params: { id } })
@@ -131,6 +183,20 @@ export function CreateDirectPurchaseOrderPage() {
       toast.error(e instanceof Error ? e.message : 'Could not create the purchase order.')
     },
   })
+
+  const update = useMutation({
+    mutationFn: () => purchaseOrderApi.updateDirect(editId!, buildPayload()),
+    onSuccess: () => {
+      toast.success('Purchase order updated.')
+      navigate({ to: '/purchase-orders/$id', params: { id: editId! } })
+    },
+    onError: (e: unknown) => {
+      toast.error(e instanceof Error ? e.message : 'Could not update the purchase order.')
+    },
+  })
+
+  const handleSubmit = () => isEditing ? update.mutate() : create.mutate()
+  const isSubmitting = create.isPending || update.isPending
 
   // ── Navigation helpers ──────────────────────────────────────────────────────
 
@@ -153,8 +219,9 @@ export function CreateDirectPurchaseOrderPage() {
                   value={supplierId ?? ''}
                   onValueChange={(v) => {
                     setSupplierId(v)
-                    setLineItems([]) // reset items when supplier changes
+                    if (!isEditing) setLineItems([]) // only reset when creating
                   }}
+                  disabled={isEditing} // supplier cannot change on edit
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select supplier…" />
@@ -165,6 +232,9 @@ export function CreateDirectPurchaseOrderPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {isEditing && (
+                  <p className="text-xs text-muted-foreground">Supplier cannot be changed when editing.</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -317,13 +387,21 @@ export function CreateDirectPurchaseOrderPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const cancelTo = isEditing
+    ? { to: '/purchase-orders/$id' as const, params: { id: editId! } }
+    : { to: '/purchase-orders' as const }
+
   return (
     <div className="space-y-6 max-w-4xl">
       <PageHeader
-        title="New Direct Purchase Order"
-        description="Create a purchase order directly without a Quotation."
+        title={isEditing ? 'Edit Direct Purchase Order' : 'New Direct Purchase Order'}
+        description={
+          isEditing
+            ? 'Update items and settings on this draft order.'
+            : 'Create a purchase order directly without a Quotation.'
+        }
         action={
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders' })}>
+          <Button variant="outline" size="sm" onClick={() => navigate(cancelTo as any)}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
           </Button>
         }
@@ -334,10 +412,10 @@ export function CreateDirectPurchaseOrderPage() {
         currentStep={currentStep}
         onNext={handleNext}
         onBack={handleBack}
-        onSubmit={() => create.mutate()}
-        isSubmitting={create.isPending}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
         canProceed={canProceed}
-        submitLabel="Create Purchase Order"
+        submitLabel={isEditing ? 'Save Changes' : 'Create Purchase Order'}
       >
         {renderStep()}
       </MultiStepForm>

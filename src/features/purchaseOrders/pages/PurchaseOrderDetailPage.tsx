@@ -81,7 +81,7 @@ export function PurchaseOrderDetailPage() {
             {role === 'Customer' && po.status === 'Draft' && (
               <>
                 {po.source === 'Direct' && (
-                  <Button size="sm" variant="outline" onClick={() => navigate({ to: '/purchase-orders/direct/new', search: { editId: id } })}>
+                  <Button size="sm" variant="outline" onClick={() => navigate({ to: '/purchase-orders/new', search: { editId: id } })}>
                     <Pencil className="mr-2 h-4 w-4" /> Edit
                   </Button>
                 )}
