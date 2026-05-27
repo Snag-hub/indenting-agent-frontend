@@ -44,7 +44,7 @@ export function CreateDirectPurchaseOrderPage() {
       supplierId: supplierId!,
       supplierName: selectedSupplierName,
       supplierItemId: i.id,
-      hasVariants: false,
+      hasVariants: i.hasVariants,
       quantityTiers: i.quantityTiers ?? [],
     }],
   }))
