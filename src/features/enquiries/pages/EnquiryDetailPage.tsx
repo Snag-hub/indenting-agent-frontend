@@ -289,10 +289,23 @@ export function EnquiryDetailPage() {
 
       {/* Item picker overlay */}
       {pickerOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-xl p-4 space-y-3">
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setPickerOpen(false)
+              setPickerSearch('')
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="enquiry-item-picker-title"
+            className="bg-white rounded-lg shadow-lg w-full max-w-xl p-4 space-y-3"
+          >
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Add Item</h3>
+              <h3 id="enquiry-item-picker-title" className="font-semibold">Add Item</h3>
               <Button
                 type="button"
                 variant="ghost"

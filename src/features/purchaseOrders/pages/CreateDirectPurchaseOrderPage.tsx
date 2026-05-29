@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -332,8 +332,8 @@ export function CreateDirectPurchaseOrderPage() {
                       ? item.variants.reduce((s, v) => s + v.quantity * (item.unitPrice ?? 0), 0)
                       : item.quantity * (item.unitPrice ?? 0)
                     return (
-                      <>
-                        <tr key={item.id} className="bg-white">
+                      <Fragment key={item.id}>
+                        <tr className="bg-white">
                           <td className="px-4 py-2.5">
                             <span className="font-medium">{item.itemName}</span>
                             {item.hasVariants && item.variants.length > 0 && (
@@ -368,7 +368,7 @@ export function CreateDirectPurchaseOrderPage() {
                             </td>
                           </tr>
                         ))}
-                      </>
+                      </Fragment>
                     )
                   })}
                 </tbody>

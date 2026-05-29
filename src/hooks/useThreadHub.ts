@@ -4,18 +4,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 
-interface ThreadMessage {
-  id: string
-  threadId: string
-  message: string
-  isInternal: boolean
-  createdBy: string
-  createdById: string
-  createdAt: string
-  attachmentUrl?: string
-  mentionedUserId?: number
-}
-
 export const useThreadHub = (threadId: string | null) => {
   const hubConnectionRef = useRef<HubConnection | null>(null)
   const { accessToken } = useAuthStore()
@@ -37,15 +25,15 @@ export const useThreadHub = (threadId: string | null) => {
           .build()
 
         // Setup event listeners
-        hubConnection.on('MessageReceived', (_message: ThreadMessage) => {
+        hubConnection.on('MessageReceived', () => {
           qc.invalidateQueries({ queryKey: ['threads', 'messages', threadId] })
         })
 
-        hubConnection.on('MessageUpdated', (_data: { messageId: string; updatedMessage: string; updatedAt: string; updatedBy: string }) => {
+        hubConnection.on('MessageUpdated', () => {
           qc.invalidateQueries({ queryKey: ['threads', 'messages', threadId] })
         })
 
-        hubConnection.on('MessageDeleted', (_data: { messageId: string; deletedAt: string; deletedBy: string }) => {
+        hubConnection.on('MessageDeleted', () => {
           qc.invalidateQueries({ queryKey: ['threads', 'messages', threadId] })
         })
 

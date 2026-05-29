@@ -361,6 +361,8 @@ export function RFQDetailPage() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
+                                  aria-label={`View quotation from ${quotation.supplierName}`}
+                                  title={`View quotation from ${quotation.supplierName}`}
                                   onClick={() => navigate({ to: '/quotations/$id', params: { id: quotation.id } })}
                                 >
                                   <Eye className="h-4 w-4" />

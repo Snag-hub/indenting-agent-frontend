@@ -157,7 +157,7 @@ export function EmployeesPage({ mode }: Props) {
       <Input
         placeholder="Search by name or email..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => { setSearch(e.target.value); setPage(1) }}
         className="max-w-sm"
       />
 

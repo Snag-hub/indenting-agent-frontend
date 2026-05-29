@@ -23,8 +23,8 @@ export function DetailPageSummary({ items, columns = 3, className }: DetailPageS
     <Card>
       <CardContent className="pt-6">
         <div className={cn('grid grid-cols-2 gap-4', colClass, className)}>
-          {items.map((item) => (
-            <div key={item.label}>
+          {items.map((item, index) => (
+            <div key={`${item.label}-${index}`}>
               <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
               <div className="text-sm font-medium">{item.value}</div>
             </div>

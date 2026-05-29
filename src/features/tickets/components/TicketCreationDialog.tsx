@@ -85,7 +85,11 @@ export function TicketCreationDialog() {
   }
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab as 'Payment' | 'PI' | 'DO')
+    const nextTab = tab as 'Payment' | 'PI' | 'DO'
+    setActiveTab(nextTab)
+    // Clear any previously selected document so a stale selection from the old
+    // tab can't be submitted (keeps the Create button disabled until reselect).
+    setSelectedEntity(nextTab, '')
   }
 
   const handleDocumentSelect = (docId: string) => {

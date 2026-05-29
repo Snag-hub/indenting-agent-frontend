@@ -134,7 +134,11 @@ export function CreateEnquiryPage() {
       for (const li of lineItems) {
         // Find the catalog entry that produced this existing line item
         const catalogItem = catalog.find((ci) =>
-          ci.offers.some((o) => o.supplierItemId === li.supplierItemId),
+          ci.offers.some(
+            (o) =>
+              o.supplierId === li.supplierId &&
+              o.supplierItemId === li.supplierItemId,
+          ),
         )
         if (!catalogItem) continue
 

@@ -77,7 +77,7 @@ export interface CreateTicketInput {
   description?: string;
   priority: "Low" | "Medium" | "High" | "Critical";
   assignedToId?: string;
-  linkedEntityType?: string;
+  linkedEntityType?: "PI" | "DO" | "Payment";
   linkedEntityId?: string;
 }
 

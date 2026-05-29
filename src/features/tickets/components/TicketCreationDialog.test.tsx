@@ -281,7 +281,8 @@ describe('TicketCreationDialog', () => {
     // currently displaying the default priority value.
     const prioritySelect = screen
       .getAllByRole('combobox')
-      .find((el) => /Medium/.test(el.textContent ?? ''))!
+      .find((el) => /Medium/.test(el.textContent ?? ''))
+    if (!prioritySelect) throw new Error('Priority combobox (showing "Medium") not found')
     await user.click(prioritySelect)
     const highOption = await screen.findByRole('option', { name: 'High' })
     await user.click(highOption)
