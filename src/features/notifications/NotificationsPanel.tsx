@@ -44,7 +44,7 @@ function groupNotificationsByDate(notifications: NotificationDto[]) {
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { unreadCount, setUnreadCount } = useNotificationStore()
+  const { unreadCount, setUnreadCount, decrement } = useNotificationStore()
   const [swipeStates, setSwipeStates] = useState<Record<string, number>>({})
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
 
@@ -57,6 +57,8 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   const markRead = useMutation({
     mutationFn: (id: string) => notificationApi.markAsRead(id),
     onSuccess: () => {
+      // Decrement badge atomically — the notification just moved from Unread → Read.
+      decrement()
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
     },
   })
@@ -76,8 +78,9 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       return notificationApi.delete(id).then(() => ({ wasUnread }))
     },
     onSuccess: (data) => {
+      // Use atomic decrement() to avoid stale-closure races on unreadCount.
       if (data.wasUnread) {
-        setUnreadCount(Math.max(0, unreadCount - 1))
+        decrement()
       }
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
     },

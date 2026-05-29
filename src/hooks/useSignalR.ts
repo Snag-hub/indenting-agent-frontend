@@ -14,6 +14,10 @@ export function useSignalR() {
   useEffect(() => {
     if (!accessToken) return;
 
+    // Guard flag — prevents stale async callbacks from mutating state after
+    // this effect has been cleaned up (e.g. on token change / unmount).
+    let destroyed = false;
+
     const baseUrl =
       import.meta.env.VITE_API_BASE_URL?.replace("/api/v1", "") ?? "";
     const hubUrl = `${baseUrl}/hubs/notifications`;
@@ -29,52 +33,56 @@ export function useSignalR() {
       .build();
 
     connection.onreconnected(() => {
+      if (destroyed) return;
       setConnected(true);
       setConnectionError(null);
       // Re-sync unread count for any notifications received while offline.
       notificationApi
         .getUnreadCount()
-        .then(setUnreadCount)
+        .then((count) => { if (!destroyed) setUnreadCount(count); })
         .catch(() => {/* ignore — badge stays at last known value */});
       qc.invalidateQueries({ queryKey: ["notifications", "list"] });
     });
 
     connection.onreconnecting(() => {
-      setConnected(false);
+      if (!destroyed) setConnected(false);
     });
 
     connection.onclose((err) => {
+      if (destroyed) return;
       setConnected(false);
       if (err) {
         setConnectionError("Real-time notifications disconnected. Refresh the page to reconnect.");
       }
     });
 
+    connection.on("notification", (_dto: NotificationDto) => {
+      if (destroyed) return;
+      increment();
+      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
+    });
+
     connection
       .start()
       .then(() => {
+        if (destroyed) return;
         setConnected(true);
         setConnectionError(null);
         connectionRef.current = connection;
       })
       .catch((err) => {
+        if (destroyed) return;
         setConnected(false);
         setConnectionError("Could not connect to real-time notifications.");
         console.error("SignalR connection error:", err);
       });
 
-    // Register the handler only after start() succeeds via onreconnected / initial start.
-    // Registering before start() is safe in SignalR JS but we do it here for clarity.
-    connection.on("notification", (_dto: NotificationDto) => {
-      increment();
-      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
-    });
-
     return () => {
+      destroyed = true;
+      connectionRef.current = null;
       connection
         .stop()
         .catch((err: any) => console.error("SignalR disconnect error:", err));
-      connectionRef.current = null;
     };
   }, [accessToken, increment, setUnreadCount, setConnected, setConnectionError, qc]);
 
