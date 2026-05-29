@@ -44,7 +44,7 @@ function groupNotificationsByDate(notifications: NotificationDto[]) {
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { setUnreadCount } = useNotificationStore()
+  const { unreadCount, setUnreadCount, decrement } = useNotificationStore()
   const [swipeStates, setSwipeStates] = useState<Record<string, number>>({})
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false)
 
@@ -57,6 +57,8 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   const markRead = useMutation({
     mutationFn: (id: string) => notificationApi.markAsRead(id),
     onSuccess: () => {
+      // Decrement badge atomically — the notification just moved from Unread → Read.
+      decrement()
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
     },
   })
@@ -71,15 +73,19 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
 
   const deleteNotification = useMutation({
     mutationFn: (id: string) => {
-      // Find the notification being deleted to check if it's unread
-      const notifToDelete = notifications.find((n) => n.id === id)
-      return notificationApi.delete(id).then(() => ({ wasUnread: notifToDelete && !notifToDelete.isRead }))
+      // Capture unread status at call time, before the query list potentially changes.
+      const wasUnread = !notifications.find((n) => n.id === id)?.isRead
+      return notificationApi.delete(id).then(() => ({ wasUnread }))
     },
     onSuccess: (data) => {
-      // Update unread count if deleted notification was unread
+      // Use atomic decrement() to avoid stale-closure races on unreadCount.
       if (data.wasUnread) {
-        setUnreadCount(Math.max(0, unreadCount - 1))
+        decrement()
       }
+      qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
+    },
+    onError: () => {
+      // Refetch the authoritative count to correct any optimistic state.
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
     },
   })
@@ -87,15 +93,20 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   const clearAll = useMutation({
     mutationFn: () => notificationApi.clearAll(),
     onSuccess: () => {
-      // Everything visible is now cleared; the unread count goes to zero.
       setUnreadCount(0)
+      qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
+    },
+    onError: () => {
+      // Re-fetch authoritative count so the badge is not stuck at 0.
+      notificationApi.getUnreadCount().then(setUnreadCount).catch(() => {})
       qc.invalidateQueries({ queryKey: ['notifications', 'list'] })
     },
   })
 
 
   const notifications = notificationsData?.data ?? []
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  // Use the store's authoritative count (kept in sync by useSignalR + mutations)
+  // rather than counting from the current page slice, which may not include all notifications.
   const groupedNotifications = groupNotificationsByDate(notifications)
 
   const handleNotificationClick = (notification: NotificationDto) => {

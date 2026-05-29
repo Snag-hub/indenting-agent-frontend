@@ -3,16 +3,20 @@ import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import type { NotificationDto } from "@/features/notifications/api/notificationApi";
+import { notificationApi, type NotificationDto } from "@/features/notifications/api/notificationApi";
 
 export function useSignalR() {
   const connectionRef = useRef<any>(null);
   const { accessToken } = useAuthStore();
-  const { increment } = useNotificationStore();
+  const { increment, setUnreadCount, setConnected, setConnectionError } = useNotificationStore();
   const qc = useQueryClient();
 
   useEffect(() => {
     if (!accessToken) return;
+
+    // Guard flag — prevents stale async callbacks from mutating state after
+    // this effect has been cleaned up (e.g. on token change / unmount).
+    let destroyed = false;
 
     const baseUrl =
       import.meta.env.VITE_API_BASE_URL?.replace("/api/v1", "") ?? "";
@@ -20,34 +24,67 @@ export function useSignalR() {
 
     const connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => accessToken,
+        // Always reads the current token from the store so reconnects after a
+        // token refresh don't use a stale JWT.
+        accessTokenFactory: () => useAuthStore.getState().accessToken ?? "",
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Debug)
+      .configureLogging(LogLevel.Warning)
       .build();
 
+    connection.onreconnected(() => {
+      if (destroyed) return;
+      setConnected(true);
+      setConnectionError(null);
+      // Re-sync unread count for any notifications received while offline.
+      notificationApi
+        .getUnreadCount()
+        .then((count) => { if (!destroyed) setUnreadCount(count); })
+        .catch(() => {/* ignore — badge stays at last known value */});
+      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
+    });
+
+    connection.onreconnecting(() => {
+      if (!destroyed) setConnected(false);
+    });
+
+    connection.onclose((err) => {
+      if (destroyed) return;
+      setConnected(false);
+      if (err) {
+        setConnectionError("Real-time notifications disconnected. Refresh the page to reconnect.");
+      }
+    });
+
     connection.on("notification", (_dto: NotificationDto) => {
+      if (destroyed) return;
       increment();
-      // Invalidate the list so the panel reflects the new notification immediately
       qc.invalidateQueries({ queryKey: ["notifications", "list"] });
     });
 
     connection
       .start()
       .then(() => {
-        console.log("SignalR connected");
+        if (destroyed) return;
+        setConnected(true);
+        setConnectionError(null);
         connectionRef.current = connection;
       })
-      .catch((err) => console.error("SignalR connection error:", err));
+      .catch((err) => {
+        if (destroyed) return;
+        setConnected(false);
+        setConnectionError("Could not connect to real-time notifications.");
+        console.error("SignalR connection error:", err);
+      });
 
     return () => {
-      if (connectionRef.current) {
-        connectionRef.current
-          .stop()
-          .catch((err: any) => console.error("SignalR disconnect error:", err));
-      }
+      destroyed = true;
+      connectionRef.current = null;
+      connection
+        .stop()
+        .catch((err: any) => console.error("SignalR disconnect error:", err));
     };
-  }, [accessToken, increment, qc]);
+  }, [accessToken, increment, setUnreadCount, setConnected, setConnectionError, qc]);
 
   return connectionRef.current;
 }
