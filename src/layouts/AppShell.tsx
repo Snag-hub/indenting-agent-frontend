@@ -7,6 +7,7 @@ import {
   ChevronRight, LogOut, Menu, AlertCircle, Hash,
   MessageSquare
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useNotificationStore } from '@/stores/notificationStore'
@@ -99,7 +100,7 @@ function PageLoadingFallback() {
 export function AppShell() {
   const { user, clearAuth } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
-  const { unreadCount, setUnreadCount } = useNotificationStore()
+  const { unreadCount, setUnreadCount, connectionError } = useNotificationStore()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const router = useRouter()
 
@@ -118,6 +119,15 @@ export function AppShell() {
     }
     loadUnreadCount()
   }, [setUnreadCount])
+
+  // Surface SignalR connection errors to the user
+  useEffect(() => {
+    if (connectionError) {
+      toast.error(connectionError, { id: 'signalr-error', duration: Infinity })
+    } else {
+      toast.dismiss('signalr-error')
+    }
+  }, [connectionError])
 
   const nav = getNav(user?.role ?? 'Admin', user?.isOrgAdmin ?? false)
 

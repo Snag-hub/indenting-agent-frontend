@@ -3,12 +3,12 @@ import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import type { NotificationDto } from "@/features/notifications/api/notificationApi";
+import { notificationApi, type NotificationDto } from "@/features/notifications/api/notificationApi";
 
 export function useSignalR() {
   const connectionRef = useRef<any>(null);
   const { accessToken } = useAuthStore();
-  const { increment } = useNotificationStore();
+  const { increment, setUnreadCount, setConnected, setConnectionError } = useNotificationStore();
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -20,34 +20,63 @@ export function useSignalR() {
 
     const connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => accessToken,
+        // Always reads the current token from the store so reconnects after a
+        // token refresh don't use a stale JWT.
+        accessTokenFactory: () => useAuthStore.getState().accessToken ?? "",
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Debug)
+      .configureLogging(LogLevel.Warning)
       .build();
 
-    connection.on("notification", (_dto: NotificationDto) => {
-      increment();
-      // Invalidate the list so the panel reflects the new notification immediately
+    connection.onreconnected(() => {
+      setConnected(true);
+      setConnectionError(null);
+      // Re-sync unread count for any notifications received while offline.
+      notificationApi
+        .getUnreadCount()
+        .then(setUnreadCount)
+        .catch(() => {/* ignore — badge stays at last known value */});
       qc.invalidateQueries({ queryKey: ["notifications", "list"] });
+    });
+
+    connection.onreconnecting(() => {
+      setConnected(false);
+    });
+
+    connection.onclose((err) => {
+      setConnected(false);
+      if (err) {
+        setConnectionError("Real-time notifications disconnected. Refresh the page to reconnect.");
+      }
     });
 
     connection
       .start()
       .then(() => {
-        console.log("SignalR connected");
+        setConnected(true);
+        setConnectionError(null);
         connectionRef.current = connection;
       })
-      .catch((err) => console.error("SignalR connection error:", err));
+      .catch((err) => {
+        setConnected(false);
+        setConnectionError("Could not connect to real-time notifications.");
+        console.error("SignalR connection error:", err);
+      });
+
+    // Register the handler only after start() succeeds via onreconnected / initial start.
+    // Registering before start() is safe in SignalR JS but we do it here for clarity.
+    connection.on("notification", (_dto: NotificationDto) => {
+      increment();
+      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
+    });
 
     return () => {
-      if (connectionRef.current) {
-        connectionRef.current
-          .stop()
-          .catch((err: any) => console.error("SignalR disconnect error:", err));
-      }
+      connection
+        .stop()
+        .catch((err: any) => console.error("SignalR disconnect error:", err));
+      connectionRef.current = null;
     };
-  }, [accessToken, increment, qc]);
+  }, [accessToken, increment, setUnreadCount, setConnected, setConnectionError, qc]);
 
   return connectionRef.current;
 }
