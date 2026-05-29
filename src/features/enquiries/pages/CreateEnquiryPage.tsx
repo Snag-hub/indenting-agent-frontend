@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -35,6 +35,9 @@ export function CreateEnquiryPage() {
   const customerId = useAuthStore((s) => s.user?.id)
   const [supplierIds, setSupplierIds] = useState<string[]>([])
   const [lineItems, setLineItems] = useState<LineItem[]>([])
+  // Tracks newly-added supplier IDs that need existing items fanned out to them
+  // once their catalog data finishes loading.
+  const [pendingFanOut, setPendingFanOut] = useState<Set<string>>(new Set())
 
   const form = useForm<CreateEnquiryFormData>({
     resolver: zodResolver(createEnquirySchema) as any,
@@ -88,12 +91,91 @@ export function CreateEnquiryPage() {
       setLineItems((items) => items.filter((li) => next.includes(li.supplierId)))
       return next
     })
+    if (checked) {
+      // Mark this supplier as needing fan-out once its catalog data loads
+      setPendingFanOut((prev) => new Set([...prev, id]))
+    } else {
+      setPendingFanOut((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
   }
 
   function removeSupplier(id: string) {
     setSupplierIds((prev) => prev.filter((s) => s !== id))
     setLineItems((items) => items.filter((li) => li.supplierId !== id))
+    setPendingFanOut((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
   }
+
+  // When catalog data updates (new supplier's items loaded), fan out existing line items
+  // to any newly-added suppliers that share the same master catalog item.
+  useEffect(() => {
+    if (pendingFanOut.size === 0 || lineItems.length === 0) return
+
+    const addedKeys = new Set(lineItems.map((li) => `${li.supplierId}::${li.supplierItemId}`))
+    const newItems: LineItem[] = []
+    const processedSuppliers = new Set<string>()
+
+    for (const newSupplierId of pendingFanOut) {
+      // Wait until this supplier's offers have actually loaded into the catalog
+      const hasInCatalog = catalog.some((ci) =>
+        ci.offers.some((o) => o.supplierId === newSupplierId),
+      )
+      if (!hasInCatalog) continue
+
+      processedSuppliers.add(newSupplierId)
+
+      for (const li of lineItems) {
+        // Find the catalog entry that produced this existing line item
+        const catalogItem = catalog.find((ci) =>
+          ci.offers.some(
+            (o) =>
+              o.supplierId === li.supplierId &&
+              o.supplierItemId === li.supplierItemId,
+          ),
+        )
+        if (!catalogItem) continue
+
+        // Check if the new supplier also offers this same item
+        const newOffer = catalogItem.offers.find((o) => o.supplierId === newSupplierId)
+        if (!newOffer) continue // supplier doesn't carry this item — skip
+
+        const key = `${newSupplierId}::${newOffer.supplierItemId}`
+        if (addedKeys.has(key)) continue // already in the list
+
+        addedKeys.add(key)
+        newItems.push({
+          id: crypto.randomUUID(),
+          supplierId: newSupplierId,
+          supplierName: newOffer.supplierName,
+          supplierItemId: newOffer.supplierItemId,
+          itemName: li.itemName,
+          quantity: li.quantity,
+          quantityTiers: newOffer.quantityTiers,
+          hasVariants: newOffer.hasVariants,
+          variants: [],
+        })
+      }
+    }
+
+    if (newItems.length > 0) {
+      setLineItems((prev) => [...prev, ...newItems])
+    }
+
+    if (processedSuppliers.size > 0) {
+      setPendingFanOut((prev) => {
+        const next = new Set(prev)
+        processedSuppliers.forEach((id) => next.delete(id))
+        return next
+      })
+    }
+  }, [catalog, pendingFanOut, lineItems])
 
   // Create enquiry / batch mutations
   const createGeneralMutation = useMutation({

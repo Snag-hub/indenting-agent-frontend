@@ -67,8 +67,9 @@ export function CreateTicketPage() {
         title: data.title,
         description: data.description,
         priority: data.priority,
-        // Pass entity link when navigated from DO / PI detail
-        linkedEntityType: entityType,
+        // Pass entity link when navigated from DO / PI detail. entityType comes
+        // from untyped URL search params, so narrow it to the API's union here.
+        linkedEntityType: entityType as 'PI' | 'DO' | 'Payment' | undefined,
         linkedEntityId: entityId,
       }),
     onSuccess: (ticketId) => {

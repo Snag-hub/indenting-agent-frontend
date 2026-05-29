@@ -16,6 +16,7 @@ vi.mock('@/stores/authStore', () => ({
 const mockPayment = {
   id: 'payment-id-1',
   purchaseOrderId: 'po-1',
+  purchaseOrderDocumentNumber: 'PO-2026-0001',
   customerId: 'cust-1',
   supplierId: 'sup-1',
   amount: 123.45,

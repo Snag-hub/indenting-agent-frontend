@@ -15,14 +15,8 @@ import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
+import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value)
-}
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -40,258 +34,156 @@ export function PurchaseOrderDetailPage() {
   const [closing, setClosing] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const { data: purchaseOrder, isLoading } = useQuery({
+  const { data: po, isLoading } = useQuery({
     queryKey: queryKeys.pos.detail(id),
     queryFn: () => purchaseOrderApi.get(id),
-  })
-
-  const { data: dispatchBalance } = useQuery({
-    queryKey: queryKeys.pos.dispatchBalance(id),
-    queryFn: () => purchaseOrderApi.getDispatchBalance(id),
-    enabled: !!purchaseOrder && purchaseOrder.status === 'Confirmed',
   })
 
   const { data: invoiceBalance } = useQuery({
     queryKey: queryKeys.pos.invoiceBalance(id),
     queryFn: () => purchaseOrderApi.getInvoiceBalance(id),
-    enabled: !!purchaseOrder && purchaseOrder.status === 'Confirmed',
+    enabled: !!po && po.status === 'Confirmed',
   })
 
   const fullyInvoiced = invoiceBalance != null && invoiceBalance.length > 0 && invoiceBalance.every(b => b.remainingQty <= 0)
 
   const confirmPO = useMutation({
     mutationFn: () => purchaseOrderApi.confirm(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.pos.detail(id) })
-      setConfirming(false)
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.pos.detail(id) }); setConfirming(false) },
   })
-
   const closePO = useMutation({
     mutationFn: () => purchaseOrderApi.close(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.pos.detail(id) })
-      setClosing(false)
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.pos.detail(id) }); setClosing(false) },
   })
-
   const deletePO = useMutation({
     mutationFn: () => purchaseOrderApi.delete(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.pos.list() })
-      navigate({ to: '/purchase-orders' })
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.pos.list() }); navigate({ to: '/purchase-orders' }) },
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (isLoading) return (
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-48 w-full" />
+    </div>
+  )
 
-  if (!purchaseOrder) {
-    return <div className="text-muted-foreground">Purchase Order not found.</div>
-  }
+  if (!po) return <div className="text-muted-foreground">Purchase Order not found.</div>
 
   return (
-    <div className="space-y-6">
+    <DetailPageContainer>
       <PageHeader
-        title={purchaseOrder.documentNumber}
-        description={`Supplier: ${purchaseOrder.supplierName}`}
+        title={po.documentNumber}
+        description={`Supplier: ${po.supplierName}`}
         action={
           <div className="flex items-center gap-2">
-            <Badge variant={statusColors[purchaseOrder.status]}>
-              {purchaseOrder.status}
-            </Badge>
+            <Badge variant={statusColors[po.status]}>{po.status}</Badge>
 
-            {role === 'Customer' && purchaseOrder.status === 'Draft' && (
+            {role === 'Customer' && po.status === 'Draft' && (
               <>
-                {purchaseOrder.source === 'Direct' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate({ to: '/purchase-orders/direct/new', search: { editId: id } })}
-                  >
+                {po.source === 'Direct' && (
+                  <Button size="sm" variant="outline" onClick={() => navigate({ to: '/purchase-orders/new', search: { editId: id } })}>
                     <Pencil className="mr-2 h-4 w-4" /> Edit
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  onClick={() => setConfirming(true)}
-                >
+                <Button size="sm" onClick={() => setConfirming(true)}>
                   <CheckCircle className="mr-2 h-4 w-4" /> Confirm &amp; Send
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => setDeleting(true)}
-                >
+                <Button size="sm" variant="destructive" onClick={() => setDeleting(true)}>
                   <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </Button>
               </>
             )}
-
-            {role === 'Customer' && purchaseOrder.status === 'Confirmed' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setClosing(true)}
-              >
+            {role === 'Customer' && po.status === 'Confirmed' && (
+              <Button size="sm" variant="outline" onClick={() => setClosing(true)}>
                 <Lock className="mr-2 h-4 w-4" /> Close PO
               </Button>
             )}
-
-            {role === 'Supplier' && purchaseOrder.status === 'Confirmed' && (
-              <Button
-                size="sm"
-                disabled={fullyInvoiced}
-                onClick={() => navigate({ to: '/proforma-invoices/new', search: { poId: id } })}
-                title={fullyInvoiced ? 'All items fully invoiced' : undefined}
-              >
+            {role === 'Supplier' && po.status === 'Confirmed' && (
+              <Button size="sm" disabled={fullyInvoiced} onClick={() => navigate({ to: '/proforma-invoices/new', search: { poId: id } })} title={fullyInvoiced ? 'All items fully invoiced' : undefined}>
                 <FileText className="mr-2 h-4 w-4" /> {fullyInvoiced ? 'Fully Invoiced' : 'Create PI'}
               </Button>
             )}
-
-            {/* DOs are now PI-rooted — supplier must raise a PI first, then create the DO from
-                the PI detail page. This keeps the chain PO → PI → DO single-track. */}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: '/purchase-orders' })}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders' })}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           </div>
         }
       />
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Main content: 2 columns */}
-        <div className="col-span-2 space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Badge variant={statusColors[purchaseOrder.status]}>{purchaseOrder.status}</Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-                  <p className="text-sm font-medium">{purchaseOrder.supplierName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
-                  <p className="text-sm">{format(new Date(purchaseOrder.createdAt), 'dd MMM yyyy')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <DetailPageGrid>
+        <DetailPageMainColumn>
+          <DetailPageSummary items={[
+            { label: 'Status', value: <Badge variant={statusColors[po.status]}>{po.status}</Badge> },
+            { label: 'Supplier', value: po.supplierName },
+            { label: 'Created', value: format(new Date(po.createdAt), 'dd MMM yyyy') },
+          ]} />
 
-          {purchaseOrder.notes && (
+          {po.notes && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap text-sm">{purchaseOrder.notes}</p>
-              </CardContent>
+              <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+              <CardContent><p className="whitespace-pre-wrap text-sm">{po.notes}</p></CardContent>
             </Card>
           )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DocumentItemsTable
-            mode="purchase-order"
-            items={purchaseOrder.items.map((item) => ({
-              id: item.id,
-              name: item.supplierItemName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.totalPrice,
-              notes: item.notes,
-              variants: item.variants?.map((v) => ({
-                id: v.id,
-                dimensionSummary: v.dimensionSummary,
-                sku: v.sku,
-                quantity: v.quantity,
-                unitPrice: v.unitPrice,
-              })),
-            }))}
-            emptyMessage="No items in this purchase order."
-          />
-        </CardContent>
-        </Card>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Items</CardTitle></CardHeader>
+            <CardContent>
+              <DocumentItemsTable
+                mode="purchase-order"
+                items={po.items.map((item) => ({
+                  id: item.id,
+                  name: item.supplierItemName,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  totalPrice: item.totalPrice,
+                  notes: item.notes,
+                  variants: item.variants?.map((v) => ({
+                    id: v.id,
+                    dimensionSummary: v.dimensionSummary,
+                    sku: v.sku,
+                    quantity: v.quantity,
+                    unitPrice: v.unitPrice,
+                  })),
+                }))}
+                emptyMessage="No items in this purchase order."
+              />
+            </CardContent>
+          </Card>
 
-        <VoucherTotalsCard
-          totals={{
-            subtotal: purchaseOrder.subtotal,
-            discountAmount: purchaseOrder.discountAmount,
-            discountPercent: purchaseOrder.discountPercent,
-            taxAmount: purchaseOrder.taxAmount,
-            shippingAmount: purchaseOrder.shippingAmount,
-            totalAmount: purchaseOrder.totalAmount,
-            currency: purchaseOrder.currency,
-          }}
-        />
-        </div>
+          <VoucherTotalsCard totals={{
+            subtotal: po.subtotal,
+            discountAmount: po.discountAmount,
+            discountPercent: po.discountPercent,
+            taxAmount: po.taxAmount,
+            shippingAmount: po.shippingAmount,
+            totalAmount: po.totalAmount,
+            currency: po.currency,
+          }} />
+        </DetailPageMainColumn>
 
-        {/* Right sidebar: 1 column */}
-        <aside>
+        <DetailPageSidebar>
           <ThreadPanel
             threadId={`PurchaseOrder-${id}`}
-            title={`PO ${purchaseOrder.documentNumber}`}
-            canPostInternal={user?.role === 'Admin'}
-            disabledReason={purchaseOrder.status === 'Draft' ? 'Confirm this purchase order to unlock messaging.' : undefined}
+            title={`PO ${po.documentNumber}`}
+            canPostInternal={role === 'Admin'}
+            disabledReason={po.status === 'Draft' ? 'Confirm this purchase order to unlock messaging.' : undefined}
           />
-        </aside>
-      </div>
+        </DetailPageSidebar>
+      </DetailPageGrid>
 
       <AttachmentPanel entityType="PurchaseOrder" entityId={id} />
 
-      <ConfirmDialog
-        open={confirming}
-        onOpenChange={(open) => {
-          if (!open) setConfirming(false)
-        }}
+      <ConfirmDialog open={confirming} onOpenChange={(o) => { if (!o) setConfirming(false) }}
         title="Confirm & Send Purchase Order"
         description="This will confirm the purchase order and send it to the supplier. You will no longer be able to edit it."
-        confirmLabel="Confirm & Send"
-        onConfirm={() => confirmPO.mutate()}
-        isLoading={confirmPO.isPending}
-      />
-
-      <ConfirmDialog
-        open={closing}
-        onOpenChange={(open) => {
-          if (!open) setClosing(false)
-        }}
-        title="Close Purchase Order"
-        description="This will close the purchase order."
-        confirmLabel="Close"
-        onConfirm={() => closePO.mutate()}
-        isLoading={closePO.isPending}
-      />
-
-      <ConfirmDialog
-        open={deleting}
-        onOpenChange={(open) => {
-          if (!open) setDeleting(false)
-        }}
+        confirmLabel="Confirm & Send" onConfirm={() => confirmPO.mutate()} isLoading={confirmPO.isPending} />
+      <ConfirmDialog open={closing} onOpenChange={(o) => { if (!o) setClosing(false) }}
+        title="Close Purchase Order" description="This will close the purchase order."
+        confirmLabel="Close" onConfirm={() => closePO.mutate()} isLoading={closePO.isPending} />
+      <ConfirmDialog open={deleting} onOpenChange={(o) => { if (!o) setDeleting(false) }}
         title="Delete Purchase Order"
         description="This will permanently delete the purchase order. This action cannot be undone."
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={() => deletePO.mutate()}
-        isLoading={deletePO.isPending}
-      />
-
-    </div>
+        confirmLabel="Delete" variant="destructive" onConfirm={() => deletePO.mutate()} isLoading={deletePO.isPending} />
+    </DetailPageContainer>
   )
 }

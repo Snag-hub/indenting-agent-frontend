@@ -47,6 +47,7 @@ export interface SupplierItemSummaryDto {
   categoryName: string | null
   createdAt: string
   quantityTiers: number[]
+  hasVariants: boolean
 }
 
 export interface SupplierItemDetailDto {

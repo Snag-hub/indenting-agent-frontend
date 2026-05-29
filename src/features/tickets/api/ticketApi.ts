@@ -68,15 +68,17 @@ export interface AvailableDocumentDto {
 
 /**
  * Payload for POST /tickets.
- * `linkedEntityType` and `linkedEntityId` are REQUIRED.
+ * `linkedEntityType` / `linkedEntityId` are optional — a ticket can be raised
+ * standalone (from the Tickets nav) or linked to a document (from a DO/PI/Payment
+ * detail page). The backend's Ticket.EntityType/EntityId are both nullable.
  */
 export interface CreateTicketInput {
   title: string;
   description?: string;
   priority: "Low" | "Medium" | "High" | "Critical";
   assignedToId?: string;
-  linkedEntityType: "PI" | "DO" | "Payment";
-  linkedEntityId: string;
+  linkedEntityType?: "PI" | "DO" | "Payment";
+  linkedEntityId?: string;
 }
 
 /** Payload for PUT /tickets/:id — all fields optional (partial update). */

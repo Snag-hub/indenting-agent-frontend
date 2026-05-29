@@ -51,7 +51,6 @@ export function ProformaInvoicesPage() {
       header: 'Doc #',
       cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
     },
-    { accessorKey: 'title', header: 'Title' },
     { accessorKey: 'supplierName', header: 'Supplier' },
     {
       accessorKey: 'status',

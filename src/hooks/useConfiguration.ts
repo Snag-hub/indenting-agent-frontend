@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   configurationApi,
-  type ConfigurationTypeDto,
-  type ConfigurationGroupDto,
   type ConfigurationParameterDto,
 } from '@/lib/configurationApi'
 import { queryKeys } from '@/lib/queryKeys'

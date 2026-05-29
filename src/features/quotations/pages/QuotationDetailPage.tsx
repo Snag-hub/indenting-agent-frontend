@@ -18,22 +18,15 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Send, Check, X, Plus, Trash2, ShoppingCart, Eye, Pencil, Lock, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Send, Check, X, Plus, Trash2, ShoppingCart, Eye, Lock, RotateCcw } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
+import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value)
-}
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Draft: 'outline',
@@ -183,7 +176,7 @@ export function QuotationDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <DetailPageContainer>
       <PageHeader
         title={quotation.documentNumber}
         description={`From: ${quotation.supplierName} · RFQ: ${quotation.rfqTitle}`}
@@ -262,35 +255,15 @@ export function QuotationDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Main content: 2 columns */}
-        <div className="col-span-2 space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Document #</p>
-                  <p className="text-sm font-mono font-medium">{quotation.documentNumber || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Badge variant={statusColors[quotation.status]}>{quotation.status}</Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Supplier</p>
-                  <p className="text-sm font-medium">{quotation.supplierName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">RFQ</p>
-                  <p className="text-sm font-mono">{quotation.rfqTitle}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
-                  <p className="text-sm">{format(new Date(quotation.createdAt), 'dd MMM yyyy')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <DetailPageGrid>
+        <DetailPageMainColumn>
+          <DetailPageSummary columns={3} items={[
+            { label: 'Document #', value: <span className="font-mono">{quotation.documentNumber || '—'}</span> },
+            { label: 'Status', value: <Badge variant={statusColors[quotation.status]}>{quotation.status}</Badge> },
+            { label: 'Supplier', value: quotation.supplierName },
+            { label: 'RFQ', value: <span className="font-mono">{quotation.rfqTitle}</span> },
+            { label: 'Created', value: format(new Date(quotation.createdAt), 'dd MMM yyyy') },
+          ]} />
 
           {quotation.rejectionReason && (
             <Card className="border-destructive/50 bg-destructive/5">
@@ -424,18 +397,17 @@ export function QuotationDetailPage() {
               </CardContent>
             </Card>
           )}
-        </div>
+        </DetailPageMainColumn>
 
-        {/* Right sidebar: 1 column */}
-        <aside>
+        <DetailPageSidebar>
           <ThreadPanel
             threadId={`Quotation-${id}`}
             title={`Q ${quotation.documentNumber}`}
             canPostInternal={user?.role === 'Admin'}
             disabledReason={quotation.status === 'Draft' ? 'Submit this quotation to unlock messaging.' : undefined}
           />
-        </aside>
-      </div>
+        </DetailPageSidebar>
+      </DetailPageGrid>
 
       <Dialog open={reviseDialogOpen} onOpenChange={setReviseDialogOpen}>
         <DialogContent className="max-w-md">
@@ -596,6 +568,6 @@ export function QuotationDetailPage() {
           onSuccess={() => qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })}
         />
       )}
-    </div>
+    </DetailPageContainer>
   )
 }

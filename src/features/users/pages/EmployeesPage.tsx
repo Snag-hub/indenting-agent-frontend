@@ -33,7 +33,7 @@ export function EmployeesPage({ mode }: Props) {
   const queryKey = mode === 'admin' ? queryKeys.users : queryKeys.myEmployees
 
   const [search, setSearch] = useState('')
-  const [page] = useState(1)
+  const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<EmployeeSummaryDto | undefined>()
   const [deleting, setDeleting] = useState<EmployeeSummaryDto | undefined>()
@@ -157,7 +157,7 @@ export function EmployeesPage({ mode }: Props) {
       <Input
         placeholder="Search by name or email..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => { setSearch(e.target.value); setPage(1) }}
         className="max-w-sm"
       />
 
@@ -165,6 +165,10 @@ export function EmployeesPage({ mode }: Props) {
         columns={columns}
         data={data?.data ?? []}
         isLoading={isLoading}
+        totalCount={data?.totalCount ?? 0}
+        page={page}
+        pageSize={20}
+        onPageChange={setPage}
       />
 
       <InviteEmployeeDialog
