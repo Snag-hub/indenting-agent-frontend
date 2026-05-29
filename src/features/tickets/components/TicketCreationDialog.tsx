@@ -85,7 +85,7 @@ export function TicketCreationDialog() {
   }
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
+    setActiveTab(tab as 'Payment' | 'PI' | 'DO')
   }
 
   const handleDocumentSelect = (docId: string) => {

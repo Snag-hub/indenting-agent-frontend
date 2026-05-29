@@ -99,7 +99,7 @@ export function DocumentItemsTable({
   // unit price lives on each variant. Roll those up so the displayed total is
   // never silently wrong. Items without variants fall back to the row-level
   // totalPrice (or qty × unitPrice if that's also missing).
-  function effectiveItemTotal(item: DocumentItem): number {
+  function effectiveItemTotal(item: DocumentLineItem): number {
     if (item.variants && item.variants.length > 0) {
       return item.variants.reduce(
         (s, v) => s + (v.unitPrice ?? 0) * v.quantity,

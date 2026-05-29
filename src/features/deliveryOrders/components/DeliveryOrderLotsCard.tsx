@@ -258,7 +258,10 @@ function LotEditorDialog({
   isPending: boolean
 }) {
   const isEdit = state.mode === 'edit'
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  // schema uses z.coerce.number(), so the resolver's *input* type differs from its
+  // *output* type (quantity: unknown -> number). Give useForm the three generics
+  // <Input, Context, Output> so the resolver and submit handler line up.
+  const { register, handleSubmit, formState: { errors } } = useForm<z.input<typeof schema>, unknown, FormData>({
     resolver: zodResolver(schema),
     defaultValues: isEdit && state.lot
       ? {

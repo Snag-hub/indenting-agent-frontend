@@ -1,10 +1,14 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import path from 'path'
 
-export default defineConfig({
+// Vitest config lives under the `test` key. Vitest 0.34's config typings target an
+// older Vite than this project uses, so we extend Vite's own UserConfig with a
+// loosely-typed `test` block rather than importing defineConfig from 'vitest/config'
+// (which would mis-type the plugins array against the bundled older Vite).
+const config: UserConfig & { test: Record<string, unknown> } = {
   plugins: [TanStackRouterVite({ routesDirectory: './src/routes' }), react(), tailwindcss()],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
@@ -28,4 +32,11 @@ export default defineConfig({
       '/api': { target: 'http://localhost:5163', changeOrigin: true },
     },
   },
-})
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+  },
+}
+
+export default defineConfig(config)

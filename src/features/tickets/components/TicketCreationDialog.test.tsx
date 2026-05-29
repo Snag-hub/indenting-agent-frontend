@@ -1,15 +1,28 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TicketCreationDialog } from './TicketCreationDialog'
 import { useTicketStore } from '@/stores/ticketStore'
-import { useAuthStore } from '@/stores/authStore'
-import * as ticketApi from '@/features/tickets/api/ticketApi'
+import { useAuthStore, type UserInfo } from '@/stores/authStore'
+import { ticketApi } from '@/features/tickets/api/ticketApi'
 import type { ReactNode } from 'react'
 
+// Test user fixtures — UserInfo requires org/role context fields.
+const makeUser = (role: UserInfo['role']): UserInfo => ({
+  id: '1',
+  fullName: 'Test User',
+  email: 'test@example.com',
+  role,
+  organisationType: role,
+  customerId: role === 'Customer' ? 'c1' : null,
+  supplierId: role === 'Supplier' ? 's1' : null,
+  isOrgAdmin: role === 'Admin',
+  status: 'Active',
+})
+
 // Mock modules
-jest.mock('@/features/tickets/api/ticketApi')
-jest.mock('@/features/tickets/hooks/useAvailableTicketDocuments', () => ({
+vi.mock('@/features/tickets/api/ticketApi')
+vi.mock('@/features/tickets/hooks/useAvailableTicketDocuments', () => ({
   useAvailableTicketDocuments: (entityType: string) => {
     const mockDocuments = {
       PI: [
@@ -45,7 +58,7 @@ const createWrapper = () => {
 
 describe('TicketCreationDialog', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     useTicketStore.setState({
       isOpen: false,
       selectedEntityType: null,
@@ -66,19 +79,21 @@ describe('TicketCreationDialog', () => {
   it('should render dialog when isOpen is true', () => {
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Create Ticket')).toBeInTheDocument()
+    // "Create Ticket" appears as both the dialog title and the submit button,
+    // so scope the assertion to the heading.
+    expect(screen.getByRole('heading', { name: 'Create Ticket' })).toBeInTheDocument()
   })
 
   it('should show PI and DO tabs for customer', () => {
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -91,7 +106,7 @@ describe('TicketCreationDialog', () => {
   it('should show only Payment tab for supplier', () => {
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Supplier' },
+      user: makeUser('Supplier'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -104,7 +119,7 @@ describe('TicketCreationDialog', () => {
   it('should show all tabs for admin', () => {
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Admin' },
+      user: makeUser('Admin'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -118,7 +133,7 @@ describe('TicketCreationDialog', () => {
     const user = userEvent.setup()
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -135,7 +150,7 @@ describe('TicketCreationDialog', () => {
   it('should disable create button if document not selected', async () => {
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -155,7 +170,7 @@ describe('TicketCreationDialog', () => {
       selectedEntityId: 'pi-1',
     })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -171,7 +186,7 @@ describe('TicketCreationDialog', () => {
     const user = userEvent.setup()
     useTicketStore.setState({ isOpen: true })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -186,7 +201,7 @@ describe('TicketCreationDialog', () => {
 
   it('should submit form with correct data', async () => {
     const user = userEvent.setup()
-    jest.spyOn(ticketApi, 'create').mockResolvedValue('ticket-id')
+    vi.spyOn(ticketApi, 'create').mockResolvedValue('ticket-id')
 
     useTicketStore.setState({
       isOpen: true,
@@ -194,7 +209,7 @@ describe('TicketCreationDialog', () => {
       selectedEntityId: 'pi-1',
     })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -222,7 +237,7 @@ describe('TicketCreationDialog', () => {
   it('should display error message on creation failure', async () => {
     const user = userEvent.setup()
     const errorMessage = 'Failed to create ticket'
-    jest.spyOn(ticketApi, 'create').mockRejectedValue(new Error(errorMessage))
+    vi.spyOn(ticketApi, 'create').mockRejectedValue(new Error(errorMessage))
 
     useTicketStore.setState({
       isOpen: true,
@@ -230,7 +245,7 @@ describe('TicketCreationDialog', () => {
       selectedEntityId: 'pi-1',
     })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
@@ -248,7 +263,7 @@ describe('TicketCreationDialog', () => {
 
   it('should support priority selection', async () => {
     const user = userEvent.setup()
-    jest.spyOn(ticketApi, 'create').mockResolvedValue('ticket-id')
+    vi.spyOn(ticketApi, 'create').mockResolvedValue('ticket-id')
 
     useTicketStore.setState({
       isOpen: true,
@@ -256,14 +271,19 @@ describe('TicketCreationDialog', () => {
       selectedEntityId: 'do-1',
     })
     useAuthStore.setState({
-      user: { id: '1', fullName: 'Test User', email: 'test@example.com', role: 'Customer' },
+      user: makeUser('Customer'),
     })
 
     render(<TicketCreationDialog />, { wrapper: createWrapper() })
 
-    const prioritySelect = screen.getByDisplayValue('Medium')
+    // Priority is a Radix Select (role combobox), not a native <select>.
+    // Several comboboxes exist (priority + one per document tab); pick the one
+    // currently displaying the default priority value.
+    const prioritySelect = screen
+      .getAllByRole('combobox')
+      .find((el) => /Medium/.test(el.textContent ?? ''))!
     await user.click(prioritySelect)
-    const highOption = screen.getByRole('option', { name: 'High' })
+    const highOption = await screen.findByRole('option', { name: 'High' })
     await user.click(highOption)
 
     const titleInput = screen.getByPlaceholderText('Brief description of the issue')

@@ -45,7 +45,7 @@ export interface EnquirySummaryDto {
 
 export interface EnquiryDetailDto {
   id: string;
-  documentNumber?: string;
+  documentNumber: string;
   enquiryType?: EnquiryType;
   priority?: string;
   title: string;
