@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── Build & Lint ─────────────────────────────────────────────────
   build:
@@ -48,7 +51,7 @@ jobs:
 
     environment:
       name: production
-      url: https://${{ secrets.DOMAIN }}
+      url: https://uat.indentingagent.com
 
     steps:
       - name: Deploy via SSH
