@@ -48,7 +48,7 @@ jobs:
 
     environment:
       name: production
-      url: https://${{ secrets.DOMAIN }}
+      url: https://uat.indentingagent.com
 
     steps:
       - name: Deploy via SSH
