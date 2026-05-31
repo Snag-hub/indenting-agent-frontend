@@ -63,7 +63,7 @@ export function VariantQuantityDialog({
   })
 
   // Map variants to common structure, handling both types of variant DTOs
-  const variants = variantsData.map((v: any) => ({
+  const variants = variantsData.map((v: { id: string; sku: string | null; dimensionSummary: string; enquiryQuantity?: number; remainingQuantity?: number }) => ({
     id: v.id,
     sku: v.sku,
     dimensionSummary: v.dimensionSummary,
