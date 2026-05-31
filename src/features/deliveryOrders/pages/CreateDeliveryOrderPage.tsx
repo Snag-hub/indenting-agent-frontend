@@ -146,8 +146,9 @@ export function CreateDeliveryOrderPage() {
       })
       toast.success('Delivery order created successfully')
       navigate({ to: '/delivery-orders/$id', params: { id } })
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? err?.message ?? 'Failed to create delivery order')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } }; message?: string }
+      toast.error(e?.response?.data?.detail ?? e?.message ?? 'Failed to create delivery order')
     } finally {
       setIsSubmitting(false)
     }

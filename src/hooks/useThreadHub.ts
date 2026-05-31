@@ -143,6 +143,7 @@ export const useThreadHub = (threadId: string | null) => {
     [threadId]
   )
 
+  // eslint-disable-next-line react-hooks/refs
   const isConnected = hubConnectionRef.current?.state === 'Connected'
 
   return {

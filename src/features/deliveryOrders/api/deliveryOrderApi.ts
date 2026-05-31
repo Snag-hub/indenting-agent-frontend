@@ -142,4 +142,4 @@ export interface AddLotInput {
   notes?: string | null;
 }
 
-export interface UpdateLotInput extends AddLotInput {}
+export type UpdateLotInput = AddLotInput

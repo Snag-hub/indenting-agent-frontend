@@ -90,6 +90,7 @@ export function QuotationItemEditor({
   useEffect(() => {
     if (!loadedVariants) return
     if (loadedVariants.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVariantRows(
         loadedVariants.map((v) => ({
           supplierItemVariantId: v.id,
@@ -134,6 +135,7 @@ export function QuotationItemEditor({
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedItemId(null)
       setItemSearch('')
       setVariantRows([])

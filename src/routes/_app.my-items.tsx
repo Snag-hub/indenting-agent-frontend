@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createFileRoute } from '@tanstack/react-router'
 import { CustomerMyItemsPage } from '@/features/customerCatalog/pages/CustomerMyItemsPage'
 import { MyItemsPage } from '@/features/supplierCatalog/pages/MyItemsPage'

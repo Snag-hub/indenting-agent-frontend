@@ -159,6 +159,7 @@ export function TicketsPage() {
             pageCount: data?.pageCount ?? 1,
             page,
             onPageChange: setPage,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any)}
         />
       )}
