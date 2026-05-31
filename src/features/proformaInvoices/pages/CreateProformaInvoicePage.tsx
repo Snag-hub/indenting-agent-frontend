@@ -156,11 +156,12 @@ export function CreateProformaInvoicePage() {
       })
       toast.success('Proforma invoice created successfully')
       navigate({ to: '/proforma-invoices/$id', params: { id: piId } })
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string; title?: string } }; message?: string }
       const detail =
-        err?.response?.data?.detail ??
-        err?.response?.data?.title ??
-        err?.message ??
+        e?.response?.data?.detail ??
+        e?.response?.data?.title ??
+        e?.message ??
         'Failed to create proforma invoice'
       toast.error(detail)
     } finally {

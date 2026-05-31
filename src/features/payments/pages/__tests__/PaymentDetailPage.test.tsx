@@ -1,3 +1,4 @@
+import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
@@ -39,7 +40,7 @@ vi.mock('@/features/payments/api/paymentApi', () => ({
 
 // Mock AttachmentPanel to avoid network calls during unit tests
 vi.mock('@/components/AttachmentPanel', () => ({
-  AttachmentPanel: (props: any) => {
+  AttachmentPanel: (props: { entityType: string; entityId: string }) => {
     return (
       <div data-testid="attachment-panel">Attachments for {props.entityType} {props.entityId}</div>
     )
@@ -50,7 +51,7 @@ vi.mock('@/components/AttachmentPanel', () => ({
 import { PaymentDetailPage } from '../PaymentDetailPage'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-const renderWithQuery = (ui: any) => {
+const renderWithQuery = (ui: React.ReactNode) => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>)
 }

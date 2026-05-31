@@ -89,9 +89,10 @@ export function CreatePaymentPage() {
       })
       toast.success('Payment recorded successfully')
       navigate({ to: '/payments/$id', params: { id } })
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } }; message?: string }
       toast.error(
-        err?.response?.data?.detail ?? err?.message ?? 'Failed to record payment'
+        e?.response?.data?.detail ?? e?.message ?? 'Failed to record payment'
       )
     } finally {
       setIsSubmitting(false)
@@ -260,6 +261,7 @@ export function CreatePaymentPage() {
         title="Record Payment"
         description={`For PI: ${pi.documentNumber}`}
         action={
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           <Button variant="outline" size="sm" onClick={() => navigate({ to: `/proforma-invoices/${piId}` as any })}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
@@ -270,9 +272,14 @@ export function CreatePaymentPage() {
         steps={STEPS}
         currentStep={currentStep}
         onNext={() => setCurrentStep(s => s + 1)}
-        onBack={() => currentStep === 0
-          ? navigate({ to: `/proforma-invoices/${piId}` as any })
-          : setCurrentStep(s => s - 1)}
+        onBack={() => {
+          if (currentStep === 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            navigate({ to: `/proforma-invoices/${piId}` as any })
+          } else {
+            setCurrentStep(s => s - 1)
+          }
+        }}
         onSubmit={onSubmit}
         isSubmitting={isSubmitting}
         canProceed={currentStep === 0 ? isStep1Valid : true}

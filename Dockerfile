@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY src ./src
 COPY public ./public
 
 # Install dependencies and build
-RUN npm i && npm ci && npm run build
+RUN npm ci && npm run build
 
 # Production stage
 FROM nginx:alpine

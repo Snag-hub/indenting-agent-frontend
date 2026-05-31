@@ -91,8 +91,9 @@ export const configurationApi = {
         `/configuration/entity-type/${entityTypeName}/parameter/${parameterName}`
       )
       return data
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const e = error as { response?: { status?: number } }
+      if (e.response?.status === 404) {
         return null
       }
       throw error

@@ -111,7 +111,7 @@ export function CreateQuotationPage() {
   const toggleExpand = (idx: number) => {
     setExpandedItems(prev => {
       const next = new Set(prev)
-      next.has(idx) ? next.delete(idx) : next.add(idx)
+      if (next.has(idx)) { next.delete(idx) } else { next.add(idx) }
       return next
     })
   }

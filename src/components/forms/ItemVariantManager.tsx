@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { UseFormReturn } from 'react-hook-form'
+import type { UseFormReturn, FieldValues } from 'react-hook-form'
 import { useFieldArray } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
@@ -15,7 +15,7 @@ export interface ItemVariantManagerProps {
   rfqId?: string
   supplierIdFilter?: string  // optional supplier filter for item search
 
-  form: UseFormReturn<any>
+  form: UseFormReturn<FieldValues>
   fieldArrayName: string
 
   onItemsChange?: (items: ItemWithVariants[]) => void
@@ -68,7 +68,7 @@ export function ItemVariantManager({
       setVariantSelectorOpen(true)
     } else {
       // For other modes, just add empty item and let user add variants
-      // @ts-ignore - fields type inference with useFieldArray
+      // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
       append({
         supplierItemId: selectedItem.id,
         itemName: selectedItem.name,
@@ -82,7 +82,7 @@ export function ItemVariantManager({
     if (selectedItemIndex === null) return
 
     const itemIndex = selectedItemIndex
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     const existingItem = fields[itemIndex]
 
     // Map variant selection results to item variants based on mode
@@ -137,7 +137,7 @@ export function ItemVariantManager({
 
     if (existingItem) {
       // Update existing item
-      // @ts-ignore - fields type inference with useFieldArray
+      // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
       update(itemIndex, {
         ...existingItem,
         variants: mappedVariants,
@@ -145,9 +145,9 @@ export function ItemVariantManager({
     } else {
       // Add new item (if not already added)
       append({
-        // @ts-ignore - fields type inference with useFieldArray
+        // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
         supplierItemId: fields[itemIndex]?.supplierItemId || '',
-        // @ts-ignore - fields type inference with useFieldArray
+        // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
         itemName: fields[itemIndex]?.itemName || '',
         variants: mappedVariants,
       })
@@ -155,7 +155,7 @@ export function ItemVariantManager({
 
     setVariantSelectorOpen(false)
     setSelectedItemIndex(null)
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     onItemsChange?.(fields)
   }
 
@@ -166,50 +166,50 @@ export function ItemVariantManager({
     field: string,
     value: unknown
   ) => {
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     const item = fields[itemIndex]
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     if (!item || !item.variants) return
 
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     const updatedVariants = [...item.variants]
     updatedVariants[variantIndex] = {
       ...updatedVariants[variantIndex],
       [field]: value,
     }
 
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     update(itemIndex, {
       ...item,
       variants: updatedVariants,
     })
 
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     onItemsChange?.([...fields])
   }
 
   // Handle removing a variant
   const handleRemoveVariant = (itemIndex: number, variantIndex: number) => {
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     const item = fields[itemIndex]
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     if (!item || !item.variants) return
 
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     const updatedVariants = item.variants.filter((_: unknown, idx: number) => idx !== variantIndex)
 
     if (updatedVariants.length === 0) {
       // If no variants left, remove the item
       remove(itemIndex)
     } else {
-      // @ts-ignore - fields type inference with useFieldArray
+      // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
       update(itemIndex, {
         ...item,
         variants: updatedVariants,
       })
     }
 
-    // @ts-ignore - fields type inference with useFieldArray
+    // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
     onItemsChange?.([...fields])
   }
 
@@ -297,9 +297,9 @@ export function ItemVariantManager({
         <VariantSelector
           open={variantSelectorOpen}
           onOpenChange={setVariantSelectorOpen}
-          // @ts-ignore - fields type inference with useFieldArray
+          // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
           supplierItemId={fields[selectedItemIndex]?.supplierItemId}
-          // @ts-ignore - fields type inference with useFieldArray
+          // @ts-expect-error -- fields type inference with useFieldArray - fields type inference with useFieldArray
           supplierItemName={fields[selectedItemIndex]?.itemName}
           mode={
             mode === 'rfq' ? 'rfq'

@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { HubConnectionBuilder, LogLevel, type HubConnection } from "@microsoft/signalr";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
-import { notificationApi, type NotificationDto } from "@/features/notifications/api/notificationApi";
+import { notificationApi } from "@/features/notifications/api/notificationApi";
 
 export function useSignalR() {
-  const connectionRef = useRef<any>(null);
+  const connectionRef = useRef<HubConnection | null>(null);
   const { accessToken } = useAuthStore();
   const { increment, setUnreadCount, setConnected, setConnectionError } = useNotificationStore();
   const qc = useQueryClient();
@@ -56,7 +56,7 @@ export function useSignalR() {
       }
     });
 
-    connection.on("notification", (_dto: NotificationDto) => {
+    connection.on("notification", () => {
       if (destroyed) return;
       increment();
       qc.invalidateQueries({ queryKey: ["notifications", "list"] });
@@ -82,9 +82,10 @@ export function useSignalR() {
       connectionRef.current = null;
       connection
         .stop()
-        .catch((err: any) => console.error("SignalR disconnect error:", err));
+        .catch((err: unknown) => console.error("SignalR disconnect error:", err));
     };
   }, [accessToken, increment, setUnreadCount, setConnected, setConnectionError, qc]);
 
+  // eslint-disable-next-line react-hooks/refs
   return connectionRef.current;
 }

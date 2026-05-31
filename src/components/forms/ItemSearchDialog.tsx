@@ -42,7 +42,7 @@ export function ItemSearchDialog({
   })
 
   // Normalize response: extract items array regardless of response structure
-  // @ts-ignore - API response type may vary; we handle both array and PagedResult structures
+  // @ts-expect-error - API response type may vary; we handle both array and PagedResult structures
   const items: Array<{ id: string; name: string; supplierName: string; masterItemName?: string }> =
     Array.isArray(queryData) ? queryData : (queryData?.data ?? [])
 

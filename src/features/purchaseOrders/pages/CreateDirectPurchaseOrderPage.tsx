@@ -401,6 +401,7 @@ export function CreateDirectPurchaseOrderPage() {
             : 'Create a purchase order directly without a Quotation.'
         }
         action={
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           <Button variant="outline" size="sm" onClick={() => navigate(cancelTo as any)}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
           </Button>

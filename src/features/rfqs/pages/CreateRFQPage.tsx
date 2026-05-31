@@ -80,13 +80,14 @@ export function CreateRFQPage() {
   // produces ONE variant dialog; confirming or cancelling advances to the next.
   // Used when the multi-supplier picker fans out an item across N suppliers
   // where some of them carry variants.
-  const [variantQueue, setVariantQueue] = useState<Array<{
+  type VariantQueueItem = {
     supplierItemId: string
     itemDisplayName: string
     supplierId: string
     supplierName: string
     quantityTiers: number[]
-  }>>([])
+  }
+  const [, setVariantQueue] = useState<VariantQueueItem[]>([])
 
   const form = useForm<CreateRFQForm>({
     resolver: zodResolver(createRFQSchema),
@@ -243,7 +244,7 @@ export function CreateRFQPage() {
     )
     if (eligibleOffers.length === 0) return
 
-    const queued: typeof variantQueue = []
+    const queued: VariantQueueItem[] = []
     for (const offer of eligibleOffers) {
       if (offer.hasVariants) {
         queued.push({

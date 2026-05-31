@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { lazy, Suspense } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/authStore'
