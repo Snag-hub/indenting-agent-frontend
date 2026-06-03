@@ -2,7 +2,7 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { enquiryApi } from '@/features/enquiries/api/enquiryApi'
+import { enquiryApi, type EnquiryItemVariantInput } from '@/features/enquiries/api/enquiryApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
@@ -11,11 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, Lock, FileText, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, Send, Lock, FileText, Trash2, Plus, Users } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { PageHeader } from '@/components/PageHeader'
 import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -35,11 +37,17 @@ export function EnquiryDetailPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
   const pickerSearchRef = useRef<HTMLInputElement>(null)
+  // Variant editing state for Draft mode items
+  const [variantDialogItem, setVariantDialogItem] = useState<{ itemId: string; supplierItemId: string; itemName: string } | null>(null)
+  // Pending picker item — when selected item has variants, hold it here until variants are chosen
+  const [pendingPickerOffer, setPendingPickerOffer] = useState<{ supplierItemId: string; hasVariants: boolean } | null>(null)
 
   const { data: enquiry, isLoading } = useQuery({
     queryKey: queryKeys.enquiries.detail(id),
     queryFn: () => enquiryApi.get(id),
   })
+
+  usePageTitle(enquiry?.documentNumber)
 
   const submitEnquiry = useMutation({
     mutationFn: () => enquiryApi.submit(id),
@@ -90,11 +98,14 @@ export function EnquiryDetailPage() {
   })
 
   const addItem = useMutation({
-    mutationFn: (payload: { supplierItemId: string; quantity: number }) =>
-      enquiryApi.addItem(id, { supplierItemId: payload.supplierItemId, quantity: payload.quantity }),
+    mutationFn: (payload: { supplierItemId: string; quantity: number; variants?: EnquiryItemVariantInput[] }) =>
+      enquiryApi.addItem(id, { supplierItemId: payload.supplierItemId, quantity: payload.quantity, variants: payload.variants }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.enquiries.detail(id) })
       toast.success('Item added.')
+      setPendingPickerOffer(null)
+      setPickerOpen(false)
+      setPickerSearch('')
     },
     onError: () => toast.error('Failed to add item.'),
   })
@@ -193,16 +204,17 @@ export function EnquiryDetailPage() {
                     <thead className="text-left text-xs text-muted-foreground border-b">
                       <tr>
                         <th className="pb-2">Item</th>
-                        <th className="pb-2 w-40">Quantity</th>
+                        <th className="pb-2 w-48">Quantity / Variants</th>
                         <th className="pb-2 w-10" />
                       </tr>
                     </thead>
                     <tbody>
                       {enquiry.items.map((item) => {
+                        const hasVariants = (item.variants?.length ?? 0) > 0
                         const pendingQty = editingQty[item.id] ?? item.quantity
-                        const dirty = pendingQty !== item.quantity
+                        const dirty = !hasVariants && pendingQty !== item.quantity
                         return (
-                          <tr key={item.id} className="border-b last:border-b-0">
+                          <tr key={item.id} className="border-b last:border-b-0 align-top">
                             <td className="py-2 pr-4">
                               <div className="font-medium">{item.itemName}</div>
                               {item.supplierName && (
@@ -210,33 +222,57 @@ export function EnquiryDetailPage() {
                               )}
                             </td>
                             <td className="py-2 pr-2">
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  value={pendingQty}
-                                  onChange={(e) =>
-                                    setEditingQty((prev) => ({
-                                      ...prev,
-                                      [item.id]: Number(e.target.value) || 1,
-                                    }))
-                                  }
-                                  className="w-24 h-8"
-                                />
-                                {dirty && (
+                              {hasVariants ? (
+                                <div className="space-y-1">
                                   <Button
                                     type="button"
                                     size="sm"
-                                    className="h-8 text-xs"
-                                    disabled={updateItemQty.isPending}
-                                    onClick={() =>
-                                      updateItemQty.mutate({ itemId: item.id, quantity: pendingQty })
-                                    }
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() => item.supplierItemId && setVariantDialogItem({
+                                      itemId: item.id,
+                                      supplierItemId: item.supplierItemId,
+                                      itemName: item.itemName,
+                                    })}
                                   >
-                                    Save
+                                    <Users className="h-3 w-3 mr-1" />
+                                    {item.variants!.length} variant{item.variants!.length !== 1 ? 's' : ''} — qty {item.quantity}
                                   </Button>
-                                )}
-                              </div>
+                                  <ul className="text-xs text-muted-foreground space-y-0.5 pl-1">
+                                    {item.variants!.map((v) => (
+                                      <li key={v.id}>{v.dimensionSummary || v.sku || v.supplierItemVariantId} — {v.quantityRequested}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={pendingQty}
+                                    onChange={(e) =>
+                                      setEditingQty((prev) => ({
+                                        ...prev,
+                                        [item.id]: Number(e.target.value) || 1,
+                                      }))
+                                    }
+                                    className="w-24 h-8"
+                                  />
+                                  {dirty && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="h-8 text-xs"
+                                      disabled={updateItemQty.isPending}
+                                      onClick={() =>
+                                        updateItemQty.mutate({ itemId: item.id, quantity: pendingQty })
+                                      }
+                                    >
+                                      Save
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </td>
                             <td className="py-2">
                               <Button
@@ -345,10 +381,15 @@ export function EnquiryDetailPage() {
                       onClick={() => {
                         const offer = relevantOffers.find((o) => !alreadyAddedIds.has(o.supplierItemId))
                         if (!offer) return
-                        addItem.mutate({
-                          supplierItemId: offer.supplierItemId,
-                          quantity: offer.quantityTiers[0] ?? 1,
-                        })
+                        if (offer.hasVariants) {
+                          // Hold the offer and open the variant dialog before adding
+                          setPendingPickerOffer({ supplierItemId: offer.supplierItemId, hasVariants: true })
+                        } else {
+                          addItem.mutate({
+                            supplierItemId: offer.supplierItemId,
+                            quantity: offer.quantityTiers[0] ?? 1,
+                          })
+                        }
                       }}
                       className="w-full text-left px-3 py-2 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed border-b last:border-b-0"
                     >
@@ -411,6 +452,47 @@ export function EnquiryDetailPage() {
         onConfirm={() => removingItemId && removeItem.mutate(removingItemId)}
         isLoading={removeItem.isPending}
       />
+
+      {/* Variant dialog for editing variants on existing Draft items */}
+      {variantDialogItem && (
+        <VariantQuantityDialog
+          open={!!variantDialogItem}
+          onOpenChange={(open) => { if (!open) setVariantDialogItem(null) }}
+          supplierItemId={variantDialogItem.supplierItemId}
+          supplierItemName={variantDialogItem.itemName}
+          onConfirm={(confirmed) => {
+            const variants: EnquiryItemVariantInput[] = confirmed.map((v) => ({
+              supplierItemVariantId: v.variantId,
+              quantityRequested: v.quantity,
+            }))
+            const totalQty = variants.reduce((s, v) => s + v.quantityRequested, 0)
+            updateItemQty.mutate({ itemId: variantDialogItem.itemId, quantity: totalQty })
+            setVariantDialogItem(null)
+          }}
+        />
+      )}
+
+      {/* Variant dialog for new items being added from the picker */}
+      {pendingPickerOffer && (
+        <VariantQuantityDialog
+          open={!!pendingPickerOffer}
+          onOpenChange={(open) => { if (!open) setPendingPickerOffer(null) }}
+          supplierItemId={pendingPickerOffer.supplierItemId}
+          supplierItemName="Select variants"
+          onConfirm={(confirmed) => {
+            const variants: EnquiryItemVariantInput[] = confirmed.map((v) => ({
+              supplierItemVariantId: v.variantId,
+              quantityRequested: v.quantity,
+            }))
+            const totalQty = variants.reduce((s, v) => s + v.quantityRequested, 0)
+            addItem.mutate({
+              supplierItemId: pendingPickerOffer.supplierItemId,
+              quantity: totalQty,
+              variants,
+            })
+          }}
+        />
+      )}
     </DetailPageContainer>
   )
 }

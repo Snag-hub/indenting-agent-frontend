@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Check, X, Ticket } from 'lucide-react'
 import { format } from 'date-fns'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -41,6 +42,8 @@ export function PaymentDetailPage() {
     queryKey: queryKeys.payments.detail(id),
     queryFn: () => paymentApi.get(id),
   })
+
+  usePageTitle(payment ? `Payment ${payment.referenceNumber}` : null)
 
   const confirmPayment = useMutation({
     mutationFn: () => paymentApi.confirm(id),

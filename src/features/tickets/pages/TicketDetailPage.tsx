@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ArrowLeft, Lock, Edit2 } from 'lucide-react'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { useAuthStore } from '@/stores/authStore'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -57,15 +58,29 @@ export function TicketDetailPage() {
     queryFn: () => ticketApi.get(id),
   })
 
-  const { register: regUpdate, handleSubmit: handleUpdateSubmit, formState: { errors: updateErrors } } = useForm<UpdateTicketForm>({
+  usePageTitle(ticket?.title)
+
+  const { register: regUpdate, handleSubmit: handleUpdateSubmit, reset: resetUpdate, formState: { errors: updateErrors } } = useForm<UpdateTicketForm>({
     resolver: zodResolver(updateTicketSchema),
     defaultValues: {
-      title: ticket?.title ?? '',
-      description: ticket?.description ?? '',
-      priority: ticket?.priority ?? 'Medium',
-      status: ticket?.status ?? 'Open',
+      title: '',
+      description: '',
+      priority: 'Medium',
+      status: 'Open',
     },
   })
+
+  // Populate the edit form once ticket data loads
+  useEffect(() => {
+    if (ticket) {
+      resetUpdate({
+        title: ticket.title,
+        description: ticket.description ?? '',
+        priority: ticket.priority,
+        status: ticket.status,
+      })
+    }
+  }, [ticket, resetUpdate])
 
   const updateTicket = useMutation({
     mutationFn: (data: UpdateTicketForm) =>

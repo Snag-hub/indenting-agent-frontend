@@ -17,6 +17,7 @@ import { DeliveryOrderLotsCard } from '@/features/deliveryOrders/components/Deli
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -40,6 +41,8 @@ export function DeliveryOrderDetailPage() {
     queryKey: queryKeys.deliveryOrders.detail(id),
     queryFn: () => deliveryOrderApi.get(id),
   })
+
+  usePageTitle(deliveryOrder?.documentNumber)
 
   const dispatchDO = useMutation({
     mutationFn: () => deliveryOrderApi.dispatch(id),
