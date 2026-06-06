@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Link2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { useAuthStore } from '@/stores/authStore'
 
 const ENTITY_LABELS: Record<string, string> = {
   DO: 'Delivery Order',
@@ -27,6 +28,15 @@ const ENTITY_LABELS: Record<string, string> = {
   RFQ: 'Request for Quotation',
   QT: 'Quotation',
   Payment: 'Payment',
+}
+
+// Which document types each role may raise a ticket against. Mirrors the backend
+// access rules so the picker never offers a type whose document list would 403.
+//   Shared docs (RFQ/QT/PO) — both parties.  PI/DO — customer only.  Payment — supplier only.
+const ENTITY_TYPES_BY_ROLE: Record<string, TicketEntityType[]> = {
+  Customer: ['RFQ', 'QT', 'PO', 'PI', 'DO'],
+  Supplier: ['RFQ', 'QT', 'PO', 'Payment'],
+  Admin: ['RFQ', 'QT', 'PO', 'PI', 'DO', 'Payment'],
 }
 
 const createTicketSchema = z.object({
@@ -40,6 +50,8 @@ type CreateTicketForm = z.infer<typeof createTicketSchema>
 export function CreateTicketPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
+  const allowedEntityTypes = ENTITY_TYPES_BY_ROLE[role ?? ''] ?? ENTITY_TYPES_BY_ROLE.Admin
 
   const { entityType: prefilledType, entityId: prefilledId, entityNumber } = Route.useSearch()
 
@@ -150,12 +162,9 @@ export function CreateTicketPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">None</SelectItem>
-                        <SelectItem value="RFQ">Request for Quotation</SelectItem>
-                        <SelectItem value="QT">Quotation</SelectItem>
-                        <SelectItem value="PO">Purchase Order</SelectItem>
-                        <SelectItem value="PI">Proforma Invoice</SelectItem>
-                        <SelectItem value="DO">Delivery Order</SelectItem>
-                        <SelectItem value="Payment">Payment</SelectItem>
+                        {allowedEntityTypes.map((t) => (
+                          <SelectItem key={t} value={t}>{ENTITY_LABELS[t]}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
