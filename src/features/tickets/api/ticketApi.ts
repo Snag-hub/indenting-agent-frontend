@@ -115,9 +115,23 @@ export const ticketApi = {
       .get<PagedResult<TicketSummaryDto>>("/tickets", { params })
       .then((r) => r.data),
 
-  /** POST /tickets — create a new ticket. Returns the new ticket's GUID. */
+  /**
+   * POST /tickets — create a new ticket. Returns the new ticket's GUID.
+   * Maps the UI's `linked*`/`assignedToId` fields to the backend command's
+   * `entityType`/`entityId`/`assignedToUserId` names. Omitted link fields → a
+   * standalone (unlinked) ticket.
+   */
   create: (data: CreateTicketInput) =>
-    api.post<string>("/tickets", data).then((r) => r.data),
+    api
+      .post<string>("/tickets", {
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        assignedToUserId: data.assignedToId,
+        entityType: data.linkedEntityType,
+        entityId: data.linkedEntityId,
+      })
+      .then((r) => r.data),
 
   /** GET /tickets/:id — full detail including comments. */
   get: (id: string): Promise<TicketDetailDto> =>
