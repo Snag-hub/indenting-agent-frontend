@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState } from 'react'
 import { Route } from '@/routes/_app.tickets.new'
-import { ticketApi } from '@/features/tickets/api/ticketApi'
+import { ticketApi, type TicketEntityType } from '@/features/tickets/api/ticketApi'
 import { useAvailableTicketDocuments } from '@/features/tickets/hooks/useAvailableTicketDocuments'
 import { queryKeys } from '@/lib/queryKeys'
 import { PageHeader } from '@/components/PageHeader'
@@ -44,8 +44,8 @@ export function CreateTicketPage() {
   const { entityType: prefilledType, entityId: prefilledId, entityNumber } = Route.useSearch()
 
   // When navigated from a document page, use those values; otherwise let user choose
-  const [selectedEntityType, setSelectedEntityType] = useState<'PI' | 'DO' | 'Payment' | ''>(
-    (prefilledType as 'PI' | 'DO' | 'Payment') ?? ''
+  const [selectedEntityType, setSelectedEntityType] = useState<TicketEntityType | ''>(
+    (prefilledType as TicketEntityType) ?? ''
   )
   const [selectedEntityId, setSelectedEntityId] = useState<string>(prefilledId ?? '')
 
@@ -64,7 +64,7 @@ export function CreateTicketPage() {
         title: data.title,
         description: data.description,
         priority: data.priority,
-        linkedEntityType: (selectedEntityType || undefined) as 'PI' | 'DO' | 'Payment' | undefined,
+        linkedEntityType: (selectedEntityType || undefined) as TicketEntityType | undefined,
         linkedEntityId: selectedEntityId || undefined,
       }),
     onSuccess: (ticketId) => {
@@ -143,13 +143,16 @@ export function CreateTicketPage() {
                     <Label>Document Type</Label>
                     <Select
                       value={selectedEntityType}
-                      onValueChange={(v) => { setSelectedEntityType(v as 'PI' | 'DO' | 'Payment' | ''); setSelectedEntityId('') }}
+                      onValueChange={(v) => { setSelectedEntityType(v as TicketEntityType | ''); setSelectedEntityId('') }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="None" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">None</SelectItem>
+                        <SelectItem value="RFQ">Request for Quotation</SelectItem>
+                        <SelectItem value="QT">Quotation</SelectItem>
+                        <SelectItem value="PO">Purchase Order</SelectItem>
                         <SelectItem value="PI">Proforma Invoice</SelectItem>
                         <SelectItem value="DO">Delivery Order</SelectItem>
                         <SelectItem value="Payment">Payment</SelectItem>

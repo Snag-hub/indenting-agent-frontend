@@ -72,12 +72,15 @@ export interface AvailableDocumentDto {
  * standalone (from the Tickets nav) or linked to a document (from a DO/PI/Payment
  * detail page). The backend's Ticket.EntityType/EntityId are both nullable.
  */
+/** Document types a ticket can be linked to. */
+export type TicketEntityType = "PI" | "DO" | "PO" | "QT" | "RFQ" | "Payment";
+
 export interface CreateTicketInput {
   title: string;
   description?: string;
   priority: "Low" | "Medium" | "High" | "Critical";
   assignedToId?: string;
-  linkedEntityType?: "PI" | "DO" | "Payment";
+  linkedEntityType?: TicketEntityType;
   linkedEntityId?: string;
 }
 
@@ -98,7 +101,7 @@ export interface AddCommentInput {
 
 export const ticketApi = {
   /** GET /tickets/available-documents — fetch documents user can link to tickets. */
-  getAvailableDocuments: (entityType: "PI" | "DO" | "Payment") =>
+  getAvailableDocuments: (entityType: TicketEntityType) =>
     api
       .get<AvailableDocumentDto[]>("/tickets/available-documents", { params: { entityType } })
       .then((r) => r.data),
