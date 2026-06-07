@@ -15,9 +15,16 @@ import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Open: 'default',
-  'In Progress': 'default',
+  InProgress: 'default',
   Resolved: 'secondary',
   Closed: 'secondary',
+}
+
+const statusLabels: Record<string, string> = {
+  Open: 'Open',
+  InProgress: 'In Progress',
+  Resolved: 'Resolved',
+  Closed: 'Closed',
 }
 
 const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -54,7 +61,7 @@ export function TicketsPage() {
       header: 'Status',
       cell: ({ getValue }) => (
         <Badge variant={statusColors[getValue() as string]}>
-          {getValue() as string}
+          {statusLabels[getValue() as string] ?? (getValue() as string)}
         </Badge>
       ),
     },
@@ -124,7 +131,7 @@ export function TicketsPage() {
           >
             <option value="">All Statuses</option>
             <option value="Open">Open</option>
-            <option value="In Progress">In Progress</option>
+            <option value="InProgress">In Progress</option>
             <option value="Resolved">Resolved</option>
             <option value="Closed">Closed</option>
           </select>

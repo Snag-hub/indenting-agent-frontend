@@ -75,6 +75,12 @@ export interface AvailableDocumentDto {
 /** Document types a ticket can be linked to. */
 export type TicketEntityType = "PI" | "DO" | "PO" | "QT" | "RFQ" | "Payment";
 
+/** A pickable counterparty org for a direct (non-document) ticket. */
+export interface TicketCounterpartyDto {
+  id: string;
+  name: string;
+}
+
 export interface CreateTicketInput {
   title: string;
   description?: string;
@@ -82,6 +88,9 @@ export interface CreateTicketInput {
   assignedToId?: string;
   linkedEntityType?: TicketEntityType;
   linkedEntityId?: string;
+  // Direct (non-document) tickets: who the ticket is for.
+  counterpartyType?: "Customer" | "Supplier";
+  counterpartyId?: string;
 }
 
 /** Payload for PUT /tickets/:id — all fields optional (partial update). */
@@ -133,7 +142,15 @@ export const ticketApi = {
         assignedToUserId: data.assignedToId,
         entityType: data.linkedEntityType,
         entityId: data.linkedEntityId,
+        counterpartyType: data.counterpartyType,
+        counterpartyId: data.counterpartyId,
       })
+      .then((r) => r.data),
+
+  /** GET /tickets/counterparties — orgs the user can direct a standalone ticket to. */
+  getCounterparties: (partyType: "Customer" | "Supplier") =>
+    api
+      .get<TicketCounterpartyDto[]>("/tickets/counterparties", { params: { partyType } })
       .then((r) => r.data),
 
   /** GET /tickets/:id — full detail including comments. */
@@ -153,5 +170,6 @@ export const ticketApi = {
     api.delete(`/tickets/${id}/comments/${commentId}`).then((r) => r.data),
 
   /** POST /tickets/:id/close — moves ticket to Closed status. */
-  close: (id: string) => api.post(`/tickets/${id}/close`).then((r) => r.data),
+  close: (id: string) =>
+    api.put(`/tickets/${id}/status`, { status: "Closed" }).then((r) => r.data),
 };

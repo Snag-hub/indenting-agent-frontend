@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,14 +30,9 @@ const ENTITY_LABELS: Record<string, string> = {
   Payment: 'Payment',
 }
 
-// Which document types each role may raise a ticket against. Mirrors the backend
-// access rules so the picker never offers a type whose document list would 403.
-//   Shared docs (RFQ/QT/PO) — both parties.  PI/DO — customer only.  Payment — supplier only.
-const ENTITY_TYPES_BY_ROLE: Record<string, TicketEntityType[]> = {
-  Customer: ['RFQ', 'QT', 'PO', 'PI', 'DO'],
-  Supplier: ['RFQ', 'QT', 'PO', 'Payment'],
-  Admin: ['RFQ', 'QT', 'PO', 'PI', 'DO', 'Payment'],
-}
+// Both the customer and supplier are parties to every document type, so all roles
+// may raise a ticket against any of them (the document list is party-scoped server-side).
+const ALL_ENTITY_TYPES: TicketEntityType[] = ['RFQ', 'QT', 'PO', 'PI', 'DO', 'Payment']
 
 const createTicketSchema = z.object({
   title: z.string().min(1, 'Title is required').min(3, 'Title must be at least 3 characters'),
@@ -51,7 +46,7 @@ export function CreateTicketPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const role = useAuthStore((s) => s.user?.role)
-  const allowedEntityTypes = ENTITY_TYPES_BY_ROLE[role ?? ''] ?? ENTITY_TYPES_BY_ROLE.Admin
+  const allowedEntityTypes = ALL_ENTITY_TYPES
 
   const { entityType: prefilledType, entityId: prefilledId, entityNumber } = Route.useSearch()
 
@@ -64,6 +59,25 @@ export function CreateTicketPage() {
   const { documents, isLoading: docsLoading } = useAvailableTicketDocuments(
     selectedEntityType || null
   )
+
+  // ── Direct (non-document) ticket: choose a counterparty org ───────────────────
+  // A Customer always directs to a Supplier and vice-versa; an Admin chooses.
+  const fixedCounterpartyType: 'Customer' | 'Supplier' | null =
+    role === 'Customer' ? 'Supplier' : role === 'Supplier' ? 'Customer' : null
+  const [counterpartyType, setCounterpartyType] = useState<'Customer' | 'Supplier'>(
+    fixedCounterpartyType ?? 'Supplier'
+  )
+  const [counterpartyId, setCounterpartyId] = useState<string>('')
+  const effectiveCounterpartyType = fixedCounterpartyType ?? counterpartyType
+
+  // Direct mode = creating from the nav (not prefilled) and no document linked.
+  const isDirect = !prefilledType && !selectedEntityType
+
+  const { data: counterparties = [], isLoading: cpLoading } = useQuery({
+    queryKey: ['tickets', 'counterparties', effectiveCounterpartyType],
+    queryFn: () => ticketApi.getCounterparties(effectiveCounterpartyType),
+    enabled: isDirect,
+  })
 
   const { register, handleSubmit, formState: { errors } } = useForm<CreateTicketForm>({
     resolver: zodResolver(createTicketSchema),
@@ -78,6 +92,9 @@ export function CreateTicketPage() {
         priority: data.priority,
         linkedEntityType: (selectedEntityType || undefined) as TicketEntityType | undefined,
         linkedEntityId: selectedEntityId || undefined,
+        // Only sent for direct tickets (no document linked).
+        counterpartyType: isDirect ? effectiveCounterpartyType : undefined,
+        counterpartyId: isDirect ? counterpartyId || undefined : undefined,
       }),
     onSuccess: (ticketId) => {
       qc.invalidateQueries({ queryKey: queryKeys.tickets.list() })
@@ -154,14 +171,19 @@ export function CreateTicketPage() {
                   <div className="space-y-1">
                     <Label>Document Type</Label>
                     <Select
-                      value={selectedEntityType}
-                      onValueChange={(v) => { setSelectedEntityType(v as TicketEntityType | ''); setSelectedEntityId('') }}
+                      value={selectedEntityType || 'none'}
+                      onValueChange={(v) => {
+                        // Radix Select forbids an empty-string item value, so "none"
+                        // is the sentinel for "standalone (unlinked)".
+                        setSelectedEntityType(v === 'none' ? '' : (v as TicketEntityType))
+                        setSelectedEntityId('')
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="None" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None (standalone ticket)</SelectItem>
                         {allowedEntityTypes.map((t) => (
                           <SelectItem key={t} value={t}>{ENTITY_LABELS[t]}</SelectItem>
                         ))}
@@ -205,8 +227,57 @@ export function CreateTicketPage() {
               </div>
             )}
 
+            {/* Counterparty — required for a direct ticket (no document linked) */}
+            {isDirect && (
+              <div className="border-t pt-4 space-y-4">
+                <p className="text-sm font-medium">
+                  Who is this ticket for? <span className="text-destructive">*</span>
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {role === 'Admin' && (
+                    <div className="space-y-1">
+                      <Label>Party</Label>
+                      <Select
+                        value={counterpartyType}
+                        onValueChange={(v) => { setCounterpartyType(v as 'Customer' | 'Supplier'); setCounterpartyId('') }}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Customer">Customer</SelectItem>
+                          <SelectItem value="Supplier">Supplier</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <Label>{effectiveCounterpartyType}</Label>
+                    <Select value={counterpartyId} onValueChange={setCounterpartyId} disabled={cpLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={cpLoading ? 'Loading…' : `Select ${effectiveCounterpartyType.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {counterparties.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                        {!cpLoading && counterparties.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            No {effectiveCounterpartyType.toLowerCase()}s available
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Only this {effectiveCounterpartyType.toLowerCase()} and admins will see and respond to the ticket.
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={createTicket.isPending}>
+              <Button type="submit" disabled={createTicket.isPending || (isDirect && !counterpartyId)}>
                 {createTicket.isPending ? 'Creating…' : 'Create Ticket'}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate({ to: '/tickets' })}>

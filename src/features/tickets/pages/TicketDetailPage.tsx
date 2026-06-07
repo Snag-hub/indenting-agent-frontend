@@ -24,9 +24,17 @@ import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Open: 'default',
-  'In Progress': 'default',
+  InProgress: 'default',
   Resolved: 'secondary',
   Closed: 'secondary',
+}
+
+// Backend status values are keys; show friendlier labels in the UI.
+const statusLabels: Record<string, string> = {
+  Open: 'Open',
+  InProgress: 'In Progress',
+  Resolved: 'Resolved',
+  Closed: 'Closed',
 }
 
 const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -40,7 +48,7 @@ const updateTicketSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']),
-  status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed']),
+  status: z.enum(['Open', 'InProgress', 'Resolved', 'Closed']),
 })
 
 type UpdateTicketForm = z.infer<typeof updateTicketSchema>
@@ -127,7 +135,7 @@ export function TicketDetailPage() {
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[ticket.status]}>
-              {ticket.status}
+              {statusLabels[ticket.status] ?? ticket.status}
             </Badge>
             <Badge variant={priorityColors[ticket.priority]}>
               {ticket.priority}
@@ -171,7 +179,7 @@ export function TicketDetailPage() {
               <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Badge variant={statusColors[ticket.status]}>{ticket.status}</Badge>
+                  <Badge variant={statusColors[ticket.status]}>{statusLabels[ticket.status] ?? ticket.status}</Badge>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Priority</p>
@@ -251,7 +259,7 @@ export function TicketDetailPage() {
                   {...regUpdate('status')}
                 >
                   <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
+                  <option value="InProgress">In Progress</option>
                   <option value="Resolved">Resolved</option>
                   <option value="Closed">Closed</option>
                 </select>
