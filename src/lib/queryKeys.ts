@@ -76,6 +76,8 @@ export const queryKeys = {
   notifications: {
     list: (params?: Record<string, unknown>) =>
       ["notifications", "list", params ?? {}] as const,
+    infinite: (params?: Record<string, unknown>) =>
+      ["notifications", "infinite", params ?? {}] as const,
     preferences: () => ["notifications", "preferences"] as const,
   },
   proformaInvoices: {
@@ -119,8 +121,19 @@ export const queryKeys = {
   threads: {
     list: (params?: Record<string, unknown>) =>
       ["threads", "list", params ?? {}] as const,
+    infinite: (params?: Record<string, unknown>) =>
+      ["threads", "infinite", params ?? {}] as const,
     messages: (threadId: string, page: number = 1) =>
       ["threads", "messages", threadId, page] as const,
+    messagesInfinite: (threadId: string) =>
+      ["threads", "messages", "infinite", threadId] as const,
+    unreadCount: () => ["threads", "unread-count"] as const,
+  },
+  auditLogs: {
+    list: (params?: Record<string, unknown>) =>
+      ["audit-logs", "list", params ?? {}] as const,
+    entityHistory: (entityType: string, entityId: string) =>
+      ["audit-logs", "entity", entityType, entityId] as const,
   },
   configuration: {
     entityTypes: () => ["config", "entity-types"] as const,

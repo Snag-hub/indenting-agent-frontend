@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { customerApi } from '@/features/accounts/api/customerApi'
 import { queryKeys } from '@/lib/queryKeys'
+import { useAuthStore } from '@/stores/authStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { PartyThreadsTab } from '@/features/threads/components/PartyThreadsTab'
+import { PartyNotificationsTab } from '@/features/notifications/components/PartyNotificationsTab'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Trash2, ChevronLeft } from 'lucide-react'
 import { format } from 'date-fns'
@@ -17,6 +20,8 @@ import { format } from 'date-fns'
 export function CustomerDetailPage() {
   const { id } = useCustomerDetailParams()
   const qc = useQueryClient()
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'Admin'
   const [unmapping, setUnmapping] = useState<string | undefined>()
 
   const { data, isLoading } = useQuery({
@@ -58,6 +63,8 @@ export function CustomerDetailPage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="items">Mapped Items ({data.mappedSupplierItems?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          {isAdmin && <TabsTrigger value="conversations">Conversations</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profile">
@@ -129,6 +136,22 @@ export function CustomerDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="conversations">
+            <PartyThreadsTab customerId={id} />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="notifications">
+            <Card>
+              <CardContent className="pt-6">
+                <PartyNotificationsTab customerId={id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <ConfirmDialog

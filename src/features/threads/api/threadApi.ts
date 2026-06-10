@@ -8,6 +8,8 @@ export interface ThreadSummaryDto {
   entityDocumentNumber?: string
   entityTitle?: string
   entityPartyName?: string
+  /** "Customer" | "Supplier" — role of the opposing party on this document */
+  entityPartyRole?: string
   subject: string
   lastMessageAt?: string
   lastMessagePreview?: string
@@ -66,6 +68,12 @@ export const threadApi = {
     entityType?: string
     search?: string
     sortBy?: 'lastActivity' | 'created'
+    /** When true, only threads with unread messages are returned */
+    unreadOnly?: boolean
+    /** Admin or Supplier: filter to threads linked to this customer */
+    customerId?: string
+    /** Admin or Customer: filter to threads linked to this supplier */
+    supplierId?: string
   } = {}): Promise<ThreadsPagedResult> => {
     const searchParams = new URLSearchParams()
     if (params.page) searchParams.append('page', params.page.toString())
@@ -73,6 +81,9 @@ export const threadApi = {
     if (params.entityType) searchParams.append('entityType', params.entityType)
     if (params.search) searchParams.append('search', params.search)
     if (params.sortBy) searchParams.append('sortBy', params.sortBy)
+    if (params.unreadOnly) searchParams.append('unreadOnly', 'true')
+    if (params.customerId) searchParams.append('customerId', params.customerId)
+    if (params.supplierId) searchParams.append('supplierId', params.supplierId)
 
     return api
       .get<ThreadsPagedResult>(`/threads?${searchParams.toString()}`)
@@ -141,5 +152,14 @@ export const threadApi = {
   getUnreadCount: (entityType: string, entityId: string): Promise<number> =>
     api
       .get<{ count: number }>(`/threads/${entityType}/${entityId}/unread-count`)
+      .then((r) => r.data.count),
+
+  /**
+   * Get total number of threads with at least one unread message for the current user.
+   * Used for the nav badge.
+   */
+  getMyUnreadCount: (): Promise<number> =>
+    api
+      .get<{ count: number }>('/threads/unread-count')
       .then((r) => r.data.count),
 }

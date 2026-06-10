@@ -10,9 +10,17 @@ export interface NotificationDto {
   message: string;
   entityId?: string;
   entityType?: string;
+  /** Document number of the linked entity, e.g. "PO-2026-0042" */
+  entityDocumentNumber?: string;
   isRead: boolean;
   status: NotificationStatus;
   createdAt: string;
+  /** User ID of the person whose action triggered this notification */
+  createdByUserId?: string;
+  /** Full name of the person who triggered this notification */
+  createdByName?: string;
+  /** "Admin" | "Customer" | "Supplier" */
+  createdByRole?: string;
 }
 
 export interface NotificationsPagedResult {
@@ -36,9 +44,12 @@ export const notificationApi = {
     pageSize: number = 20,
     unreadOnly: boolean = false,
     includeCleared: boolean = false,
+    entityType?: string,
+    customerId?: string,
+    supplierId?: string,
   ): Promise<NotificationsPagedResult> =>
     api.get<NotificationsPagedResult>("/notifications", {
-      params: { page, pageSize, unreadOnly, includeCleared }
+      params: { page, pageSize, unreadOnly, includeCleared, entityType, customerId, supplierId }
     }).then((r) => r.data),
 
   /**

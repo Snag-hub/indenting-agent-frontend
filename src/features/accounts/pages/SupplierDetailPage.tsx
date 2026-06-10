@@ -2,17 +2,22 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { queryKeys } from '@/lib/queryKeys'
+import { useAuthStore } from '@/stores/authStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/PageHeader'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
+import { PartyThreadsTab } from '@/features/threads/components/PartyThreadsTab'
+import { PartyNotificationsTab } from '@/features/notifications/components/PartyNotificationsTab'
 import { ChevronLeft, Package } from 'lucide-react'
 import { format } from 'date-fns'
 
 export function SupplierDetailPage() {
   const { id } = useSupplierDetailParams()
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'Admin'
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.suppliers.detail(id),
@@ -47,6 +52,8 @@ export function SupplierDetailPage() {
             Item Catalog ({data.itemCount ?? 0})
           </TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          {isAdmin && <TabsTrigger value="conversations">Conversations</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profile">
@@ -101,6 +108,22 @@ export function SupplierDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="conversations">
+            <PartyThreadsTab supplierId={id} />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="notifications">
+            <Card>
+              <CardContent className="pt-6">
+                <PartyNotificationsTab supplierId={id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

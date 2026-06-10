@@ -51,7 +51,7 @@ export function TicketsPage() {
 
   const columns: ColumnDef<TicketSummaryDto>[] = [
     {
-      accessorKey: 'documentNumber',
+      accessorKey: 'ticketNumber',
       header: '#',
       cell: ({ getValue }) => <span className="font-mono text-xs">{(getValue() as string) ?? '—'}</span>,
     },

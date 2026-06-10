@@ -131,7 +131,7 @@ export function TicketDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={ticket.title}
-        description={ticket.documentNumber ? `#${ticket.documentNumber}` : ''}
+        description={(ticket.ticketNumber ?? ticket.documentNumber) ? `#${ticket.ticketNumber ?? ticket.documentNumber}` : ''}
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[ticket.status]}>

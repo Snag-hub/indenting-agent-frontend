@@ -17,7 +17,7 @@ export interface TicketCommentDto {
  */
 export interface TicketSummaryDto {
   id: string;
-  documentNumber?: string;
+  ticketNumber?: string;
   title: string;
   description?: string;
   status: "Open" | "In Progress" | "Resolved" | "Closed";

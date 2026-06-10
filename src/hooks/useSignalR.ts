@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { notificationApi } from "@/features/notifications/api/notificationApi";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useSignalR() {
   const connectionRef = useRef<HubConnection | null>(null);
@@ -41,7 +42,8 @@ export function useSignalR() {
         .getUnreadCount()
         .then((count) => { if (!destroyed) setUnreadCount(count); })
         .catch(() => {/* ignore — badge stays at last known value */});
-      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
+      qc.invalidateQueries({ queryKey: ["notifications", "infinite"] });
+      qc.invalidateQueries({ queryKey: queryKeys.threads.unreadCount() });
     });
 
     connection.onreconnecting(() => {
@@ -59,7 +61,10 @@ export function useSignalR() {
     connection.on("notification", () => {
       if (destroyed) return;
       increment();
-      qc.invalidateQueries({ queryKey: ["notifications", "list"] });
+      qc.invalidateQueries({ queryKey: ["notifications", "infinite"] });
+      // Thread messages generate bell notifications via FanoutAsync — invalidate
+      // the nav badge so it reflects the new unread thread immediately.
+      qc.invalidateQueries({ queryKey: queryKeys.threads.unreadCount() });
     });
 
     connection
