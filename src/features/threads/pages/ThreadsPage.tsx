@@ -57,7 +57,7 @@ export function ThreadsPage() {
   useEffect(() => {
     if (preselectedThreadId) {
       setSelectedThreadId(preselectedThreadId) // eslint-disable-line react-hooks/set-state-in-effect
-      setMobileView('detail') // eslint-disable-line react-hooks/set-state-in-effect
+      setMobileView('detail')
     }
   }, [preselectedThreadId])
 

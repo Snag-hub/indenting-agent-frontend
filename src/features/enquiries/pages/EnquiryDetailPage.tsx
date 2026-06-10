@@ -77,8 +77,8 @@ export function EnquiryDetailPage() {
   })
 
   const updateItemQty = useMutation({
-    mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
-      enquiryApi.updateItem(itemId, { quantity }),
+    mutationFn: ({ itemId, quantity, variants }: { itemId: string; quantity: number; variants?: import('@/features/enquiries/api/enquiryApi').EnquiryItemVariantInput[] }) =>
+      enquiryApi.updateItem(itemId, { quantity, variants }),
     onSuccess: (_data, { itemId }) => {
       qc.invalidateQueries({ queryKey: queryKeys.enquiries.detail(id) })
       setEditingQty((prev) => { const next = { ...prev }; delete next[itemId]; return next })
@@ -466,7 +466,7 @@ export function EnquiryDetailPage() {
               quantityRequested: v.quantity,
             }))
             const totalQty = variants.reduce((s, v) => s + v.quantityRequested, 0)
-            updateItemQty.mutate({ itemId: variantDialogItem.itemId, quantity: totalQty })
+            updateItemQty.mutate({ itemId: variantDialogItem.itemId, quantity: totalQty, variants })
             setVariantDialogItem(null)
           }}
         />

@@ -122,7 +122,7 @@ export const enquiryApi = {
   addItem: (enquiryId: string, data: EnquiryItemInput) =>
     api.post<string>(`/enquiries/${enquiryId}/items`, data).then((r) => r.data),
 
-  updateItem: (itemId: string, data: { quantity: number; notes?: string }) =>
+  updateItem: (itemId: string, data: { quantity: number; notes?: string; variants?: EnquiryItemVariantInput[] }) =>
     api.put(`/enquiries/items/${itemId}`, data),
 
   removeItem: (itemId: string) =>

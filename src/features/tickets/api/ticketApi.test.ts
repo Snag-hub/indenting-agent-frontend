@@ -31,6 +31,8 @@ describe('ticketApi.create — payload mapping', () => {
       assignedToUserId: 'user-9',
       entityType: 'PO',
       entityId: 'po-pk-123',
+      counterpartyType: undefined,
+      counterpartyId: undefined,
     })
   })
 

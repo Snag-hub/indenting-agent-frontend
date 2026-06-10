@@ -160,6 +160,7 @@ export function ThreadListPane({
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
                         e.stopPropagation()
                         navigate({ to: docRoute, params: { id: thread.entityId } })
                       }

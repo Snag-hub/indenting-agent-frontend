@@ -44,7 +44,7 @@ export function PartyNotificationsTab({ customerId, supplierId }: PartyNotificat
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.notifications.list({ customerId, supplierId, page }),
-    queryFn: () => notificationApi.list(page, 20, false, true, customerId, supplierId),
+    queryFn: () => notificationApi.list(page, 20, false, true, undefined, customerId, supplierId),
   })
 
   if (isLoading) {

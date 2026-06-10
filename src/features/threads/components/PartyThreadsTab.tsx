@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { threadApi } from '@/features/threads/api/threadApi'
 import { ThreadListPane } from '@/features/threads/components/ThreadListPane'
@@ -17,18 +16,24 @@ interface PartyThreadsTabProps {
  */
 export function PartyThreadsTab({ customerId, supplierId }: PartyThreadsTabProps) {
   const navigate = useNavigate()
-  const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.threads.list({ customerId, supplierId, page }),
-    queryFn: () =>
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: queryKeys.threads.infinite({ customerId, supplierId }),
+    queryFn: ({ pageParam }) =>
       threadApi.list({
         customerId,
         supplierId,
-        page,
+        page: pageParam as number,
         pageSize: 20,
       }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.totalCount / lastPage.pageSize)
+      return lastPage.page < totalPages ? lastPage.page + 1 : undefined
+    },
   })
+
+  const threads = data?.pages.flatMap((p) => p.data) ?? []
 
   const handleSelectThread = (threadId: string) => {
     navigate({ to: '/threads', search: { threadId } })
@@ -37,13 +42,13 @@ export function PartyThreadsTab({ customerId, supplierId }: PartyThreadsTabProps
   return (
     <div className="h-[500px] border rounded-lg bg-card flex flex-col overflow-hidden">
       <ThreadListPane
-        threads={data?.data ?? []}
+        threads={threads}
         selectedThreadId={null}
         onSelectThread={handleSelectThread}
         isLoading={isLoading}
-        page={page}
-        totalCount={data?.totalCount ?? 0}
-        onPageChange={setPage}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage ?? false}
+        isFetchingNextPage={isFetchingNextPage}
       />
     </div>
   )

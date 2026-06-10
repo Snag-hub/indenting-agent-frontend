@@ -169,7 +169,7 @@ export const ticketApi = {
   removeComment: (id: string, commentId: string) =>
     api.delete(`/tickets/${id}/comments/${commentId}`).then((r) => r.data),
 
-  /** POST /tickets/:id/close — moves ticket to Closed status. */
+  /** PUT /tickets/:id/status — moves ticket to Closed status. */
   close: (id: string) =>
     api.put(`/tickets/${id}/status`, { status: "Closed" }).then((r) => r.data),
 };
