@@ -16,6 +16,7 @@ import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -38,6 +39,8 @@ export function PurchaseOrderDetailPage() {
     queryKey: queryKeys.pos.detail(id),
     queryFn: () => purchaseOrderApi.get(id),
   })
+
+  usePageTitle(po?.documentNumber)
 
   const { data: invoiceBalance } = useQuery({
     queryKey: queryKeys.pos.invoiceBalance(id),

@@ -33,6 +33,7 @@ import { Route as AppEnquiriesRouteImport } from './routes/_app.enquiries'
 import { Route as AppDeliveryOrdersRouteImport } from './routes/_app.delivery-orders'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app.customers'
+import { Route as AppAuditLogsRouteImport } from './routes/_app.audit-logs'
 import { Route as AppTicketsNewRouteImport } from './routes/_app.tickets.new'
 import { Route as AppTicketsIdRouteImport } from './routes/_app.tickets.$id'
 import { Route as AppSuppliersIdRouteImport } from './routes/_app.suppliers.$id'
@@ -180,6 +181,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
 const AppCustomersRoute = AppCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditLogsRoute = AppAuditLogsRouteImport.update({
+  id: '/audit-logs',
+  path: '/audit-logs',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTicketsNewRoute = AppTicketsNewRouteImport.update({
@@ -341,6 +347,7 @@ const AppCatalogItemsIdRoute = AppCatalogItemsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit-logs': typeof AppAuditLogsRoute
   '/customers': typeof AppCustomersRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/delivery-orders': typeof AppDeliveryOrdersRouteWithChildren
@@ -395,6 +402,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit-logs': typeof AppAuditLogsRoute
   '/customers': typeof AppCustomersRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/delivery-orders': typeof AppDeliveryOrdersRouteWithChildren
@@ -452,6 +460,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/_app/audit-logs': typeof AppAuditLogsRoute
   '/_app/customers': typeof AppCustomersRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/delivery-orders': typeof AppDeliveryOrdersRouteWithChildren
@@ -508,6 +517,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/audit-logs'
     | '/customers'
     | '/dashboard'
     | '/delivery-orders'
@@ -562,6 +572,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/audit-logs'
     | '/customers'
     | '/dashboard'
     | '/delivery-orders'
@@ -618,6 +629,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/_app/audit-logs'
     | '/_app/customers'
     | '/_app/dashboard'
     | '/_app/delivery-orders'
@@ -845,6 +857,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/customers'
       preLoaderRoute: typeof AppCustomersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/audit-logs': {
+      id: '/_app/audit-logs'
+      path: '/audit-logs'
+      fullPath: '/audit-logs'
+      preLoaderRoute: typeof AppAuditLogsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/tickets/new': {
@@ -1280,6 +1299,7 @@ const AppCatalogItemsRouteWithChildren = AppCatalogItemsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAuditLogsRoute: typeof AppAuditLogsRoute
   AppCustomersRoute: typeof AppCustomersRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppDeliveryOrdersRoute: typeof AppDeliveryOrdersRouteWithChildren
@@ -1306,6 +1326,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAuditLogsRoute: AppAuditLogsRoute,
   AppCustomersRoute: AppCustomersRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppDeliveryOrdersRoute: AppDeliveryOrdersRouteWithChildren,

@@ -17,7 +17,7 @@ export interface TicketCommentDto {
  */
 export interface TicketSummaryDto {
   id: string;
-  documentNumber?: string;
+  ticketNumber?: string;
   title: string;
   description?: string;
   status: "Open" | "In Progress" | "Resolved" | "Closed";
@@ -72,13 +72,25 @@ export interface AvailableDocumentDto {
  * standalone (from the Tickets nav) or linked to a document (from a DO/PI/Payment
  * detail page). The backend's Ticket.EntityType/EntityId are both nullable.
  */
+/** Document types a ticket can be linked to. */
+export type TicketEntityType = "PI" | "DO" | "PO" | "QT" | "RFQ" | "Payment";
+
+/** A pickable counterparty org for a direct (non-document) ticket. */
+export interface TicketCounterpartyDto {
+  id: string;
+  name: string;
+}
+
 export interface CreateTicketInput {
   title: string;
   description?: string;
   priority: "Low" | "Medium" | "High" | "Critical";
   assignedToId?: string;
-  linkedEntityType?: "PI" | "DO" | "Payment";
+  linkedEntityType?: TicketEntityType;
   linkedEntityId?: string;
+  // Direct (non-document) tickets: who the ticket is for.
+  counterpartyType?: "Customer" | "Supplier";
+  counterpartyId?: string;
 }
 
 /** Payload for PUT /tickets/:id — all fields optional (partial update). */
@@ -98,7 +110,7 @@ export interface AddCommentInput {
 
 export const ticketApi = {
   /** GET /tickets/available-documents — fetch documents user can link to tickets. */
-  getAvailableDocuments: (entityType: "PI" | "DO" | "Payment") =>
+  getAvailableDocuments: (entityType: TicketEntityType) =>
     api
       .get<AvailableDocumentDto[]>("/tickets/available-documents", { params: { entityType } })
       .then((r) => r.data),
@@ -115,9 +127,31 @@ export const ticketApi = {
       .get<PagedResult<TicketSummaryDto>>("/tickets", { params })
       .then((r) => r.data),
 
-  /** POST /tickets — create a new ticket. Returns the new ticket's GUID. */
+  /**
+   * POST /tickets — create a new ticket. Returns the new ticket's GUID.
+   * Maps the UI's `linked*`/`assignedToId` fields to the backend command's
+   * `entityType`/`entityId`/`assignedToUserId` names. Omitted link fields → a
+   * standalone (unlinked) ticket.
+   */
   create: (data: CreateTicketInput) =>
-    api.post<string>("/tickets", data).then((r) => r.data),
+    api
+      .post<string>("/tickets", {
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        assignedToUserId: data.assignedToId,
+        entityType: data.linkedEntityType,
+        entityId: data.linkedEntityId,
+        counterpartyType: data.counterpartyType,
+        counterpartyId: data.counterpartyId,
+      })
+      .then((r) => r.data),
+
+  /** GET /tickets/counterparties — orgs the user can direct a standalone ticket to. */
+  getCounterparties: (partyType: "Customer" | "Supplier") =>
+    api
+      .get<TicketCounterpartyDto[]>("/tickets/counterparties", { params: { partyType } })
+      .then((r) => r.data),
 
   /** GET /tickets/:id — full detail including comments. */
   get: (id: string): Promise<TicketDetailDto> =>
@@ -135,6 +169,7 @@ export const ticketApi = {
   removeComment: (id: string, commentId: string) =>
     api.delete(`/tickets/${id}/comments/${commentId}`).then((r) => r.data),
 
-  /** POST /tickets/:id/close — moves ticket to Closed status. */
-  close: (id: string) => api.post(`/tickets/${id}/close`).then((r) => r.data),
+  /** PUT /tickets/:id/status — moves ticket to Closed status. */
+  close: (id: string) =>
+    api.put(`/tickets/${id}/status`, { status: "Closed" }).then((r) => r.data),
 };

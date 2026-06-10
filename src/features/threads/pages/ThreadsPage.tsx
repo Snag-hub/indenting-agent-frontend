@@ -1,6 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useSearch } from '@tanstack/react-router'
 import { threadApi } from '@/features/threads/api/threadApi'
+import { customerApi } from '@/features/accounts/api/customerApi'
+import { supplierApi } from '@/features/accounts/api/supplierApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -37,39 +40,99 @@ const SORT_OPTIONS = [
 
 export function ThreadsPage() {
   const { user } = useAuthStore()
+  const isAdmin = user?.role === 'Admin'
+  const isSupplier = user?.role === 'Supplier'
+  const isCustomer = user?.role === 'Customer'
+  const { threadId: preselectedThreadId } = useSearch({ from: '/_app/threads' })
 
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(preselectedThreadId ?? null)
   const [searchInput, setSearchInput] = useState('')
   const [entityType, setEntityType] = useState('all')
   const [sortBy, setSortBy] = useState<'lastActivity' | 'created'>('lastActivity')
-  const [page, setPage] = useState(1)
-  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
+  const [unreadOnly, setUnreadOnly] = useState(false)
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>(preselectedThreadId ? 'detail' : 'list')
 
-  // Debounce search input to avoid excessive API calls
+  // When navigated from a party detail page with a threadId, auto-open that thread.
+  // Syncing URL search params into local state is the intended use of useEffect here.
+  useEffect(() => {
+    if (preselectedThreadId) {
+      setSelectedThreadId(preselectedThreadId) // eslint-disable-line react-hooks/set-state-in-effect
+      setMobileView('detail')
+    }
+  }, [preselectedThreadId])
+
+  // Admin-only party filters
+  const [partyType, setPartyType] = useState<'all' | 'customer' | 'supplier'>('all')
+  const [partyId, setPartyId] = useState<string>('all')
+
   const search = useDebounce(searchInput, 300)
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.threads.list({ page, search, entityType, sortBy }),
-    queryFn: () =>
+  // Load counterparty lists for filter dropdowns:
+  //   Admin    → loads both
+  //   Supplier → loads customers (to filter their threads by customer)
+  //   Customer → loads suppliers (to filter their threads by supplier)
+  const { data: customersData } = useQuery({
+    queryKey: queryKeys.customers.list({ page: 1, pageSize: 100 }),
+    queryFn: () => customerApi.list({ page: 1, pageSize: 100 }),
+    enabled: isAdmin || isSupplier,
+  })
+  const { data: suppliersData } = useQuery({
+    queryKey: queryKeys.suppliers.list({ page: 1, pageSize: 100 }),
+    queryFn: () => supplierApi.list({ page: 1, pageSize: 100 }),
+    enabled: isAdmin || isCustomer,
+  })
+
+  // Admin uses a two-level (partyType + partyId) picker.
+  // Supplier/Customer get a single-level picker for their counterpart.
+  const resolvedCustomerId =
+    partyId !== 'all' && (partyType === 'customer' || isSupplier) ? partyId : undefined
+  const resolvedSupplierId =
+    partyId !== 'all' && (partyType === 'supplier' || isCustomer) ? partyId : undefined
+
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: queryKeys.threads.infinite({
+      search,
+      entityType,
+      sortBy,
+      unreadOnly,
+      customerId: resolvedCustomerId,
+      supplierId: resolvedSupplierId,
+    }),
+    queryFn: ({ pageParam }) =>
       threadApi.list({
-        page,
+        page: pageParam as number,
         pageSize: 20,
         search: search || undefined,
         entityType: entityType !== 'all' ? entityType : undefined,
         sortBy,
+        unreadOnly: unreadOnly || undefined,
+        customerId: resolvedCustomerId,
+        supplierId: resolvedSupplierId,
       }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.totalCount / lastPage.pageSize)
+      return lastPage.page < totalPages ? lastPage.page + 1 : undefined
+    },
     retry: 1,
   })
 
-  const selectedThread = data?.data.find((t) => t.threadId === selectedThreadId)
+  const threads = data?.pages.flatMap((p) => p.data) ?? []
+  const selectedThread = threads.find((t) => t.threadId === selectedThreadId)
 
-  // Check if any filters are active
-  const hasActiveFilters = searchInput !== '' || entityType !== 'all'
+  const hasActiveFilters =
+    searchInput !== '' ||
+    entityType !== 'all' ||
+    unreadOnly ||
+    partyType !== 'all' ||
+    partyId !== 'all'
 
   const clearFilters = () => {
     setSearchInput('')
     setEntityType('all')
-    setPage(1)
+    setUnreadOnly(false)
+    setPartyType('all')
+    setPartyId('all')
   }
 
   const handleSelectThread = (threadId: string) => {
@@ -82,14 +145,18 @@ export function ThreadsPage() {
     setMobileView('list')
   }
 
+  const handlePartyTypeChange = (value: string) => {
+    setPartyType(value as 'all' | 'customer' | 'supplier')
+    setPartyId('all')
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="h-full overflow-hidden flex flex-col gap-4">
       <PageHeader
         title="Conversations"
         description="View and manage all conversations across your documents"
       />
 
-      {/* Error Alert */}
       {error && (
         <div className="flex gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -97,20 +164,19 @@ export function ThreadsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Pane: Thread List */}
-        <div className={`col-span-1 border rounded-lg bg-card flex flex-col ${
+        <div className={`col-span-1 min-h-0 border rounded-lg bg-card flex flex-col ${
           mobileView === 'detail' ? 'hidden lg:flex' : ''
         }`}>
           <div className="border-b p-4 space-y-3">
             {/* Search Input */}
             <div className="relative">
               <Input
-                placeholder="Search by name, doc #..."
+                placeholder="Search by doc #, party name, subject…"
                 value={searchInput}
                 onChange={(e) => {
                   setSearchInput(e.target.value)
-                  setPage(1)
                 }}
                 className="h-9 pr-8"
               />
@@ -124,12 +190,9 @@ export function ThreadsPage() {
               )}
             </div>
 
-            {/* Filter Controls */}
+            {/* Entity Type + Sort + Unread toggle */}
             <div className="flex gap-2">
-              <Select value={entityType} onValueChange={(v) => {
-                setEntityType(v)
-                setPage(1)
-              }}>
+              <Select value={entityType} onValueChange={(v) => { setEntityType(v) }}>
                 <SelectTrigger className="h-9 flex-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -156,6 +219,91 @@ export function ThreadsPage() {
               </Select>
             </div>
 
+            {/* Unread only toggle */}
+            <Button
+              variant={unreadOnly ? 'default' : 'outline'}
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => setUnreadOnly((v) => !v)}
+            >
+              <span className={`mr-2 h-2 w-2 rounded-full ${unreadOnly ? 'bg-white' : 'bg-blue-500'}`} />
+              {unreadOnly ? 'Showing Unread Only' : 'Show Unread Only'}
+            </Button>
+
+            {/* Party filter — Admin: two-level picker; Supplier: customer picker; Customer: supplier picker */}
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Select value={partyType} onValueChange={handlePartyTypeChange}>
+                  <SelectTrigger className="h-9 w-32 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Parties</SelectItem>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="supplier">Supplier</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {partyType === 'customer' && (
+                  <Select value={partyId} onValueChange={(v) => setPartyId(v)}>
+                    <SelectTrigger className="h-9 flex-1 min-w-0">
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Customers</SelectItem>
+                      {customersData?.data.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {partyType === 'supplier' && (
+                  <Select value={partyId} onValueChange={(v) => setPartyId(v)}>
+                    <SelectTrigger className="h-9 flex-1 min-w-0">
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Suppliers</SelectItem>
+                      {suppliersData?.data.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            {/* Supplier: filter own threads by a specific customer */}
+            {isSupplier && (
+              <Select value={partyId} onValueChange={(v) => setPartyId(v)}>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="All Customers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  {customersData?.data.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Customer: filter own threads by a specific supplier */}
+            {isCustomer && (
+              <Select value={partyId} onValueChange={(v) => setPartyId(v)}>
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="All Suppliers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Suppliers</SelectItem>
+                  {suppliersData?.data.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
             {/* Active Filters Indicator */}
             {hasActiveFilters && (
               <div className="flex items-center gap-2 flex-wrap">
@@ -177,18 +325,18 @@ export function ThreadsPage() {
 
           {/* Thread List */}
           <ThreadListPane
-            threads={data?.data ?? []}
+            threads={threads}
             selectedThreadId={selectedThreadId}
             onSelectThread={handleSelectThread}
             isLoading={isLoading}
-            page={page}
-            totalCount={data?.totalCount ?? 0}
-            onPageChange={setPage}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage ?? false}
+            isFetchingNextPage={isFetchingNextPage}
           />
         </div>
 
         {/* Right Pane: Thread Detail */}
-        <div className={`col-span-2 flex flex-col ${
+        <div className={`col-span-2 min-h-0 flex flex-col ${
           mobileView === 'list' ? 'hidden lg:flex' : ''
         }`}>
           {selectedThread ? (

@@ -11,6 +11,7 @@ import { QuotationItemEditor } from '@/features/quotations/components/QuotationI
 import { useAuthStore } from '@/stores/authStore'
 import { queryKeys } from '@/lib/queryKeys'
 import { PageHeader } from '@/components/PageHeader'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -69,6 +70,8 @@ export function QuotationDetailPage() {
     queryKey: queryKeys.quotations.detail(id),
     queryFn: () => quotationApi.get(id),
   })
+
+  usePageTitle(quotation?.documentNumber)
 
   const { register: registerRevise, handleSubmit: handleRevise, reset: resetRevise } = useForm<ReviseForm>({
     resolver: zodResolver(reviseSchema),

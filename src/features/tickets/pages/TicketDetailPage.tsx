@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,13 +19,22 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ArrowLeft, Lock, Edit2 } from 'lucide-react'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { useAuthStore } from '@/stores/authStore'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   Open: 'default',
-  'In Progress': 'default',
+  InProgress: 'default',
   Resolved: 'secondary',
   Closed: 'secondary',
+}
+
+// Backend status values are keys; show friendlier labels in the UI.
+const statusLabels: Record<string, string> = {
+  Open: 'Open',
+  InProgress: 'In Progress',
+  Resolved: 'Resolved',
+  Closed: 'Closed',
 }
 
 const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -39,7 +48,7 @@ const updateTicketSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']),
-  status: z.enum(['Open', 'In Progress', 'Resolved', 'Closed']),
+  status: z.enum(['Open', 'InProgress', 'Resolved', 'Closed']),
 })
 
 type UpdateTicketForm = z.infer<typeof updateTicketSchema>
@@ -57,15 +66,29 @@ export function TicketDetailPage() {
     queryFn: () => ticketApi.get(id),
   })
 
-  const { register: regUpdate, handleSubmit: handleUpdateSubmit, formState: { errors: updateErrors } } = useForm<UpdateTicketForm>({
+  usePageTitle(ticket?.title)
+
+  const { register: regUpdate, handleSubmit: handleUpdateSubmit, reset: resetUpdate, formState: { errors: updateErrors } } = useForm<UpdateTicketForm>({
     resolver: zodResolver(updateTicketSchema),
     defaultValues: {
-      title: ticket?.title ?? '',
-      description: ticket?.description ?? '',
-      priority: ticket?.priority ?? 'Medium',
-      status: ticket?.status ?? 'Open',
+      title: '',
+      description: '',
+      priority: 'Medium',
+      status: 'Open',
     },
   })
+
+  // Populate the edit form once ticket data loads
+  useEffect(() => {
+    if (ticket) {
+      resetUpdate({
+        title: ticket.title,
+        description: ticket.description ?? '',
+        priority: ticket.priority,
+        status: ticket.status,
+      })
+    }
+  }, [ticket, resetUpdate])
 
   const updateTicket = useMutation({
     mutationFn: (data: UpdateTicketForm) =>
@@ -108,11 +131,11 @@ export function TicketDetailPage() {
     <div className="space-y-6">
       <PageHeader
         title={ticket.title}
-        description={ticket.documentNumber ? `#${ticket.documentNumber}` : ''}
+        description={(ticket.ticketNumber ?? ticket.documentNumber) ? `#${ticket.ticketNumber ?? ticket.documentNumber}` : ''}
         action={
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[ticket.status]}>
-              {ticket.status}
+              {statusLabels[ticket.status] ?? ticket.status}
             </Badge>
             <Badge variant={priorityColors[ticket.priority]}>
               {ticket.priority}
@@ -156,7 +179,7 @@ export function TicketDetailPage() {
               <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Badge variant={statusColors[ticket.status]}>{ticket.status}</Badge>
+                  <Badge variant={statusColors[ticket.status]}>{statusLabels[ticket.status] ?? ticket.status}</Badge>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Priority</p>
@@ -236,7 +259,7 @@ export function TicketDetailPage() {
                   {...regUpdate('status')}
                 >
                   <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
+                  <option value="InProgress">In Progress</option>
                   <option value="Resolved">Resolved</option>
                   <option value="Closed">Closed</option>
                 </select>

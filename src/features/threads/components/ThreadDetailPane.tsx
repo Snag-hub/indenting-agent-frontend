@@ -35,17 +35,19 @@ export function ThreadDetailPane({
   const markAsRead = useMutation({
     mutationFn: () => threadApi.markAsRead(thread.threadId),
     onSuccess: () => {
-      // Invalidate threads list to refresh unread counts
-      qc.invalidateQueries({ queryKey: queryKeys.threads.list() })
+      // Refresh thread list unread counts + nav badge
+      qc.invalidateQueries({ queryKey: queryKeys.threads.infinite() })
+      qc.invalidateQueries({ queryKey: queryKeys.threads.unreadCount() })
     },
   })
 
-  // Mark thread as read when opened
+  // Mark thread as read when opened. Intentionally keyed only on threadId —
+  // we don't want to re-fire when markAsRead or unreadCount reference changes.
   useEffect(() => {
     if (thread.unreadCount > 0) {
       markAsRead.mutate()
     }
-  }, [thread.threadId])
+  }, [thread.threadId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="border rounded-lg bg-card flex flex-col h-full overflow-hidden">

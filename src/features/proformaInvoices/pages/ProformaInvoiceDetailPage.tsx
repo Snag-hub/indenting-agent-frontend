@@ -16,6 +16,7 @@ import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
 import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -39,6 +40,8 @@ export function ProformaInvoiceDetailPage() {
     queryKey: queryKeys.proformaInvoices.detail(id),
     queryFn: () => proformaInvoiceApi.get(id),
   })
+
+  usePageTitle(pi?.documentNumber)
 
   const sendPI = useMutation({
     mutationFn: () => proformaInvoiceApi.send(id),
