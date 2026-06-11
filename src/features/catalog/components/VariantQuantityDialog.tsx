@@ -199,17 +199,27 @@ export function VariantQuantityDialog({
                               const effectiveTiers = variant.quantityTiers.length > 0
                                 ? variant.quantityTiers
                                 : (itemQuantityTiers ?? [])
+                              const otherTotalForSelect = totalQuantity - (quantities[variant.id] ?? 0)
+                              const maxForSelect = enquiryId && variant.remainingQuantity !== undefined
+                                ? Math.min(variant.remainingQuantity, maxTotal !== undefined ? Math.max(0, maxTotal - otherTotalForSelect) : Infinity)
+                                : maxTotal !== undefined
+                                  ? Math.max(0, maxTotal - otherTotalForSelect)
+                                  : Infinity
+                              const allowedTiers = effectiveTiers.filter((t) => t <= maxForSelect)
                               return effectiveTiers.length > 0 ? (
                                 <Select
                                   value={quantities[variant.id] ? String(quantities[variant.id]) : '0'}
-                                  onValueChange={(v) => handleQuantityChange(variant.id, Number(v))}
+                                  onValueChange={(v) => {
+                                    const val = Number(v) || 0
+                                    handleQuantityChange(variant.id, Math.min(val, maxForSelect))
+                                  }}
                                 >
                                   <SelectTrigger className="w-28">
                                     <SelectValue placeholder="Select qty" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="0">— None —</SelectItem>
-                                    {effectiveTiers.map((t) => (
+                                    {allowedTiers.map((t) => (
                                       <SelectItem key={t} value={String(t)}>{t.toLocaleString()}</SelectItem>
                                     ))}
                                   </SelectContent>
