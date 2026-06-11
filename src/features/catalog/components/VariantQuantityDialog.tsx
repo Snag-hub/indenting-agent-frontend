@@ -156,9 +156,9 @@ export function VariantQuantityDialog({
                     <TableRow>
                       <TableHead>Variant</TableHead>
                       <TableHead>SKU</TableHead>
-                      {enquiryVariants && <TableHead className="text-right">Enquiry Qty</TableHead>}
-                      {enquiryVariants && <TableHead className="text-right">Remaining</TableHead>}
-                      <TableHead className="text-right">{enquiryVariants ? 'RFQ Qty' : 'Quantity'}</TableHead>
+                      {enquiryId && <TableHead className="text-right">Enquiry Qty</TableHead>}
+                      {enquiryId && <TableHead className="text-right">Remaining</TableHead>}
+                      <TableHead className="text-right">{enquiryId ? 'RFQ Qty' : 'Quantity'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -199,17 +199,27 @@ export function VariantQuantityDialog({
                               const effectiveTiers = variant.quantityTiers.length > 0
                                 ? variant.quantityTiers
                                 : (itemQuantityTiers ?? [])
+                              const otherTotalForSelect = totalQuantity - (quantities[variant.id] ?? 0)
+                              const maxForSelect = enquiryId && variant.remainingQuantity !== undefined
+                                ? Math.min(variant.remainingQuantity, maxTotal !== undefined ? Math.max(0, maxTotal - otherTotalForSelect) : Infinity)
+                                : maxTotal !== undefined
+                                  ? Math.max(0, maxTotal - otherTotalForSelect)
+                                  : Infinity
+                              const allowedTiers = effectiveTiers.filter((t) => t <= maxForSelect)
                               return effectiveTiers.length > 0 ? (
                                 <Select
                                   value={quantities[variant.id] ? String(quantities[variant.id]) : '0'}
-                                  onValueChange={(v) => handleQuantityChange(variant.id, Number(v))}
+                                  onValueChange={(v) => {
+                                    const val = Number(v) || 0
+                                    handleQuantityChange(variant.id, Math.min(val, maxForSelect))
+                                  }}
                                 >
                                   <SelectTrigger className="w-28">
                                     <SelectValue placeholder="Select qty" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="0">— None —</SelectItem>
-                                    {effectiveTiers.map((t) => (
+                                    {allowedTiers.map((t) => (
                                       <SelectItem key={t} value={String(t)}>{t.toLocaleString()}</SelectItem>
                                     ))}
                                   </SelectContent>
@@ -220,7 +230,11 @@ export function VariantQuantityDialog({
                                   min="0"
                                   max={
                                     enquiryId && variant.remainingQuantity !== undefined
-                                      ? Math.max(0, variant.remainingQuantity)
+                                      ? (() => {
+                                          const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
+                                          const budgetLeft = maxTotal !== undefined ? Math.max(0, maxTotal - otherTotal) : Infinity
+                                          return Math.max(0, Math.min(variant.remainingQuantity, budgetLeft))
+                                        })()
                                       : maxTotal !== undefined
                                         ? (quantities[variant.id] ?? 0) + Math.max(0, maxTotal - totalQuantity)
                                         : undefined
@@ -229,7 +243,10 @@ export function VariantQuantityDialog({
                                   onChange={(e) => {
                                     const val = parseInt(e.target.value, 10) || 0
                                     if (enquiryId && variant.remainingQuantity !== undefined) {
-                                      handleQuantityChange(variant.id, Math.min(val, variant.remainingQuantity))
+                                      const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
+                                      const budgetLeft = maxTotal !== undefined ? Math.max(0, maxTotal - otherTotal) : Infinity
+                                      const maxForThis = Math.min(variant.remainingQuantity, budgetLeft)
+                                      handleQuantityChange(variant.id, Math.min(val, maxForThis))
                                     } else {
                                       const otherTotal = totalQuantity - (quantities[variant.id] ?? 0)
                                       const capped = maxTotal !== undefined
