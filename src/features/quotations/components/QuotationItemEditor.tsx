@@ -30,6 +30,8 @@ export interface QuotationItemEditorProps {
   mode: 'add' | 'edit'
   quotationId: string
   versionId: string
+  /** ISO 4217 currency code for this version — used to format prices consistently */
+  currency?: string | null
   /** Edit mode only — the existing item to modify */
   item?: QuotationItemDto
   /** Called after a successful add or update so the parent can invalidate its query */
@@ -38,8 +40,13 @@ export interface QuotationItemEditorProps {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+function formatCurrency(value: number, currency?: string | null): string {
+  const code = currency && currency.length === 3 ? currency : 'USD'
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(value)
+  } catch {
+    return `${code} ${value.toFixed(2)}`
+  }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -50,6 +57,7 @@ export function QuotationItemEditor({
   mode,
   quotationId,
   versionId,
+  currency,
   item,
   onSuccess,
 }: QuotationItemEditorProps) {
@@ -365,7 +373,8 @@ export function QuotationItemEditor({
                   </span>{' '}
                   units ·{' '}
                   {formatCurrency(
-                    variantRows.reduce((s, r) => s + r.quantity * r.unitPrice, 0)
+                    variantRows.reduce((s, r) => s + r.quantity * r.unitPrice, 0),
+                    currency
                   )}
                 </span>
               </div>
@@ -406,7 +415,7 @@ export function QuotationItemEditor({
               </div>
 
               <p className="col-span-2 text-xs text-muted-foreground text-right">
-                Total: {formatCurrency(qty * unitPrice)}
+                Total: {formatCurrency(qty * unitPrice, currency)}
               </p>
             </div>
           )}

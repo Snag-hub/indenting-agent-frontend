@@ -133,6 +133,7 @@ export function PurchaseOrderDetailPage() {
             <CardContent>
               <DocumentItemsTable
                 mode="purchase-order"
+                currency={po.currency}
                 items={po.items.map((item) => ({
                   id: item.id,
                   name: item.supplierItemName,

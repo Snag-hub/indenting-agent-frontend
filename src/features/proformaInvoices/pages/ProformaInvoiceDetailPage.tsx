@@ -130,6 +130,7 @@ export function ProformaInvoiceDetailPage() {
             <CardContent>
               <DocumentItemsTable
                 mode="proforma-invoice"
+                currency={pi.currency}
                 items={pi.items.map((item) => ({
                   id: item.id,
                   name: item.supplierItemName,

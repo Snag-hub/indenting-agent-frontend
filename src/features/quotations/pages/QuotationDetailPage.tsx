@@ -64,6 +64,7 @@ export function QuotationDetailPage() {
     mode: 'add' | 'edit'
     item?: QuotationItemDto
     versionId?: string
+    currency?: string | null
   } | null>(null)
 
   const { data: quotation, isLoading } = useQuery({
@@ -339,6 +340,7 @@ export function QuotationDetailPage() {
 
                         <DocumentItemsTable
                           mode="quotation"
+                          currency={version.currency}
                           items={version.items.map((item) => ({
                             id: item.id,
                             name: item.supplierItemName,
@@ -357,7 +359,7 @@ export function QuotationDetailPage() {
                           actions={canEdit ? {
                             onEdit: (item) => {
                               const original = version.items.find((i) => i.id === item.id)
-                              if (original) setEditorState({ open: true, mode: 'edit', item: original, versionId: version.id })
+                              if (original) setEditorState({ open: true, mode: 'edit', item: original, versionId: version.id, currency: version.currency })
                             },
                             onDelete: (item) => setRemovingItemId(item.id),
                           } : undefined}
@@ -388,7 +390,7 @@ export function QuotationDetailPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setEditorState({ open: true, mode: 'add', versionId: version.id })}
+                            onClick={() => setEditorState({ open: true, mode: 'add', versionId: version.id, currency: version.currency })}
                           >
                             <Plus className="mr-2 h-4 w-4" /> Add Item
                           </Button>
@@ -567,6 +569,7 @@ export function QuotationDetailPage() {
             quotation.versions[quotation.versions.length - 1]?.id ??
             ''
           }
+          currency={editorState.currency}
           item={editorState.item}
           onSuccess={() => qc.invalidateQueries({ queryKey: queryKeys.quotations.detail(id) })}
         />

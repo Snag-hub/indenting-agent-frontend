@@ -55,13 +55,20 @@ const MODE_CONFIG: Record<DocumentItemsMode, ModeConfig> = {
   'delivery-order':   { showSupplierName: false, showPricing: false, showTotalRow: false, alwaysExpanded: false, qtyLabel: 'Qty Dispatched' },
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+function formatCurrency(value: number, currency?: string | null): string {
+  const code = currency && currency.length === 3 ? currency : 'USD'
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(value)
+  } catch {
+    return `${code} ${value.toFixed(2)}`
+  }
 }
 
 interface DocumentItemsTableProps {
   mode: DocumentItemsMode
   items: DocumentLineItem[]
+  /** ISO 4217 currency code — defaults to USD if omitted */
+  currency?: string | null
   actions?: {
     onEdit?: (item: DocumentLineItem) => void
     onDelete?: (item: DocumentLineItem) => void
@@ -72,6 +79,7 @@ interface DocumentItemsTableProps {
 export function DocumentItemsTable({
   mode,
   items,
+  currency,
   actions,
   emptyMessage = 'No items.',
 }: DocumentItemsTableProps) {
@@ -184,7 +192,7 @@ export function DocumentItemsTable({
                     <TableCell className="text-sm text-right">
                       {hasVariants
                         ? <span className="text-muted-foreground">—</span>
-                        : item.unitPrice != null ? formatCurrency(item.unitPrice) : <span className="text-muted-foreground">—</span>}
+                        : item.unitPrice != null ? formatCurrency(item.unitPrice, currency) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                   )}
                   {config.showPricing && (
@@ -192,7 +200,7 @@ export function DocumentItemsTable({
                       {(() => {
                         const total = effectiveItemTotal(item)
                         return total > 0
-                          ? formatCurrency(total)
+                          ? formatCurrency(total, currency)
                           : <span className="text-muted-foreground">—</span>
                       })()}
                     </TableCell>
@@ -256,12 +264,12 @@ export function DocumentItemsTable({
                       </TableCell>
                       {config.showPricing && (
                         <TableCell className="text-xs py-2 text-right text-muted-foreground">
-                          {v.unitPrice != null ? formatCurrency(v.unitPrice) : <span>—</span>}
+                          {v.unitPrice != null ? formatCurrency(v.unitPrice, currency) : <span>—</span>}
                         </TableCell>
                       )}
                       {config.showPricing && (
                         <TableCell className="text-xs py-2 text-right text-muted-foreground">
-                          {variantTotal != null ? formatCurrency(variantTotal) : <span>—</span>}
+                          {variantTotal != null ? formatCurrency(variantTotal, currency) : <span>—</span>}
                         </TableCell>
                       )}
                       <TableCell className="py-2" />
@@ -280,7 +288,7 @@ export function DocumentItemsTable({
           <tfoot>
             <tr className="border-t bg-slate-50 font-semibold text-sm">
               <td className="p-4" colSpan={config.showPricing ? 3 : 2}>Items Total</td>
-              <td className="p-4 text-right">{formatCurrency(itemsTotal)}</td>
+              <td className="p-4 text-right">{formatCurrency(itemsTotal, currency)}</td>
               <td className="p-4" />
               {hasActions && <td className="p-4" />}
             </tr>
