@@ -10,43 +10,55 @@ interface Props {
 
 interface State {
   error: Error | null
+  reloading: boolean
 }
 
-/**
- * React class-based error boundary.
- *
- * Catches unhandled render/lifecycle errors in its subtree and shows a
- * friendly recovery UI instead of a blank screen.
- *
- * Usage:
- *   <ErrorBoundary>
- *     <SomePage />
- *   </ErrorBoundary>
- *
- * With custom fallback:
- *   <ErrorBoundary fallback={(err, reset) => <MyFallback error={err} onRetry={reset} />}>
- *     <SomePage />
- *   </ErrorBoundary>
- */
-export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null }
+function isChunkLoadError(error: Error): boolean {
+  return (
+    error.message.includes('Failed to fetch dynamically imported module') ||
+    error.message.includes('Importing a module script failed') ||
+    error.message.includes('Unable to preload CSS for')
+  )
+}
 
-  static getDerivedStateFromError(error: Error): State {
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null, reloading: false }
+
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error }
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    // In production you'd forward to Sentry / Datadog here.
     console.error('[ErrorBoundary] Caught error:', error, info.componentStack)
+
+    // After a new deployment the old chunk hashes are gone — hard reload fetches
+    // the new HTML with correct asset URLs. Guard with sessionStorage to avoid
+    // an infinite reload loop if the chunk genuinely 404s permanently.
+    if (isChunkLoadError(error)) {
+      const key = `chunk-reload:${error.message.slice(0, 100)}`
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1')
+        this.setState({ reloading: true })
+        window.location.reload()
+      }
+    }
   }
 
-  reset = () => this.setState({ error: null })
+  reset = () => this.setState({ error: null, reloading: false })
 
   render() {
-    const { error } = this.state
+    const { error, reloading } = this.state
     const { children, fallback } = this.props
 
     if (error) {
+      if (reloading) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[300px] p-8 text-center">
+            <RefreshCw className="h-8 w-8 text-slate-400 animate-spin mb-3" />
+            <p className="text-sm text-slate-500">Reloading page…</p>
+          </div>
+        )
+      }
       if (fallback) return fallback(error, this.reset)
       return <DefaultErrorFallback error={error} onReset={this.reset} />
     }
