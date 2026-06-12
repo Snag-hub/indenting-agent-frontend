@@ -120,6 +120,9 @@ export const ticketApi = {
     search?: string;
     status?: string;
     priority?: string;
+    fromDate?: string;
+    toDate?: string;
+    dateField?: string;
     page?: number;
     pageSize?: number;
   }) =>

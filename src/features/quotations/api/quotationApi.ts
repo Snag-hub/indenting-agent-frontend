@@ -107,6 +107,11 @@ export const quotationApi = {
     search?: string;
     status?: string;
     rfqId?: string;
+    fromDate?: string;
+    toDate?: string;
+    dateField?: string;
+    supplierId?: string;
+    customerId?: string;
     page?: number;
     pageSize?: number;
   }) =>
