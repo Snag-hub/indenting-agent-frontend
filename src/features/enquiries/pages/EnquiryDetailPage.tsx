@@ -6,18 +6,20 @@ import { enquiryApi, type EnquiryItemVariantInput } from '@/features/enquiries/a
 import { queryKeys } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
+import { AuditTimeline } from '@/components/AuditTimeline'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, Lock, FileText, Trash2, Plus, Users } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Send, Lock, FileText, Trash2, Plus, Users } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { PageHeader } from '@/components/PageHeader'
-import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageSummary } from '@/components/detail-page'
 import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -30,6 +32,7 @@ export function EnquiryDetailPage() {
   const { id } = useParams({ from: '/_app/enquiries/$id' })
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const role = useAuthStore((s) => s.user?.role)
   const [submitting, setSubmitting] = useState(false)
   const [closing, setClosing] = useState(false)
   const [removingItemId, setRemovingItemId] = useState<string | null>(null)
@@ -37,9 +40,12 @@ export function EnquiryDetailPage() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
   const pickerSearchRef = useRef<HTMLInputElement>(null)
-  // Variant editing state for Draft mode items
-  const [variantDialogItem, setVariantDialogItem] = useState<{ itemId: string; supplierItemId: string; itemName: string } | null>(null)
-  // Pending picker item — when selected item has variants, hold it here until variants are chosen
+  const [variantDialogItem, setVariantDialogItem] = useState<{
+    itemId: string
+    supplierItemId: string
+    itemName: string
+    initialQuantities: Record<string, number>
+  } | null>(null)
   const [pendingPickerOffer, setPendingPickerOffer] = useState<{ supplierItemId: string; hasVariants: boolean } | null>(null)
 
   const { data: enquiry, isLoading } = useQuery({
@@ -131,12 +137,13 @@ export function EnquiryDetailPage() {
 
   return (
     <DetailPageContainer>
-      <PageHeader
+      <DetailPageHeader
         title={enquiry.documentNumber}
         description={`${enquiry.enquiryType} · ${enquiry.priority} priority`}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge variant={statusColors[enquiry.status]}>{enquiry.status}</Badge>
+        status={enquiry.status}
+        onBack={() => navigate({ to: '/enquiries' })}
+        actions={
+          <>
             {enquiry.status === 'Draft' && (
               <Button size="sm" onClick={() => setSubmitting(true)}>
                 <Send className="mr-2 h-4 w-4" /> Submit
@@ -156,25 +163,31 @@ export function EnquiryDetailPage() {
                 </Button>
               </>
             )}
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/enquiries' })}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          </>
         }
       />
 
-      <DetailPageGrid>
-        <DetailPageMainColumn>
-          <DetailPageSummary
-            items={[
-              { label: 'Status', value: <Badge variant={statusColors[enquiry.status]}>{enquiry.status}</Badge> },
-              { label: 'Type', value: enquiry.enquiryType },
-              { label: 'Priority', value: enquiry.priority },
-              { label: 'Created', value: format(new Date(enquiry.createdAt), 'dd MMM yyyy') },
-            ]}
-            columns={4}
-          />
+      <div className="mt-4">
+        <DetailPageSummary
+          items={[
+            { label: 'Status', value: <Badge variant={statusColors[enquiry.status]}>{enquiry.status}</Badge> },
+            { label: 'Type', value: enquiry.enquiryType },
+            { label: 'Priority', value: enquiry.priority },
+            { label: 'Created', value: format(new Date(enquiry.createdAt), 'dd MMM yyyy') },
+          ]}
+          columns={4}
+        />
+      </div>
 
+      <Tabs defaultValue="items" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="items">Items</TabsTrigger>
+          <TabsTrigger value="threads">Threads</TabsTrigger>
+          <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          {role === 'Admin' && <TabsTrigger value="audit">Audit Log</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="items" className="mt-4 space-y-4">
           {enquiry.notes && (
             <Card>
               <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
@@ -233,6 +246,9 @@ export function EnquiryDetailPage() {
                                       itemId: item.id,
                                       supplierItemId: item.supplierItemId,
                                       itemName: item.itemName,
+                                      initialQuantities: Object.fromEntries(
+                                        (item.variants ?? []).map(v => [v.supplierItemVariantId, v.quantityRequested])
+                                      ),
                                     })}
                                   >
                                     <Users className="h-3 w-3 mr-1" />
@@ -311,17 +327,25 @@ export function EnquiryDetailPage() {
               )}
             </CardContent>
           </Card>
-        </DetailPageMainColumn>
+        </TabsContent>
 
-        <DetailPageSidebar>
+        <TabsContent value="threads" className="mt-4">
           <ThreadPanel
             threadId={threadId}
             disabledReason={enquiry.status === 'Draft' ? 'Submit this enquiry to unlock messaging.' : undefined}
           />
-        </DetailPageSidebar>
-      </DetailPageGrid>
+        </TabsContent>
 
-      <AttachmentPanel entityType="Enquiry" entityId={id} />
+        <TabsContent value="attachments" className="mt-4">
+          <AttachmentPanel entityType="Enquiry" entityId={id} />
+        </TabsContent>
+
+        {role === 'Admin' && (
+          <TabsContent value="audit" className="mt-4">
+            <AuditTimeline entityType="Enquiry" entityId={id} />
+          </TabsContent>
+        )}
+      </Tabs>
 
       {/* Item picker overlay */}
       {pickerOpen && (
@@ -382,7 +406,6 @@ export function EnquiryDetailPage() {
                         const offer = relevantOffers.find((o) => !alreadyAddedIds.has(o.supplierItemId))
                         if (!offer) return
                         if (offer.hasVariants) {
-                          // Hold the offer and open the variant dialog before adding
                           setPendingPickerOffer({ supplierItemId: offer.supplierItemId, hasVariants: true })
                         } else {
                           addItem.mutate({
@@ -453,13 +476,13 @@ export function EnquiryDetailPage() {
         isLoading={removeItem.isPending}
       />
 
-      {/* Variant dialog for editing variants on existing Draft items */}
       {variantDialogItem && (
         <VariantQuantityDialog
           open={!!variantDialogItem}
           onOpenChange={(open) => { if (!open) setVariantDialogItem(null) }}
           supplierItemId={variantDialogItem.supplierItemId}
           supplierItemName={variantDialogItem.itemName}
+          initialQuantities={variantDialogItem.initialQuantities}
           onConfirm={(confirmed) => {
             const variants: EnquiryItemVariantInput[] = confirmed.map((v) => ({
               supplierItemVariantId: v.variantId,
@@ -472,7 +495,6 @@ export function EnquiryDetailPage() {
         />
       )}
 
-      {/* Variant dialog for new items being added from the picker */}
       {pendingPickerOffer && (
         <VariantQuantityDialog
           open={!!pendingPickerOffer}

@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Eye } from 'lucide-react'
+import { Eye, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 
 function formatCurrency(value: number): string {
@@ -97,6 +97,14 @@ export function PaymentsPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-slate-500">No payments recorded yet.</p>
+              <Button size="sm" variant="outline" onClick={() => navigate({ to: '/payments/new' })}>
+                <Plus className="mr-2 h-4 w-4" /> Record Payment
+              </Button>
+            </div>
+          }
         />
       )}
     </div>

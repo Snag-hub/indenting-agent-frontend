@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Trash2 } from 'lucide-react'
+import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
 import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
 
@@ -80,6 +81,7 @@ export function PurchaseOrdersPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
+          <ThreadDrawerButton entityType="PurchaseOrder" entityId={row.original.id} size="sm" />
           <Button
             size="icon"
             variant="ghost"
@@ -130,6 +132,9 @@ export function PurchaseOrdersPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <p className="text-sm text-slate-500">No purchase orders yet. Accept a quotation to create your first PO.</p>
+          }
         />
       )}
 

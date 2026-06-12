@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Trash2 } from 'lucide-react'
+import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -71,6 +72,7 @@ export function DeliveryOrdersPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
+          <ThreadDrawerButton entityType="DeliveryOrder" entityId={row.original.id} size="sm" />
           <Button
             size="icon"
             variant="ghost"
@@ -114,6 +116,9 @@ export function DeliveryOrdersPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <p className="text-sm text-slate-500">No delivery orders yet. They appear here once suppliers create DOs against a proforma invoice.</p>
+          }
         />
       )}
 

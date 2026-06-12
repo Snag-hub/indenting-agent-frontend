@@ -9,7 +9,6 @@ import { rfqApi } from '@/features/rfqs/api/rfqApi'
 import { quotationApi } from '@/features/quotations/api/quotationApi'
 import { supplierItemApi } from '@/features/supplierCatalog/api/supplierItemApi'
 import { queryKeys } from '@/lib/queryKeys'
-import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -22,11 +21,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
+import { Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -207,15 +206,13 @@ export function RFQDetailPage() {
 
   return (
     <DetailPageContainer>
-      <PageHeader
+      <DetailPageHeader
         title={`RFQ ${rfq.documentNumber || '(unsaved)'}`}
         description={rfq.dueDate ? `Due: ${format(new Date(rfq.dueDate), 'dd MMM yyyy')}` : undefined}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge variant={statusColors[rfq.status]}>
-              {rfq.status}
-            </Badge>
-
+        status={rfq.status}
+        onBack={() => navigate({ to: '/rfqs' })}
+        actions={
+          <>
             {role === 'Customer' && rfq.status === 'Draft' && (
               <>
                 <Button size="sm" variant="outline" onClick={() => setEditDialogOpen(true)}>
@@ -262,11 +259,7 @@ export function RFQDetailPage() {
             {role === 'Supplier' && isDeclined && (
               <Badge variant="destructive">Declined</Badge>
             )}
-
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/rfqs' })}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          </>
         }
       />
 

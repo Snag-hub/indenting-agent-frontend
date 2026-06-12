@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Trash2 } from 'lucide-react'
+import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -76,6 +77,7 @@ export function ProformaInvoicesPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
+          <ThreadDrawerButton entityType="ProformaInvoice" entityId={row.original.id} size="sm" />
           <Button
             size="icon"
             variant="ghost"
@@ -119,6 +121,9 @@ export function ProformaInvoicesPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <p className="text-sm text-slate-500">No proforma invoices yet. They appear here once suppliers raise PIs against purchase orders.</p>
+          }
         />
       )}
 

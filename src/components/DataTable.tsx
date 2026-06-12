@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -17,6 +18,8 @@ interface DataTableProps<TData> {
   pageSize: number
   onPageChange: (page: number) => void
   isLoading?: boolean
+  /** Rendered instead of the generic "No results." when the table has no rows. */
+  emptyState?: ReactNode
 }
 
 export function DataTable<TData>({
@@ -27,6 +30,7 @@ export function DataTable<TData>({
   pageSize,
   onPageChange,
   isLoading,
+  emptyState,
 }: DataTableProps<TData>) {
   const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel() })
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -69,8 +73,10 @@ export function DataTable<TData>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-slate-400">
-                  No results.
+                <TableCell colSpan={columns.length} className="py-10 text-center">
+                  {emptyState ?? (
+                    <span className="text-slate-400">No results.</span>
+                  )}
                 </TableCell>
               </TableRow>
             )}

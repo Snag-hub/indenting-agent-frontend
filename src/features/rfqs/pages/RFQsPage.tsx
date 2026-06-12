@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Send, Lock, Trash2 } from 'lucide-react'
+import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -110,6 +111,7 @@ export function RFQsPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
+          <ThreadDrawerButton entityType="RFQ" entityId={row.original.id} size="sm" />
           <Button
             size="icon"
             variant="ghost"
@@ -194,6 +196,14 @@ export function RFQsPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-slate-500">No RFQs yet. Convert an enquiry to create your first RFQ.</p>
+              <Button size="sm" variant="outline" onClick={() => navigate({ to: '/enquiries' })}>
+                View Enquiries
+              </Button>
+            </div>
+          }
         />
       )}
 

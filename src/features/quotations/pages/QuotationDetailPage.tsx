@@ -10,7 +10,6 @@ import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi
 import { QuotationItemEditor } from '@/features/quotations/components/QuotationItemEditor'
 import { useAuthStore } from '@/stores/authStore'
 import { queryKeys } from '@/lib/queryKeys'
-import { PageHeader } from '@/components/PageHeader'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
@@ -21,12 +20,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Send, Check, X, Plus, Trash2, ShoppingCart, Eye, Lock, RotateCcw } from 'lucide-react'
+import { Send, Check, X, Plus, Trash2, ShoppingCart, Eye, Lock, RotateCcw } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -181,54 +180,34 @@ export function QuotationDetailPage() {
 
   return (
     <DetailPageContainer>
-      <PageHeader
+      <DetailPageHeader
         title={quotation.documentNumber}
         description={`From: ${quotation.supplierName} · RFQ: ${quotation.rfqTitle}`}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge variant={statusColors[quotation.status]}>
-              {quotation.status}
-            </Badge>
-
+        status={quotation.status}
+        onBack={() => navigate({ to: '/quotations' })}
+        actions={
+          <>
             {role === 'Supplier' && quotation.status === 'Draft' && (
-              <Button
-                size="sm"
-                onClick={() => setSubmitting(true)}
-              >
+              <Button size="sm" onClick={() => setSubmitting(true)}>
                 <Send className="mr-2 h-4 w-4" /> Submit
               </Button>
             )}
 
             {role === 'Supplier' && (quotation.status === 'Submitted' || quotation.status === 'Draft' || quotation.status === 'RevisionRequested') && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setReviseDialogOpen(true)}
-              >
+              <Button size="sm" variant="outline" onClick={() => setReviseDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" /> New Version
               </Button>
             )}
 
             {role === 'Customer' && quotation.status === 'Submitted' && (
               <>
-                <Button
-                  size="sm"
-                  onClick={() => setAccepting(true)}
-                >
+                <Button size="sm" onClick={() => setAccepting(true)}>
                   <Check className="mr-2 h-4 w-4" /> Accept
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setRequestRevisionOpen(true)}
-                >
+                <Button size="sm" variant="outline" onClick={() => setRequestRevisionOpen(true)}>
                   <RotateCcw className="mr-2 h-4 w-4" /> Request Revision
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setRejectDialogOpen(true)}
-                >
+                <Button size="sm" variant="outline" onClick={() => setRejectDialogOpen(true)}>
                   <X className="mr-2 h-4 w-4" /> Reject
                 </Button>
               </>
@@ -247,15 +226,7 @@ export function QuotationDetailPage() {
                 <Eye className="mr-2 h-4 w-4" /> View PO
               </Button>
             )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate({ to: '/quotations' })}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          </>
         }
       />
 

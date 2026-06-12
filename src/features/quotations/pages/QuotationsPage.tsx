@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Trash2 } from 'lucide-react'
+import { ThreadDrawerButton } from '@/features/threads/components/ThreadDrawerButton'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -78,6 +79,7 @@ export function QuotationsPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
+          <ThreadDrawerButton entityType="Quotation" entityId={row.original.id} size="sm" />
           <Button
             size="icon"
             variant="ghost"
@@ -133,6 +135,9 @@ export function QuotationsPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <p className="text-sm text-slate-500">No quotations yet. Quotations appear here once suppliers respond to RFQs.</p>
+          }
         />
       )}
 

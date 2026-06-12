@@ -4,17 +4,16 @@ import { useState } from 'react'
 import { proformaInvoiceApi } from '@/features/proformaInvoices/api/proformaInvoiceApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
-import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
+import { Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
@@ -67,13 +66,13 @@ export function ProformaInvoiceDetailPage() {
 
   return (
     <DetailPageContainer>
-      <PageHeader
+      <DetailPageHeader
         title={pi.documentNumber}
         description={`Supplier: ${pi.supplierName}`}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge variant={statusColors[pi.status]}>{pi.status}</Badge>
-
+        status={pi.status}
+        onBack={() => navigate({ to: '/proforma-invoices' })}
+        actions={
+          <>
             {role === 'Supplier' && pi.status === 'Draft' && (
               <Button size="sm" onClick={() => setSending(true)}>
                 <Send className="mr-2 h-4 w-4" /> Send PI
@@ -102,10 +101,7 @@ export function ProformaInvoiceDetailPage() {
             <Button variant="outline" size="sm" onClick={() => navigate({ to: '/tickets/new', search: { entityType: 'PI', entityId: pi.id, entityNumber: pi.documentNumber } })}>
               <Ticket className="mr-2 h-4 w-4" /> Create Ticket
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/proforma-invoices' })}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          </>
         }
       />
 

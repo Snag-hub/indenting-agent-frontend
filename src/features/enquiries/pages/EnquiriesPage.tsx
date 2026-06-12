@@ -184,6 +184,14 @@ export function EnquiriesPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-slate-500">No enquiries yet. Create your first to get started.</p>
+              <Button size="sm" variant="outline" onClick={() => navigate({ to: '/enquiries/new' })}>
+                <Plus className="mr-2 h-4 w-4" /> New Enquiry
+              </Button>
+            </div>
+          }
         />
       )}
 
