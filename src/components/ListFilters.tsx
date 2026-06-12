@@ -81,7 +81,6 @@ export function ListFilters({
   ].filter(Boolean).length
 
   const hasDateFilter = onFromDateChange || onToDateChange
-  const hasPartyFilters = (supplierOptions && onSupplierChange) || (customerOptions && onCustomerChange)
   const hasDateFieldSelect = dateFields && dateFields.length > 1 && onDateFieldChange
 
   return (
