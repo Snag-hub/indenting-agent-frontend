@@ -4,18 +4,16 @@ import { useState } from 'react'
 import { purchaseOrderApi } from '@/features/purchaseOrders/api/purchaseOrderApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
-import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, CheckCircle, Lock, FileText, Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle, Lock, FileText, Pencil, Trash2 } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
@@ -63,24 +61,19 @@ export function PurchaseOrderDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.pos.list() }); navigate({ to: '/purchase-orders' }) },
   })
 
-  if (isLoading) return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-48 w-full" />
-    </div>
-  )
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!po) return <div className="text-muted-foreground">Purchase Order not found.</div>
 
   return (
     <DetailPageContainer>
-      <PageHeader
+      <DetailPageHeader
         title={po.documentNumber}
         description={`Supplier: ${po.supplierName}`}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge variant={statusColors[po.status]}>{po.status}</Badge>
-
+        status={po.status}
+        onBack={() => navigate({ to: '/purchase-orders' })}
+        actions={
+          <>
             {role === 'Customer' && po.status === 'Draft' && (
               <>
                 {po.source === 'Direct' && (
@@ -106,10 +99,7 @@ export function PurchaseOrderDetailPage() {
                 <FileText className="mr-2 h-4 w-4" /> {fullyInvoiced ? 'Fully Invoiced' : 'Create PI'}
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/purchase-orders' })}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          </>
         }
       />
 
@@ -133,6 +123,7 @@ export function PurchaseOrderDetailPage() {
             <CardContent>
               <DocumentItemsTable
                 mode="purchase-order"
+                currency={po.currency}
                 items={po.items.map((item) => ({
                   id: item.id,
                   name: item.supplierItemName,

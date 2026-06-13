@@ -4,19 +4,17 @@ import { useState } from 'react'
 import { deliveryOrderApi } from '@/features/deliveryOrders/api/deliveryOrderApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/authStore'
-import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Send, X, CheckCircle, Ticket } from 'lucide-react'
+import { Send, X, CheckCircle, Ticket } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { DeliveryOrderLotsCard } from '@/features/deliveryOrders/components/DeliveryOrderLotsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
@@ -57,24 +55,19 @@ export function DeliveryOrderDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) }); setCancelling(false) },
   })
 
-  if (isLoading) return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-48 w-full" />
-    </div>
-  )
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!deliveryOrder) return <div className="text-muted-foreground">Delivery Order not found.</div>
 
   return (
     <DetailPageContainer>
-      <PageHeader
+      <DetailPageHeader
         title={deliveryOrder.documentNumber}
         description={`Supplier: ${deliveryOrder.supplierName}`}
-        action={
-          <div className="flex items-center gap-2">
-            <Badge variant={statusColors[deliveryOrder.status]}>{deliveryOrder.status}</Badge>
-
+        status={deliveryOrder.status}
+        onBack={() => navigate({ to: '/delivery-orders' })}
+        actions={
+          <>
             {role === 'Supplier' && deliveryOrder.status === 'Pending' && (
               <Button size="sm" onClick={() => setDispatching(true)}>
                 <Send className="mr-2 h-4 w-4" /> Dispatch
@@ -93,10 +86,7 @@ export function DeliveryOrderDetailPage() {
             <Button variant="outline" size="sm" onClick={() => navigate({ to: '/tickets/new', search: { entityType: 'DO', entityId: deliveryOrder.id, entityNumber: deliveryOrder.documentNumber } })}>
               <Ticket className="mr-2 h-4 w-4" /> Create Ticket
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: '/delivery-orders' })}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          </div>
+          </>
         }
       />
 

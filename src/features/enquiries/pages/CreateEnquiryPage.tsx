@@ -40,8 +40,7 @@ export function CreateEnquiryPage() {
   const [pendingFanOut, setPendingFanOut] = useState<Set<string>>(new Set())
 
   const form = useForm<CreateEnquiryFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(createEnquirySchema) as any,
+    resolver: zodResolver(createEnquirySchema),
     defaultValues: {
       enquiryType: 'General',
       title: '',
@@ -50,6 +49,7 @@ export function CreateEnquiryPage() {
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const enquiryType = form.watch('enquiryType')
   const addTitle = form.watch('addTitle')
 

@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { DetailPageSkeleton } from '@/components/detail-page'
 import { ArrowLeft, Check, X, Ticket } from 'lucide-react'
 import { format } from 'date-fns'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
@@ -61,14 +61,7 @@ export function PaymentDetailPage() {
     },
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!payment) {
     return <div className="text-muted-foreground">Payment not found.</div>

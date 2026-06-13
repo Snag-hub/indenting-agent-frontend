@@ -102,7 +102,6 @@ export function VariantSelector({
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuantities(initialQuantities ?? {})
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrices(initialPrices ?? {})
   }, [open, initialQuantities, initialPrices])
 

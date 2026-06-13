@@ -261,8 +261,7 @@ export function CreatePaymentPage() {
         title="Record Payment"
         description={`For PI: ${pi.documentNumber}`}
         action={
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: `/proforma-invoices/${piId}` as any })}>
+          <Button variant="outline" size="sm" onClick={() => navigate({ to: '/proforma-invoices/$id', params: { id: piId } })}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
         }
@@ -274,8 +273,7 @@ export function CreatePaymentPage() {
         onNext={() => setCurrentStep(s => s + 1)}
         onBack={() => {
           if (currentStep === 0) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            navigate({ to: `/proforma-invoices/${piId}` as any })
+            navigate({ to: '/proforma-invoices/$id', params: { id: piId } })
           } else {
             setCurrentStep(s => s - 1)
           }

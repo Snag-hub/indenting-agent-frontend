@@ -76,6 +76,11 @@ export const proformaInvoiceApi = {
   list: (params?: {
     search?: string;
     status?: string;
+    fromDate?: string;
+    toDate?: string;
+    dateField?: string;
+    supplierId?: string;
+    customerId?: string;
     page?: number;
     pageSize?: number;
   }) =>

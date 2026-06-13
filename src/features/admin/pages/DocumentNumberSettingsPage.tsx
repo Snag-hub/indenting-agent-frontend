@@ -54,6 +54,7 @@ function EditFormatDialog({ format, onClose }: { format: DocumentNumberFormatDto
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchAll = watch()
   const preview = getPreview(watchAll.prefix || '?', watchAll.suffix, watchAll.padding || 4, watchAll.includeYear)
 

@@ -6,8 +6,8 @@ import { ticketApi, type TicketSummaryDto } from '@/features/tickets/api/ticketA
 import { queryKeys } from '@/lib/queryKeys'
 import { DataTable } from '@/components/DataTable'
 import { PageHeader } from '@/components/PageHeader'
+import { ListFilters, type FilterOption } from '@/components/ListFilters'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus } from 'lucide-react'
@@ -34,17 +34,33 @@ const priorityColors: Record<string, 'default' | 'secondary' | 'destructive' | '
   Critical: 'destructive',
 }
 
+const STATUS_OPTIONS: FilterOption[] = [
+  { value: 'Open', label: 'Open' },
+  { value: 'InProgress', label: 'In Progress' },
+  { value: 'Resolved', label: 'Resolved' },
+  { value: 'Closed', label: 'Closed' },
+]
+
 export function TicketsPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
+
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const [priority, setPriority] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
   const [page, setPage] = useState(1)
 
+  const filterParams = {
+    search: search || undefined,
+    status: status || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.tickets.list({ search, status, priority, page }),
-    queryFn: () => ticketApi.list({ search, status: status || undefined, priority: priority || undefined, pageSize: 20, page }),
+    queryKey: queryKeys.tickets.list({ ...filterParams, page }),
+    queryFn: () => ticketApi.list({ ...filterParams, pageSize: 20, page }),
   })
 
   if (childMatches.length > 0) return <Outlet />
@@ -69,15 +85,15 @@ export function TicketsPage() {
       accessorKey: 'priority',
       header: 'Priority',
       cell: ({ getValue }) => (
-        <Badge variant={priorityColors[getValue() as string]}>
-          {getValue() as string}
-        </Badge>
+        <Badge variant={priorityColors[getValue() as string]}>{getValue() as string}</Badge>
       ),
     },
     {
       accessorKey: 'assignedToName',
       header: 'Assigned To',
-      cell: ({ getValue }) => getValue() ? <span className="text-sm">{getValue() as string}</span> : <span className="text-muted-foreground text-sm">Unassigned</span>,
+      cell: ({ getValue }) => getValue()
+        ? <span className="text-sm">{getValue() as string}</span>
+        : <span className="text-muted-foreground text-sm">Unassigned</span>,
     },
     {
       accessorKey: 'createdAt',
@@ -89,11 +105,7 @@ export function TicketsPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center justify-end">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => navigate({ to: '/tickets/$id', params: { id: row.original.id } })}
-          >
+          <Button size="icon" variant="ghost" onClick={() => navigate({ to: '/tickets/$id', params: { id: row.original.id } })}>
             <Eye className="h-4 w-4" />
           </Button>
         </div>
@@ -113,44 +125,19 @@ export function TicketsPage() {
         }
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-        <div className="flex-1">
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">Search</label>
-          <Input
-            placeholder="Search by title…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">Status</label>
-          <select
-            className="h-9 px-3 py-2 bg-background border border-input rounded-md text-sm"
-            value={status}
-            onChange={(e) => { setStatus(e.target.value); setPage(1) }}
-          >
-            <option value="">All Statuses</option>
-            <option value="Open">Open</option>
-            <option value="InProgress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">Priority</label>
-          <select
-            className="h-9 px-3 py-2 bg-background border border-input rounded-md text-sm"
-            value={priority}
-            onChange={(e) => { setPriority(e.target.value); setPage(1) }}
-          >
-            <option value="">All Priorities</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Critical">Critical</option>
-          </select>
-        </div>
-      </div>
+      <ListFilters
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchPlaceholder="Search by title…"
+        status={status}
+        onStatusChange={(v) => { setStatus(v); setPage(1) }}
+        statusOptions={STATUS_OPTIONS}
+        fromDate={fromDate}
+        onFromDateChange={(v) => { setFromDate(v); setPage(1) }}
+        toDate={toDate}
+        onToDateChange={(v) => { setToDate(v); setPage(1) }}
+        onClear={() => { setSearch(''); setStatus(''); setFromDate(''); setToDate(''); setPage(1) }}
+      />
 
       {isLoading ? (
         <div className="space-y-2">
@@ -160,14 +147,14 @@ export function TicketsPage() {
         </div>
       ) : (
         <DataTable
-          {...({
-            columns,
-            data: data?.data ?? [],
-            pageCount: data?.pageCount ?? 1,
-            page,
-            onPageChange: setPage,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any)}
+          columns={columns}
+          data={data?.data ?? []}
+          totalCount={data?.totalCount ?? 0}
+          page={page}
+          pageSize={20}
+          onPageChange={setPage}
+          isLoading={isLoading}
+          emptyState={<p className="text-sm text-slate-500">No tickets found.</p>}
         />
       )}
     </div>

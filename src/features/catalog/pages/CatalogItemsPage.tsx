@@ -206,6 +206,7 @@ function ItemForm({
     resolver: zodResolver(itemSchema),
     defaultValues,
   })
+  // eslint-disable-next-line react-hooks/incompatible-library
   const categoryId = watch('categoryId')
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

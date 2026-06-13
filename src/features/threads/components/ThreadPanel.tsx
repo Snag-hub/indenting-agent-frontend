@@ -72,6 +72,7 @@ export function ThreadPanel({ threadId, title, canPostInternal = false, disabled
     resolver: zodResolver(messageSchema),
     defaultValues: { message: '', isInternal: false },
   })
+  // eslint-disable-next-line react-hooks/incompatible-library
   const isInternalChecked = watch('isInternal')
 
   // ── Scroll behaviour ────────────────────────────────────────────────────────

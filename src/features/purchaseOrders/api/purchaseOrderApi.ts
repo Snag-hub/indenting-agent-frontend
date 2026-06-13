@@ -109,7 +109,17 @@ export interface VoucherItemBalanceDto {
 }
 
 export const purchaseOrderApi = {
-  list: (params?: { status?: string; page?: number; pageSize?: number }) =>
+  list: (params?: {
+    search?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+    dateField?: string;
+    supplierId?: string;
+    customerId?: string;
+    page?: number;
+    pageSize?: number;
+  }) =>
     api
       .get<PagedResult<PurchaseOrderSummaryDto>>("/purchase-orders", { params })
       .then((r) => r.data),

@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { enquiryApi, type EnquirySummaryDto } from '@/features/enquiries/api/enquiryApi'
+import { customerApi } from '@/features/accounts/api/customerApi'
 import { queryKeys } from '@/lib/queryKeys'
 import { DataTable } from '@/components/DataTable'
 import { PageHeader } from '@/components/PageHeader'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ListFilters, type FilterOption } from '@/components/ListFilters'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eye, Plus, Send, Lock, Trash2 } from 'lucide-react'
@@ -22,22 +23,48 @@ const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'ou
   Closed: 'secondary',
 }
 
+const STATUS_OPTIONS: FilterOption[] = [
+  { value: 'Draft', label: 'Draft' },
+  { value: 'Open', label: 'Open' },
+  { value: 'Closed', label: 'Closed' },
+]
+
 export function EnquiriesPage() {
   const navigate = useNavigate()
   const childMatches = useChildMatches()
   const qc = useQueryClient()
   const role = useAuthStore((s) => s.user?.role)
-  // Customers own Enquiries; only they (and Admin) see the Delete action.
-  const canDelete = role === 'Customer' || role === 'Admin'
+  const isAdmin = role === 'Admin'
+  const canDelete = role === 'Customer' || isAdmin
+
   const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [customerId, setCustomerId] = useState('')
   const [page, setPage] = useState(1)
   const [submitting, setSubmitting] = useState<string | undefined>()
   const [closing, setClosing] = useState<string | undefined>()
   const [deleting, setDeleting] = useState<string | undefined>()
 
+  const { data: customersData } = useQuery({
+    queryKey: ['customers', 'options'],
+    queryFn: () => customerApi.list({ pageSize: 200 }),
+    enabled: isAdmin,
+  })
+  const customerOptions: FilterOption[] = customersData?.data.map(c => ({ value: c.id, label: c.name })) ?? []
+
+  const filterParams = {
+    search: search || undefined,
+    status: status || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+    customerId: customerId || undefined,
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.enquiries.list({ search, page }),
-    queryFn: () => enquiryApi.list({ search, pageSize: 20, page }),
+    queryKey: queryKeys.enquiries.list({ ...filterParams, page }),
+    queryFn: () => enquiryApi.list({ ...filterParams, pageSize: 20, page }),
   })
 
   const submitEnquiry = useMutation({
@@ -101,7 +128,6 @@ export function EnquiriesPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2 justify-end">
           <ThreadDrawerButton entityType="Enquiry" entityId={row.original.id} size="sm" />
-
           <Button
             size="icon"
             variant="ghost"
@@ -109,36 +135,18 @@ export function EnquiriesPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
-
           {row.original.status === 'Draft' && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setSubmitting(row.original.id)}
-              title="Submit Enquiry"
-            >
+            <Button size="icon" variant="ghost" onClick={() => setSubmitting(row.original.id)} title="Submit Enquiry">
               <Send className="h-4 w-4" />
             </Button>
           )}
-
           {row.original.status === 'Open' && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setClosing(row.original.id)}
-              title="Close Enquiry"
-            >
+            <Button size="icon" variant="ghost" onClick={() => setClosing(row.original.id)} title="Close Enquiry">
               <Lock className="h-4 w-4" />
             </Button>
           )}
-
           {canDelete && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setDeleting(row.original.id)}
-              title="Delete Enquiry"
-            >
+            <Button size="icon" variant="ghost" onClick={() => setDeleting(row.original.id)} title="Delete Enquiry">
               <Trash2 className="h-4 w-4 text-red-400" />
             </Button>
           )}
@@ -159,14 +167,21 @@ export function EnquiriesPage() {
         }
       />
 
-      <Input
-        placeholder="Search enquiries by title..."
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value)
-          setPage(1)
-        }}
-        className="max-w-sm"
+      <ListFilters
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1) }}
+        searchPlaceholder="Search by title, doc #, notes…"
+        status={status}
+        onStatusChange={(v) => { setStatus(v); setPage(1) }}
+        statusOptions={STATUS_OPTIONS}
+        fromDate={fromDate}
+        onFromDateChange={(v) => { setFromDate(v); setPage(1) }}
+        toDate={toDate}
+        onToDateChange={(v) => { setToDate(v); setPage(1) }}
+        customerId={isAdmin ? customerId : undefined}
+        onCustomerChange={isAdmin ? (v) => { setCustomerId(v); setPage(1) } : undefined}
+        customerOptions={isAdmin ? customerOptions : undefined}
+        onClear={() => { setSearch(''); setStatus(''); setFromDate(''); setToDate(''); setCustomerId(''); setPage(1) }}
       />
 
       {isLoading ? (
@@ -184,41 +199,40 @@ export function EnquiriesPage() {
           pageSize={20}
           onPageChange={setPage}
           isLoading={isLoading}
+          emptyState={
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-slate-500">No enquiries found.</p>
+              <Button size="sm" variant="outline" onClick={() => navigate({ to: '/enquiries/new' })}>
+                <Plus className="mr-2 h-4 w-4" /> New Enquiry
+              </Button>
+            </div>
+          }
         />
       )}
 
-
       <ConfirmDialog
         open={!!submitting}
-        onOpenChange={(open) => {
-          if (!open) setSubmitting(undefined)
-        }}
+        onOpenChange={(open) => { if (!open) setSubmitting(undefined) }}
         title="Submit Enquiry"
         description="This will change the status to Open and notify relevant parties."
         confirmLabel="Submit"
         onConfirm={() => submitting && submitEnquiry.mutate(submitting)}
         isLoading={submitEnquiry.isPending}
       />
-
       <ConfirmDialog
         open={!!closing}
-        onOpenChange={(open) => {
-          if (!open) setClosing(undefined)
-        }}
+        onOpenChange={(open) => { if (!open) setClosing(undefined) }}
         title="Close Enquiry"
         description="This will mark the enquiry as Closed."
         confirmLabel="Close"
         onConfirm={() => closing && closeEnquiry.mutate(closing)}
         isLoading={closeEnquiry.isPending}
       />
-
       <ConfirmDialog
         open={!!deleting}
-        onOpenChange={(open) => {
-          if (!open) setDeleting(undefined)
-        }}
+        onOpenChange={(open) => { if (!open) setDeleting(undefined) }}
         title="Delete Enquiry"
-        description="This will permanently remove the enquiry. RFQs/POs that depend on it may block deletion."
+        description="This will permanently remove the enquiry."
         variant="destructive"
         confirmLabel="Delete"
         onConfirm={() => deleting && deleteEnquiry.mutate(deleting)}

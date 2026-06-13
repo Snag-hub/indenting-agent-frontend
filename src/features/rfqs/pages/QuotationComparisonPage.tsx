@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { rfqApi, type SupplierQuotationComparisonDto } from '@/features/rfqs/api/rfqApi'
 import { quotationApi } from '@/features/quotations/api/quotationApi'
@@ -45,12 +45,12 @@ export function QuotationComparisonPage() {
     onError: () => toast.error('Failed to accept quotation.'),
   })
 
-  const toggleExpand = (itemId: string) =>
+  const toggleExpand = useCallback((itemId: string) =>
     setExpandedItems((prev) => {
       const next = new Set(prev)
       if (next.has(itemId)) { next.delete(itemId) } else { next.add(itemId) }
       return next
-    })
+    }), [])
 
   // Derived values — default to empty arrays so the useMemo below is always called
   // (hooks must not appear after conditional returns).
