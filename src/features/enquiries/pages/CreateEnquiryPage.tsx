@@ -50,6 +50,7 @@ export function CreateEnquiryPage() {
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const enquiryType = form.watch('enquiryType')
   const addTitle = form.watch('addTitle')
 

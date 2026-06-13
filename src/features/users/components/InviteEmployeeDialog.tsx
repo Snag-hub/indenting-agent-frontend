@@ -70,6 +70,7 @@ export function InviteEmployeeDialog({
     }
   }, [open, existing, reset, mode, user?.role])
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const isOrgAdminWatch = watch('isOrgAdmin')
 
   const queryKey = mode === 'admin' ? queryKeys.users.list() : queryKeys.myEmployees.list()

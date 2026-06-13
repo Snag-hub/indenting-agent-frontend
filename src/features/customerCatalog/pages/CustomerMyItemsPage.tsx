@@ -63,6 +63,7 @@ export function CustomerMyItemsPage() {
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const itemId = watch('itemId')
   const selectedItem = availableItems.find(i => i.id === itemId)
 
