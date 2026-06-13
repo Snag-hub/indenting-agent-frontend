@@ -1,4 +1,5 @@
 export { DetailPageContainer } from './DetailPageContainer'
+export { DetailPageSkeleton } from './DetailPageSkeleton'
 export { DetailPageHeader } from './DetailPageHeader'
 export { DetailPageGrid } from './DetailPageGrid'
 export { DetailPageMainColumn } from './DetailPageMainColumn'

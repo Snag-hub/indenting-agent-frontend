@@ -11,12 +11,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Send, Lock, FileText, Trash2, Plus, Users } from 'lucide-react'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageHeader, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { VariantQuantityDialog } from '@/features/catalog/components/VariantQuantityDialog'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuthStore } from '@/stores/authStore'
@@ -120,14 +119,7 @@ export function EnquiryDetailPage() {
     if (pickerOpen) setTimeout(() => pickerSearchRef.current?.focus(), 50)
   }, [pickerOpen])
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!enquiry) {
     return <div className="text-muted-foreground">Enquiry not found.</div>

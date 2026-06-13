@@ -7,13 +7,12 @@ import { useAuthStore } from '@/stores/authStore'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Send, X, CheckCircle, Truck, Ticket, CreditCard } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
@@ -55,12 +54,7 @@ export function ProformaInvoiceDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.proformaInvoices.detail(id) }); setCancelling(false) },
   })
 
-  if (isLoading) return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-48 w-full" />
-    </div>
-  )
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!pi) return <div className="text-muted-foreground">Proforma Invoice not found.</div>
 

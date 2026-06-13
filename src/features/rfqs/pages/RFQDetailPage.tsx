@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -25,7 +24,7 @@ import { Send, Lock, Plus, Edit2, Copy, Eye } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -180,14 +179,7 @@ export function RFQDetailPage() {
   // Child route active (e.g. /comparison) — let it render instead of this page.
   if (childMatches.length > 0) return <Outlet />
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!rfq) {
     return <div className="text-muted-foreground">RFQ not found.</div>

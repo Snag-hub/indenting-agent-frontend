@@ -8,14 +8,13 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Send, X, CheckCircle, Ticket } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { DeliveryOrderLotsCard } from '@/features/deliveryOrders/components/DeliveryOrderLotsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
@@ -56,12 +55,7 @@ export function DeliveryOrderDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.deliveryOrders.detail(id) }); setCancelling(false) },
   })
 
-  if (isLoading) return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-48 w-full" />
-    </div>
-  )
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!deliveryOrder) return <div className="text-muted-foreground">Delivery Order not found.</div>
 

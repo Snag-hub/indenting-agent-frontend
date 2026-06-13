@@ -8,13 +8,12 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { CheckCircle, Lock, FileText, Pencil, Trash2 } from 'lucide-react'
 import { DocumentItemsTable } from '@/components/DocumentItemsTable'
 import { VoucherTotalsCard } from '@/components/VoucherTotalsCard'
 import { AttachmentPanel } from '@/components/AttachmentPanel'
 import { ThreadPanel } from '@/features/threads/components/ThreadPanel'
-import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSummary } from '@/components/detail-page'
+import { DetailPageContainer, DetailPageHeader, DetailPageGrid, DetailPageMainColumn, DetailPageSidebar, DetailPageSkeleton, DetailPageSummary } from '@/components/detail-page'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { format } from 'date-fns'
 
@@ -62,12 +61,7 @@ export function PurchaseOrderDetailPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.pos.list() }); navigate({ to: '/purchase-orders' }) },
   })
 
-  if (isLoading) return (
-    <div className="space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-48 w-full" />
-    </div>
-  )
+  if (isLoading) return <DetailPageSkeleton />
 
   if (!po) return <div className="text-muted-foreground">Purchase Order not found.</div>
 
