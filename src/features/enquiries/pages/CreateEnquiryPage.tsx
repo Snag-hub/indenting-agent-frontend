@@ -40,8 +40,7 @@ export function CreateEnquiryPage() {
   const [pendingFanOut, setPendingFanOut] = useState<Set<string>>(new Set())
 
   const form = useForm<CreateEnquiryFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(createEnquirySchema) as any,
+    resolver: zodResolver(createEnquirySchema),
     defaultValues: {
       enquiryType: 'General',
       title: '',
